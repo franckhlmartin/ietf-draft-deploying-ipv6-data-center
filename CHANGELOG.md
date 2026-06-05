@@ -6,8 +6,5 @@ semantics.
 
 ## Unreleased
 
-- **Introduction and early chapters:** audience (SRE/SWE), v6ops charter alignment,
-  IPv6 fundamentals for software engineers, data center addressing, application
-  readiness inventory, DNS registration, ICMPv6/PMTUD, client-side load
-  balancing (RFC 6724 Rule 9), observability, out-of-band management, and
-  IPv6-only jump host transition pattern.
+- **Internal vs external scope (§4.5):** IPv6-only on internal interfaces;
+  dual-stack external edges; dual-homed edge servers for administration.

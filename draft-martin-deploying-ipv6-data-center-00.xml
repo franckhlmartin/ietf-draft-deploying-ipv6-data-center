@@ -66,9 +66,9 @@ but cover broader enterprise and regional context.</t>
 <t><xref target="ipv6-fundamentals"></xref> summarizes protocol and addressing differences that
 surprise application developers. <xref target="name-resolution"></xref> explains how to resolve
 names to <strong>full address lists</strong> (not a single address). <xref target="internet-addressing"></xref>
-covers prefix allocation, semantic internal prefixes, edge gateways for Internet
-egress, frontends for IPv4-only services, static addressing, and access-control
-propagation in data centers. <xref target="application-readiness"></xref> catalogs software gaps --- hard-coded
+covers prefix allocation, semantic internal prefixes, internal vs external
+IPv6-only scope, edge gateways for Internet egress, frontends for IPv4-only
+services, static addressing, and access-control propagation in data centers. <xref target="application-readiness"></xref> catalogs software gaps --- hard-coded
 addresses, weak IP parsing, geo databases, security tools, static analysis
 in CI, and IPv6-first documentation conventions. Later sections
 cover DNS registration, name-to-address resolution APIs, ICMPv6 and path MTU,
@@ -398,6 +398,33 @@ logging.</t>
 performs <strong>NAT64</strong> or protocol translation <xref target="RFC6146"></xref> (and DNS64 where
 needed) on the way out. Translation is <strong>centralized, observable, and
 rate-limited</strong> --- not duplicated on every app host.</t>
+</section>
+
+<section anchor="internal-external"><name>Internal vs External: Where IPv6-Only Applies</name>
+<t>A practical <strong>IPv6-only data center</strong> usually means <strong>IPv6-only on internal
+interfaces and east-west paths</strong>, not on every interface facing the outside
+world. The <strong>Internet is not yet ready for an IPv6-only-only edge</strong>: clients,
+transit, partners, and operator tooling still expect <strong>dual-stack</strong> (or IPv4
+fallback) on <strong>external</strong> interfaces --- load balancers, border routers, VPN
+concentrators, and customer-facing anycast fronts.</t>
+<t>Plan accordingly:</t>
+
+<ul spacing="compact">
+<li><strong>Inside the data center:</strong> servers, containers, and service-to-service traffic
+<bcp14>SHOULD</bcp14> move to <strong>IPv6-only</strong> (or IPv6-primary) on internal VLANs and
+<tt>/64</tt> islands as readiness allows.</li>
+<li><strong>At the edge:</strong> <strong>external interfaces SHOULD remain dual-stack</strong> until IPv4
+dependency is gone for your user base and upstream paths. The edge gateway
+performs translation when an internal IPv6-only host must reach IPv4-only
+destinations (see above).</li>
+</ul>
+<t><strong>Dual-home servers on the edge</strong> --- one <strong>internal</strong> interface (IPv6-only or
+IPv6-primary) and one <strong>external</strong> interface (dual-stack) --- simplify
+<strong>administration and break-glass access</strong>: operators and automation can reach
+management paths on the internal v6 network while the service still serves
+dual-stack Internet clients. Document which interface is which in IPAM and
+host naming; do not collapse &quot;internal v6-only&quot; and &quot;external dual-stack&quot; into
+a single ambiguous address on production boxes.</t>
 </section>
 
 <section anchor="ipv4-only-wrappers"><name>Frontends for IPv4-Only Services</name>
@@ -872,11 +899,12 @@ nothing was missed. Provisioning time already runs those checks, supports
 canary or phased ramp-up, and catches failures before the service takes
 production traffic.</t>
 <t>Teams <bcp14>SHOULD</bcp14> treat every <strong>new service</strong>, <strong>new software version</strong>, and
-<strong>rewrite of an existing application</strong> as an opportunity to ship <strong>IPv6-only
-from the start</strong> (or dual-stack with IPv6 validated in the same pipeline), rather
-than cloning an IPv4-only template and scheduling conversion later. Brownfield
-conversion remains necessary for legacy estates, but the default for greenfield
-work <bcp14>SHOULD NOT</bcp14> be &quot;IPv4 now, IPv6 someday.&quot;</t>
+<strong>rewrite of an existing application</strong> as an opportunity to ship <strong>IPv6-only on
+internal interfaces</strong> from the start (see <xref target="internal-external"></xref>), with <strong>dual-stack
+only where external reachability requires it</strong>, rather than cloning an IPv4-only
+template and scheduling conversion later. Brownfield conversion remains necessary
+for legacy estates, but the default for greenfield work <bcp14>SHOULD NOT</bcp14> be
+&quot;IPv4 now, IPv6 someday.&quot;</t>
 </section>
 
 <section anchor="ipv6-only-jump-hosts"><name>IPv6-Only Jump Hosts</name>
