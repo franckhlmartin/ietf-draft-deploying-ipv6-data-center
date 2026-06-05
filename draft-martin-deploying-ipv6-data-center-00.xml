@@ -1,0 +1,974 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- name="GENERATOR" content="github.com/mmarkdown/mmark Mmark Markdown Processor - mmark.miek.nl" -->
+<rfc version="3" ipr="trust200902" docName="draft-martin-deploying-ipv6-data-center-00" submissionType="IETF" category="info" xml:lang="en" xmlns:xi="http://www.w3.org/2001/XInclude" indexInclude="true">
+
+<front>
+<title abbrev="deploying-ipv6-data-center">Deploying IPv6 in Data Centers</title><seriesInfo value="draft-martin-deploying-ipv6-data-center-00" stream="IETF" status="informational" name="Internet-Draft"></seriesInfo>
+<author initials="F." surname="Martin" fullname="Franck Martin"><organization>Peachymango.org</organization><address><postal><street></street>
+</postal><email>franck@peachymango.org</email>
+</address></author><date year="2026" month="June" day="5"></date>
+<area>ops</area>
+<workgroup>IPv6 Operations</workgroup>
+<keyword>IPv6</keyword>
+<keyword>data center</keyword>
+<keyword>SRE</keyword>
+<keyword>software</keyword>
+<keyword>operations</keyword>
+<keyword>deployment</keyword>
+
+<abstract>
+<t>Data center operators are moving toward IPv6-only operation to simplify
+addressing, restore end-to-end connectivity, and meet operator and
+government timelines. Much published IPv6 guidance targets network engineers;
+this document instead addresses <strong>Software Release Engineers (SREs)</strong> and
+<strong>Software Engineers (SWEs)</strong> who deploy, operate, and debug services in
+data centers. It explains IPv6 fundamentals that affect application code,
+observability, DNS, load balancing, and out-of-band management; documents
+common software and infrastructure gaps; and offers practical deployment
+patterns aligned with the IPv6 Operations (v6ops) working group charter.</t>
+</abstract>
+
+</front>
+
+<middle>
+
+<section anchor="introduction"><name>Introduction</name>
+
+<section anchor="audience-and-purpose"><name>Audience and Purpose</name>
+<t>This document is written for <strong>SREs and SWEs</strong> who run services in data
+centers --- not primarily for network engineers designing routing policy.
+Network teams still own prefixes, routing, and firewalls, but IPv6
+deployment succeeds or fails in application code, configuration management,
+monitoring pipelines, and the long tail of enterprise software that assumes
+IPv4.</t>
+<t>The <eref target="https://datatracker.ietf.org/wg/v6ops/about/">IPv6 Operations (v6ops) working group</eref>
+charter calls for informational documents that demonstrate how IPv6 can be
+deployed in specific environments, including data centers. This draft meets
+that objective from a <strong>software and operations</strong> perspective: what engineers
+who write and run services need to know before, during, and after enabling
+IPv6 in production.</t>
+</section>
+
+<section anchor="related-guides"><name>Related Guides</name>
+<t>This document focuses on data center SRE and software engineering practice.
+Operators may also find these <strong>informative deployment guides</strong> useful alongside
+this draft:</t>
+
+<ul spacing="compact">
+<li><xref target="ARCEP-IPV6-GUIDE"></xref> --- enterprise IPv6 rollout guidance from ARCEP (France)</li>
+<li><xref target="ARIN-APPS-V6"></xref> --- application and software developer guidance from ARIN</li>
+</ul>
+<t>They overlap partially with sections here (applications, addressing, operations)
+but cover broader enterprise and regional context.</t>
+</section>
+
+<section anchor="document-structure"><name>Document Structure</name>
+<t><xref target="ipv6-fundamentals"></xref> summarizes protocol and addressing differences that
+surprise application developers. <xref target="name-resolution"></xref> explains how to resolve
+names to <strong>full address lists</strong> (not a single address). <xref target="internet-addressing"></xref>
+covers prefix allocation, semantic internal prefixes, edge gateways for Internet
+egress, frontends for IPv4-only services, static addressing, and access-control
+propagation in data centers. <xref target="application-readiness"></xref> catalogs software gaps --- hard-coded
+addresses, weak IP parsing, geo databases, security tools, static analysis
+in CI, and IPv6-first documentation conventions. Later sections
+cover DNS registration, name-to-address resolution APIs, ICMPv6 and path MTU,
+client-side load balancing, <xref target="observability"></xref> for migration metrics,
+out-of-band management, and transition tactics --- <xref target="provision-not-transform"></xref>
+and IPv6-only jump hosts.</t>
+</section>
+
+<section anchor="requirements-language"><name>Requirements Language</name>
+<t>The key words &quot;<bcp14>MUST</bcp14>&quot;, &quot;<bcp14>MUST NOT</bcp14>&quot;, &quot;<bcp14>REQUIRED</bcp14>&quot;, &quot;<bcp14>SHALL</bcp14>&quot;,
+&quot;<bcp14>SHALL NOT</bcp14>&quot;, &quot;<bcp14>SHOULD</bcp14>&quot;, &quot;<bcp14>SHOULD NOT</bcp14>&quot;, &quot;<bcp14>RECOMMENDED</bcp14>&quot;,
+&quot;<bcp14>NOT RECOMMENDED</bcp14>&quot;, &quot;<bcp14>MAY</bcp14>&quot;, and &quot;<bcp14>OPTIONAL</bcp14>&quot; in this document are to
+be interpreted as described in BCP 14 <xref target="RFC2119"></xref> <xref target="RFC8174"></xref> when, and only
+when, they appear in all capitals, as shown here.</t>
+</section>
+</section>
+
+<section anchor="ipv6-fundamentals"><name>IPv6 Fundamentals for Software Engineers</name>
+<t>Software engineers who have worked only in IPv4 environments often discover
+that IPv6 is not &quot;IPv4 with longer addresses.&quot; The differences below affect
+code, configuration, monitoring, and troubleshooting daily.</t>
+
+<section anchor="address-size-and-header-format"><name>Address Size and Header Format</name>
+<t>IPv4 addresses are <strong>32 bits</strong>; IPv6 addresses are <strong>128 bits</strong>
+<xref target="RFC8200"></xref>. The IPv4 header has a <strong>variable length</strong> because options are
+carried in the main header. The IPv6 header has a <strong>fixed 40-byte length</strong>,
+which simplifies fast-path processing on routers and hosts. Additional IPv6
+options live in <strong>extension headers</strong> chained after the main header; routers
+<strong>do not need to process</strong> most extension headers for forwarding
+<xref target="RFC8200"></xref>.</t>
+</section>
+
+<section anchor="checksums-jumbo-frames-and-fragmentation"><name>Checksums, Jumbo Frames, and Fragmentation</name>
+<t>IPv6 removed the header checksum present in IPv4; integrity is assumed to be
+covered by upper-layer protocols (for example, TCP, UDP, and SCTP) and link
+layers where applicable <xref target="RFC8200"></xref>. Operators can use <strong>jumbo frames</strong> on
+supported paths to reduce per-packet overhead and acknowledgment rates on
+high-throughput links. Jumbo frames are an operational choice on the LAN and
+require end-to-end support; they are not an IPv6 requirement but are often
+easier to reason about once NAT middleboxes are removed.</t>
+<t>IPv4 allowed routers to fragment packets in transit. IPv6 <strong>fragments only at
+endpoints</strong> <xref target="RFC8200"></xref>. If a packet exceeds the path MTU, the source discovers
+the limit through Path MTU Discovery (see <xref target="icmpv6-pmtud"></xref>) rather than relying
+on router fragmentation. Application teams that tune MSS or disable PMTUD on
+IPv4 must not copy those habits blindly to IPv6.</t>
+</section>
+
+<section anchor="icmpv6-and-neighbor-discovery"><name>ICMPv6 and Neighbor Discovery</name>
+<t>IPv4 Address Resolution Protocol (ARP) is replaced in IPv6 by <strong>Neighbor
+Discovery (ND)</strong> carried in <strong>ICMPv6</strong> <xref target="RFC4861"></xref> <xref target="RFC4443"></xref>. ND resolves
+addresses on the local link, discovers routers, and performs other essential
+functions. <strong>ICMPv6 therefore MUST NOT be blocked wholesale</strong> on IPv6 paths
+the way some IPv4 deployments block all ICMP. Blocking ICMPv6 breaks ND and
+PMTUD and produces failures that look like application bugs.</t>
+</section>
+
+<section anchor="end-to-end-connectivity"><name>End-to-End Connectivity</name>
+<t>IPv4 data centers often rely on Network Address Translation (NAT), carrier-grade
+NAT (CGNAT), and overlapping private address space <xref target="RFC1918"></xref>. IPv6 restores
+the <strong>end-to-end principle</strong>: globally unique addresses (with deliberate
+exceptions noted below) can be routed on the Internet without translation.
+Routing replaces NAT for many multi-tenant container scenarios, which simplifies
+traffic inspection but requires disciplined prefix planning (see
+<xref target="internet-addressing"></xref>).</t>
+</section>
+
+<section anchor="address-types"><name>Address Types and Terminology</name>
+<t>Careless use of the word &quot;IPv6&quot; causes outages. This document uses the
+following terms:</t>
+<t><strong>Link-local address</strong>: An address in <tt>fe80::/10</tt> used only on a single link
+<xref target="RFC4291"></xref>. Link-local addresses are <strong>not</strong> routed on the Internet. On
+Linux, connecting to a link-local destination requires a <strong>zone identifier</strong>
+(for example, <tt>fe80::1%eth0</tt>) because the same link-local prefix exists on
+every interface.</t>
+<t><strong>Unique Local Address (ULA)</strong>: An address in <tt>fc00::/7</tt> intended for local
+use and <strong>not</strong> globally routed <xref target="RFC4193"></xref>. ULAs resemble IPv4 private space
+in purpose but are uncommon in many data center designs that use provider-
+aggregated global unicast space internally. Like IPv4 private address space,
+ULAs can create <strong>renumbering work</strong> when companies merge or networks are
+combined --- a data center network is never final.</t>
+<t><strong>Internal global unicast address</strong>: A globally routable IPv6 address used
+<strong>inside</strong> the data center (for example, from the operator's GUA allocation).
+These addresses are reachable according to routing and security policy, not
+because they are &quot;private.&quot;</t>
+<t><strong>External global unicast address</strong>: A globally routable address presented to
+clients on the Internet, often via load balancers or anycast.</t>
+<t>Unlike IPv4, there is <strong>no RFC 1918 equivalent that dominates data center
+design</strong>. With rare exceptions (link-local, ULA, and special-purpose ranges
+in <xref target="RFC6890"></xref>), <strong>IPv6 unicast addresses are designed to be globally
+unique and routable</strong>. Security boundaries are enforced by routing policy and
+firewall rules, not by assuming addresses are inherently non-routable.</t>
+</section>
+
+<section anchor="address-representation"><name>Address Representation</name>
+<t>IPv6 addresses have several equivalent textual forms <xref target="RFC4291"></xref>:</t>
+
+<ul spacing="compact">
+<li>Full form: <tt>2001:db8:0:0:0:0:0:1</tt></li>
+<li>Compressed zeros: <tt>2001:db8::1</tt></li>
+<li>Loopback: <tt>::1</tt> (compare IPv4 <tt>127.0.0.1</tt>)</li>
+<li>Unspecified: <tt>::</tt></li>
+<li>IPv4-mapped IPv6: <tt>::ffff:192.0.2.1</tt></li>
+</ul>
+<t>In <strong>dual-stack</strong> environments, IPv4 addresses also appear in multiple forms
+in code and configuration:</t>
+
+<ul spacing="compact">
+<li>Dotted decimal: <tt>192.0.2.1</tt></li>
+<li>Integer (historical APIs): <tt>3232235521</tt></li>
+<li>Hex packed in configs: <tt>0xC0000201</tt></li>
+<li>Mapped in IPv6 APIs: <tt>::ffff:192.0.2.1</tt></li>
+</ul>
+<t>In software, addresses <bcp14>MUST</bcp14> be stored in a <strong>binary field or structure
+sized for 128 bits</strong> (for example, <tt>in6_addr</tt>, <tt>sockaddr_storage</tt>, or an
+equivalent language type), so the same field can hold IPv4 or IPv6. <strong>Do not
+store addresses as strings</strong> in databases, logs-as-data, caches, or message
+payloads. Provide helper functions to convert between the binary form and a
+human-readable representation for display and configuration I/O, and use those
+helpers at boundaries --- <strong>never parse or compare address strings ad hoc</strong> in
+application logic.</t>
+<t>Applications <bcp14>SHOULD</bcp14> treat names, not literal addresses, as the stable
+interface (see <xref target="naming-services"></xref>). To turn a name into addresses, use the
+APIs described in <xref target="name-resolution"></xref> --- not legacy one-address helpers and
+not string parsing.</t>
+</section>
+
+<section anchor="prefix-length-and-the-64-convention"><name>Prefix Length and the /64 Convention</name>
+<t>On most LANs and data center segments, the <strong>network/host split is at the
+64th bit</strong> --- a <tt>/64</tt> prefix on the wire <xref target="RFC4291"></xref>. Roughly speaking, a
+<tt>/64</tt> is the IPv6 analogue of an IPv4 <tt>/24</tt> in terms of &quot;one subnet per
+broadcast domain,&quot; though the address space is vastly larger. A good data
+center pattern assigns a <strong><tt>/56</tt> per host</strong> so each container can receive its
+own <strong><tt>/64</tt></strong> (see <xref target="prefix-allocation"></xref>).</t>
+</section>
+
+<section anchor="link-local-gateways"><name>Link-Local Gateways</name>
+<t>Many data center designs place the default gateway at <strong><tt>fe80::1</tt></strong> on each
+link. That choice avoids consuming a global address for the router and matches
+common vendor examples. Servers <bcp14>MUST</bcp14> specify the outgoing interface when
+using link-local next hops (for example, <tt>ip -6 route add default via fe80::1
+dev eth0</tt>). The router platform <bcp14>MUST</bcp14> actually configure <tt>fe80::1</tt> on the
+expected interface.</t>
+</section>
+
+<section anchor="naming-services"><name>Naming Services</name>
+<t><tt>::1</tt> is home; <tt>127.0.0.1</tt> is home. <strong>Do not embed IP addresses in
+application code</strong> when a name will do. Use hostnames and service discovery;
+resolve names at connection time.</t>
+<t>DNS (or an equivalent naming and service registry) becomes <strong>essential</strong> in
+IPv6 because humans cannot memorize 128-bit addresses. Operational maturity
+includes forward and reverse DNS for infrastructure, health checks keyed on
+names, and monitoring that labels series by hostname rather than by address
+literals.</t>
+</section>
+</section>
+
+<section anchor="name-resolution"><name>Resolving Hostnames to Addresses</name>
+<t>Turning a hostname into addresses is a separate step from choosing which
+address to connect to. Application code <bcp14>MUST</bcp14> use an API that returns <strong>all</strong>
+candidate addresses, then apply local policy (retries, Happy Eyeballs
+<xref target="RFC8305"></xref>, load spreading --- see <xref target="address-selection"></xref> and
+<xref target="client-load-balancing"></xref>).</t>
+
+<section anchor="use-getaddrinfo-not-legacy-one-address-apis"><name>Use getaddrinfo(), Not Legacy One-Address APIs</name>
+<t>On POSIX systems the correct resolver entry point is <strong><tt>getaddrinfo()</tt></strong>
+<xref target="RFC3493"></xref>. It takes a hostname (or numeric address string), service/port hints,
+and an <tt>addrinfo</tt> hints structure, and returns a <strong>linked list of <tt>addrinfo</tt>
+structures</strong> --- one node per address. The caller <strong>MUST iterate the entire
+list</strong> (the <tt>ai_next</tt> chain), copy each <tt>sockaddr</tt> into binary form (see
+<xref target="address-representation"></xref>), and <bcp14>MUST</bcp14> release the list with <tt>freeaddrinfo()</tt>.</t>
+<t>Please note: <strong><tt>getaddrinfo()</tt></strong> is the name-to-address API for retrieving a
+full list; it is not the same as:</t>
+
+<ul spacing="compact">
+<li><strong><tt>gethostbyname()</tt></strong> and <strong><tt>gethostbyname2()</tt></strong> --- deprecated, not
+thread-safe, and still present in old tutorials. Many call sites use only the
+first address even when multiple are available.</li>
+<li><strong><tt>inet_addr()</tt></strong>, <strong><tt>inet_aton()</tt></strong>, and <strong><tt>inet_pton()</tt></strong> --- parse a
+<strong>literal</strong> address string into binary; they perform <strong>no DNS lookup</strong> and
+return a single address only.</li>
+<li>Higher-level HTTP or RPC helpers that resolve a name internally and connect to
+<strong>one</strong> chosen address without exposing the full set --- fine for quick
+clients, unsuitable when the service relies on multiple A/AAAA records.</li>
+</ul>
+<t>To request both IPv4 and IPv6 results, set <tt>hints.ai_family</tt> to <tt>AF_UNSPEC</tt>
+(unless a deliberate single-family policy applies). Inspect <tt>ai_family</tt>,
+<tt>ai_addrlen</tt>, and <tt>ai_addr</tt> on <strong>each</strong> list element; do not assume every node
+has the same address family.</t>
+<t>Language runtimes expose the same idea under different names:</t>
+
+<ul spacing="compact">
+<li><strong>Python:</strong> <tt>socket.getaddrinfo()</tt> returns a list of tuples --- iterate all
+entries; avoid <tt>socket.gethostbyname()</tt>, which returns one IPv4 address.</li>
+<li><strong>Go:</strong> <tt>net.DefaultResolver.LookupIPAddr()</tt> or <tt>LookupIP()</tt>; avoid code paths
+that stop after the first returned address.</li>
+<li><strong>Java:</strong> <tt>InetAddress.getAllByName()</tt> returns an array; <strong><tt>getByName()</tt></strong>
+returns only the first address and is a common source of &quot;works in the lab&quot;
+failures under round-robin DNS.</li>
+<li><strong>Node.js:</strong> <tt>dns.promises.resolve()</tt> or <tt>dns.lookup()</tt> with <tt>{ all: true }</tt>;
+the default <tt>lookup()</tt> without <tt>all: true</tt> returns a single address.</li>
+</ul>
+</section>
+
+<section anchor="why-the-full-list-matters"><name>Why the Full List Matters</name>
+<t>DNS often publishes <strong>multiple A and AAAA records</strong> for availability and load
+distribution. Connecting to <tt>result-&gt;ai_addr</tt> and ignoring <tt>ai_next</tt> defeats
+that design. After collecting the list, the application (or a shared library)
+chooses order: IPv6-first, Happy Eyeballs, random shuffle within a family, or
+explicit retry on failure. <strong><tt>getaddrinfo()</tt> supplies candidates; it does not
+replace client-side load balancing.</strong></t>
+<t>Note that libc implementations may <strong>reorder</strong> the list per <xref target="RFC6724"></xref> before
+returning it (see <xref target="address-selection"></xref>). You still need every element --- reorder
+yourself if policy requires --- but you cannot skip resolution and hope DNS
+order survives unchanged.</t>
+</section>
+
+<section anchor="numeric-input-at-the-edge"><name>Numeric Input at the Edge</name>
+<t>When configuration or user input contains an address <strong>literal</strong> rather than a
+hostname, <strong><tt>inet_pton()</tt></strong> (or the language equivalent) converts it to binary
+for storage. When input might be either a name or a literal, <strong><tt>getaddrinfo()</tt></strong>
+accepts both; alternatively, try literal parse first, then fall back to DNS.
+Either way, convert once to binary and use binary forms internally.</t>
+</section>
+
+<section anchor="address-selection"><name>Address Selection, gai.conf, and DNS Round Robin</name>
+<t>The Linux file <tt>/etc/gai.conf</tt> and the algorithms in <xref target="RFC6724"></xref> control
+<strong>address selection order</strong> for dual-stack hosts --- which address family and
+which destination address are tried first. This is invisible in application
+source but visible in production load distribution.</t>
+<t><strong>RFC 6724 destination address selection Rule 9</strong> (&quot;Use longest matching
+prefix&quot;) compares each candidate destination with its likely source address
+and <strong>sorts addresses deterministically</strong> <xref target="RFC6724"></xref>. Resolver libraries such
+as <strong>glibc</strong> implement this sorting inside <tt>getaddrinfo()</tt>. The effect:
+<strong>DNS round-robin is not a load-balancing strategy on IPv6</strong> (and is weakened
+on IPv4 in many cases). A round-robin AAAA record can collapse to &quot;always try
+the same address first&quot; once Rule 9 runs, concentrating connections on one
+backend. The problem is subtle on IPv4 but <strong>often severe on IPv6</strong>.</t>
+<t>Rule 9 is reasonable on the global Internet but <strong>often wrong inside a data
+center</strong>, where many servers are functionally declared equidistant and
+operators expect DNS or
+anycast to spread load. Mitigations include:</t>
+
+<ul spacing="compact">
+<li>Perform <strong>client-side load balancing</strong> in the application or library.</li>
+<li>Fetch all addresses (for example, via <tt>getaddrinfo()</tt> without premature
+sorting, or via a resolver that preserves DNS order), then choose randomly
+<strong>within the same address family</strong> --- do not shuffle v4 and v6 together in
+ways that accidentally defeat IPv6 preference policy.</li>
+<li>Use service meshes, anycast, or explicit endpoint lists rather than naive
+round-robin alone.</li>
+</ul>
+<t>Changing <tt>/etc/gai.conf</tt> adjusts precedence tables but <strong>does not fully
+disable Rule 9</strong> in all implementations. Treat load balancing as a <strong>software
+concern</strong>, not something DNS alone provides.</t>
+</section>
+</section>
+
+<section anchor="internet-addressing"><name>Internet and Data Center Addressing</name>
+<t>Network teams assign prefixes; SREs consume them in orchestration templates,
+container runtimes, and firewall tickets. This section covers patterns that
+reduce outages during rollout.</t>
+
+<section anchor="prefix-allocation"><name>Prefix Allocation for Hosts and Containers</name>
+<t>A common data center pattern assigns a <strong><tt>/56</tt> to each physical host</strong> (or
+rack entity), providing <strong>256 <tt>/64</tt> subnets</strong> --- one <tt>/64</tt> for the host itself
+and up to <strong>255 <tt>/64</tt> prefixes</strong> for containers, virtual machines, or
+Kubernetes pods. Each container <bcp14>SHOULD</bcp14> receive a full <strong><tt>/64</tt></strong>, not a
+longer prefix carved out of a single host <tt>/64</tt>. Routing between <tt>/64</tt> islands
+replaces NAT for east-west traffic and avoids CGNAT-style visibility loss in
+flow logs. Assigning only a <strong><tt>/64</tt> per host</strong> is insufficient when multiple
+containers each need their own <tt>/64</tt>; request a <strong><tt>/56</tt> (or shorter)</strong> delegation
+from the network team instead.</t>
+<t>The exact mapping depends on orchestrator and CNI design; the important software
+lesson is that <strong>each tier needs an explicit prefix plan</strong> rather than assuming
+&quot;one address per host&quot; as in legacy IPv4 NAT designs.</t>
+<t>Kubernetes clusters often use eBPF-based service NAT on the node. Traditional
+Linux tools (<tt>ss</tt>, <tt>/proc/net/tcp</tt>) may show node-level sockets, not pod-level
+flows, when NAT is involved. IPv6 routing reduces NAT use but <strong>does not
+remove the need for observability hooks</strong> at the CNI layer.</t>
+</section>
+
+<section anchor="static-addressing-router-advertisements-and-ipam"><name>Static Addressing, Router Advertisements, and IPAM</name>
+<t>Enterprise data centers usually prefer <strong>static addresses</strong> from an IP Address
+Management (IPAM) system over SLAAC-derived random interface identifiers.
+Disable <strong>Router Advertisements (RA)</strong> on server-facing ports and on servers
+themselves when static addressing is required, so hosts do not acquire
+unexpected addresses alongside provisioned ones.</t>
+<t>Gateway at <strong><tt>fe80::1</tt></strong>, global addresses from IPAM, and DNS names registered
+in forward and reverse zones should be one coordinated change set.</t>
+</section>
+
+<section anchor="semantic-prefixes"><name>Semantic Prefixes for Internal Traffic</name>
+<t>On IPv4, operators quickly tell <strong>internal from Internet</strong> traffic: RFC 1918
+space such as <tt>10.0.0.0/8</tt> and <tt>192.168.0.0/16</tt> signals &quot;inside the
+organization&quot; in logs, captures, and mental models <xref target="RFC1918"></xref>. On IPv6, most
+data center addresses are <strong>global unicast</strong> --- there is no automatic &quot;private
+vs public&quot; heuristic. Debugging and ACL writing become harder unless the site
+<strong>designates a small set of well-known aggregates</strong> in IPAM and teaches SREs to
+use them.</t>
+<t>A practical pattern is to carve <strong>one prefix for each operational class</strong>, for
+example:</t>
+
+<ul spacing="compact">
+<li><strong>Everything in the data center</strong> --- one aggregated prefix (the exact length
+depends on fleet size; a <tt>/26</tt> under the site GUA is an example when the
+block is purely semantic and routing summarizes wider internally)</li>
+<li><strong>Everything employees</strong> --- corporate VPN, office wired/wireless for staff</li>
+<li><strong>Everything guest Wi-Fi</strong> --- captive portal and untrusted clients</li>
+</ul>
+<t>SREs then remember <strong>three networks</strong>, not hundreds of <tt>/64</tt>s, when filtering
+pcaps, writing runbooks, or explaining an incident. Document these prefixes in
+the same place as <xref target="prefix-allocation"></xref> and <xref target="acl-propagation"></xref> rules so logs,
+firewall objects, and monitoring use consistent names (<tt>dc-internal</tt>,
+<tt>corp-employee</tt>, <tt>guest-wifi</tt>).</t>
+</section>
+
+<section anchor="internet-egress"><name>Internet Egress and Edge Gateways</name>
+<t>On IPv4 it is often convenient to give a data center host Internet access via
+<strong>NAT44</strong> (or operator CGNAT) on a central device. That pattern <strong>SHOULD NOT
+be copied onto IPv6 hosts</strong> --- do not deploy ad hoc <strong>NAT66</strong> or per-server
+masquerading so internal servers &quot;hide&quot; behind random IPv6 ports. Internal
+hosts <bcp14>SHOULD</bcp14> reach the Internet through a <strong>gateway at the edge</strong> (border
+router, firewall, or dedicated translation cluster) with explicit policy and
+logging.</t>
+<t>That edge model still helps when an <strong>IPv6-only server</strong> must reach an
+<strong>IPv4-only Internet service</strong>: the server sends IPv6 to the edge; the gateway
+performs <strong>NAT64</strong> or protocol translation <xref target="RFC6146"></xref> (and DNS64 where
+needed) on the way out. Translation is <strong>centralized, observable, and
+rate-limited</strong> --- not duplicated on every app host.</t>
+</section>
+
+<section anchor="ipv4-only-wrappers"><name>Frontends for IPv4-Only Services</name>
+<t>Legacy applications that remain <strong>IPv4-only</strong> <bcp14>SHOULD NOT</bcp14> be exposed
+directly to dual-stack or IPv6-only clients. Surround them with a <strong>gateway
+tier</strong> --- for example <strong>nginx</strong>, <strong>HAProxy</strong>, or a service-mesh ingress ---
+that accepts <strong>IPv6 (and IPv4 if required)</strong> on the front side and speaks IPv4
+only to the backend. Clients see a normal v6-capable service name; the
+IPv4-only binary stays on an internal path until it is rewritten or replaced
+(see <xref target="provision-not-transform"></xref>).</t>
+<t>An alternative on the host is <strong>NAT64 implemented with eBPF</strong> (similar in spirit
+to Kubernetes node NAT). That can unblock a single service quickly but <strong>often
+does not scale</strong> as a fleet-wide strategy --- connection state, troubleshooting,
+and upgrade churn multiply with every host doing translation. Prefer a <strong>small
+number of shared frontends or edge translators</strong> over per-host NAT64 except in
+controlled exceptions. See also <xref target="icmpv6-pmtud"></xref> for VPN and middlebox
+interactions with translated traffic.</t>
+</section>
+
+<section anchor="acl-propagation"><name>Access Control List Propagation</name>
+<t>When IPv6 is added to a service that already runs on IPv4, <strong>firewall and ACL
+automation may lag by minutes</strong>. During that window the service can appear
+<strong>healthy on IPv4 but broken on IPv6</strong>, or reachable in one direction only.
+SRE runbooks <bcp14>SHOULD</bcp14> treat &quot;IPv6 enabled on the host&quot; and &quot;IPv6 permitted
+end-to-end&quot; as separate checklist items. Do not announce IPv6 on a load
+balancer until policy propagation completes.</t>
+<t>Software teams <bcp14>SHOULD NOT</bcp14> create entirely new ACL models per address family
+when the same role-based policy can express both; parallel rule sets double
+drift risk. Where separate rules are unavoidable, generate them from the same
+source of truth.</t>
+
+<section anchor="ipam-based-ipv4-to-ipv6-mapping-for-acls"><name>IPAM-Based IPv4-to-IPv6 Mapping for ACLs</name>
+<t>When IPAM tracks both address families, operators can <strong>derive a predictable
+IPv6 address from a hostname</strong> before an AAAA record exists in DNS. That
+mapping lets ACL and firewall systems publish <strong>IPv6 rules in advance</strong>, so
+policy is already in place when the service starts listening on IPv6 --- there
+is no window where the host is up on IPv6 but ACL automation is still catching
+up.</t>
+<t>This pattern <strong>requires ACL policy to be expressed by hostname (or role)</strong>, not
+by scattered literal addresses maintained separately per family. Given a hostname,
+a controller can resolve or derive addresses with the following <strong>pseudo-rules</strong>:</t>
+
+<ol spacing="compact">
+<li>Look up the <strong>AAAA</strong> record. If present, use that IPv6 address.</li>
+<li>If no AAAA exists, look up the <strong>A</strong> record and obtain the IPv4 address.</li>
+<li>In IPAM, find the <strong>IPv4 network</strong> that contains that address.</li>
+<li>Find the <strong>associated IPv6 network</strong> paired with that IPv4 network in IPAM.</li>
+<li><strong>Embed the IPv4 address</strong> into the IPv6 network according to the site's
+translation plan (for example, a fixed nibble layout or well-known offset).
+The result is the <strong>predicted IPv6 address</strong> for that hostname.</li>
+</ol>
+<t>The benefit is operational: <strong>ACLs for IPv6 can be built and deployed everywhere
+before DNS advertises AAAA</strong>, because the IPv6 address is computable from the
+same hostname and IPAM data already used for IPv4. When the service later
+enables IPv6 and the AAAA is published, the pre-provisioned rules should match
+without a second ACL rollout. The site translation plan in step 5 <bcp14>MUST</bcp14> be
+documented and stable; ad hoc embedding layouts defeat this approach.</t>
+<t>If ACL systems cannot accept hostnames and expand them through this logic,
+teams fall back to the lag problem described above --- IPv6 goes live while
+firewall tickets are still in flight.</t>
+</section>
+</section>
+</section>
+
+<section anchor="application-readiness"><name>Application and Software Readiness</name>
+<t>IPv6 deployment exposes software that &quot;worked on the LAN&quot; only because the LAN
+was IPv4. This section lists classes of problems seen in production data
+centers and enterprise rollouts.</t>
+
+<section anchor="enterprise-platform-inventory"><name>Enterprise Platform Inventory</name>
+<t>Many enterprise platforms still assume IPv4-only access paths. Examples
+reported in operator experience include <strong>Hadoop</strong>, certain <strong>object storage
+APIs</strong>, <strong>Kubernetes</strong> dependencies (especially third-party charts and
+sidecars), <strong>cloud firewalls</strong> (for example, Azure Firewall and third-party
+NGFW images on cloud platforms where IPv6 support lagged vendor roadmaps), and
+<strong>security analytics</strong> pipelines that ingest NetFlow or packet metadata on
+IPv4 only.</t>
+<t><strong>Action for SRE teams:</strong> maintain a <strong>living inventory</strong> of software in the
+deployment path (data plane, control plane, CI/CD, security, logging) with an
+explicit <strong>IPv6 supported / broken / untested</strong> classification. Monitoring
+pipelines <bcp14>SHOULD</bcp14> continuously <strong>discover services not yet in that inventory</strong>
+(see <xref target="observability"></xref>). Security research or monitoring that runs IPv4-only
+cannot validate IPv6 attack surface; teams <bcp14>SHOULD</bcp14> require IPv6 parity before
+accepting &quot;no IPv6 security issues&quot; claims.</t>
+<t>This document does not attempt a canonical vendor matrix --- products change
+--- but the inventory practice is mandatory for sane rollout planning.</t>
+</section>
+
+<section anchor="hard-coded-addresses-and-localhost-pitfalls"><name>Hard-Coded Addresses and Localhost Pitfalls</name>
+<t>A recurring defect is binding services to <strong><tt>127.0.0.1</tt></strong> instead of
+<strong><tt>localhost</tt></strong> or <tt>::1</tt>. On dual-stack hosts, <tt>127.0.0.1</tt> listens <strong>IPv4
+loopback only</strong>; IPv6 clients cannot connect even when the service &quot;runs
+locally.&quot; The fix is to use name-based bind targets (<tt>localhost</tt>) or explicit
+dual-stack sockets depending on platform API.</t>
+<t>Similar bugs appear with <strong><tt>0.0.0.0</tt></strong> vs <strong><tt>::</tt></strong> listen semantics, health
+probes that curl IPv4 literals, and container images that ship <tt>/etc/hosts</tt>
+without IPv6 entries.</t>
+</section>
+
+<section anchor="ip-address-storage-in-application-data"><name>IP Address Storage in Application Data</name>
+<t>Many services store client or server IP addresses in databases, logs, caches,
+and message queues using <strong>fixed-width fields</strong> (32-bit integers, <tt>CHAR(15)</tt>)
+or parsers that accept dotted decimal only. IPv6 requires <strong>structured address
+types</strong> (128-bit binary, or text with adequate length) and family-aware
+comparison.</t>
+<t>Affected areas include:</t>
+
+<ul spacing="compact">
+<li><strong>Geolocation databases</strong> (for example, MaxMind and similar) used for
+compliance, fraud, and ad targeting --- coverage and accuracy for IPv6 vary
+widely.</li>
+<li><strong>Real User Monitoring (RUM)</strong> and <strong>DNS steering</strong> products that map clients
+to &quot;nearest&quot; PoP --- if the probe or edge logic is IPv4-only, steering
+decisions silently degrade for IPv6 clients.</li>
+<li><strong>Rate limiting and abuse detection</strong> keyed on &quot;IP&quot; strings with naive
+splitting on <tt>.</tt> characters.</li>
+</ul>
+<t>Refactoring often touches every schema, serializer, and analytics job that
+touched the field --- plan migration as a <strong>program</strong>, not a one-line fix.</t>
+</section>
+
+<section anchor="databases-acls-and-security-tools"><name>Databases, ACLs, and Security Tools</name>
+<t><strong>MySQL and MariaDB</strong> host-based ACLs are historically <strong>string comparisons</strong>
+on the client address field. IPv6 literals contain colons and zone identifiers;
+copying IPv4 ACL patterns without testing produces false denials or overly
+broad grants. Test <tt>USER@'2001:db8::/32'</tt>-style entries explicitly.</t>
+<t>Security agents (EDR, IDS, WAF) may lack IPv6 decode paths even when they claim
+dual-stack support. Validate <strong>both directions</strong> --- ingress to the service and
+egress from the service --- under IPv6-only client paths. The same teams can
+extend PR checks with static analysis rules (see <xref target="static-analysis"></xref>).</t>
+</section>
+
+<section anchor="language-runtimes"><name>Language Runtimes and Libraries</name>
+<t><strong>Python</strong> exposes several <strong>deprecated socket helpers that are IPv4-only or
+return only one address</strong>, yet remain common in production code and older
+tutorials. Examples include:</t>
+
+<ul spacing="compact">
+<li><strong><tt>socket.gethostbyname()</tt></strong> and <strong><tt>socket.gethostbyname_ex()</tt></strong> --- resolve
+a name to IPv4 only; use <strong><tt>socket.getaddrinfo()</tt></strong> and iterate all results
+(see <xref target="name-resolution"></xref>).</li>
+<li><strong><tt>socket.gethostbyaddr()</tt></strong> --- reverse lookup with IPv4-centric assumptions;
+prefer <strong><tt>getnameinfo()</tt></strong> with a binary <tt>sockaddr</tt> from the connection.</li>
+<li><strong><tt>socket.inet_aton()</tt></strong> and <strong><tt>socket.inet_ntoa()</tt></strong> --- convert IPv4
+literals only; use <strong><tt>socket.inet_pton()</tt></strong> and <strong><tt>socket.inet_ntop()</tt></strong> for
+both address families.</li>
+</ul>
+<t>These APIs <strong>will not return IPv6</strong> even when the host has AAAA records and
+IPv6 connectivity. Replacing them is rarely a one-line change --- call sites,
+tests, and error handling often assume 32-bit or dotted-decimal form.</t>
+<t>Other languages have similar legacy (<tt>inet_aton</tt> assumptions, IPv4-only standard
+library gaps). Code review checklists <bcp14>SHOULD</bcp14> include:</t>
+
+<ul spacing="compact">
+<li>No unparsed string IPs in business logic</li>
+<li>Resolve names with a <strong>full-list</strong> API (see <xref target="name-resolution"></xref>); never call
+legacy one-address helpers in new code</li>
+<li>Tests that run against <strong>IPv6 literals and DNS names with AAAA records</strong></li>
+</ul>
+</section>
+
+<section anchor="static-analysis"><name>Static Analysis and Pull Request Automation</name>
+<t>Manual review does not scale across large monorepos. <strong>Security and platform
+teams SHOULD integrate IPv6 readiness checks into pull request (PR) workflows</strong>,
+piggybacking on existing gates rather than relying on a separate audit cycle.</t>
+
+<section anchor="pattern-scanners-in-ci"><name>Pattern Scanners in CI</name>
+<t>Ship <strong>Semgrep</strong>, <strong>CodeQL</strong>, or equivalent rules that flag likely IPv4-only
+patterns, for example:</t>
+
+<ul spacing="compact">
+<li>Literal <tt>127.0.0.1</tt>, <tt>0.0.0.0</tt>, or dotted-decimal regexes used as addresses</li>
+<li>Calls to deprecated Python socket helpers (see <xref target="language-runtimes"></xref>)</li>
+<li><tt>AF_INET</tt> sockets where dual-stack or <tt>AF_INET6</tt> is required</li>
+<li>Database columns or structs sized for IPv4-only (<tt>CHAR(15)</tt>, 32-bit integers)</li>
+<li>String splits on <tt>.</tt> to parse &quot;IP addresses&quot;</li>
+</ul>
+<t>Security teams often own the rule pack; application teams own remediation.
+Rules <bcp14>SHOULD</bcp14> be published internally with examples and fix guidance.</t>
+</section>
+
+<section anchor="automated-remediation-pull-requests"><name>Automated Remediation Pull Requests</name>
+<t>Beyond blocking merges, pipelines <bcp14>MAY</bcp14> open <strong>automatic PRs</strong> that propose
+fixes when a scan finds matches on default branches or on a schedule. Some
+findings are straightforward (replace <tt>gethostbyname</tt> with <tt>getaddrinfo</tt> usage);
+others need context. <strong>AI-assisted patch generation</strong> can speed up bulk
+refactors, but <bcp14>MUST</bcp14> be reviewed by a human --- expect <strong>false positives</strong>
+(for example, code that intentionally handles IPv4-only legacy clients).</t>
+<t>Treat auto-generated PRs like any other contribution: tests, ownership by code
+owners, and rollback plan.</t>
+</section>
+
+<section anchor="opt-out-annotations-for-engineers"><name>Opt-Out Annotations for Engineers</name>
+<t>Engineers <bcp14>SHOULD</bcp14> be able to <strong>suppress a finding on a specific line</strong> when
+the IPv4-only behavior is intentional and documented --- for example, a
+compatibility shim with a planned removal date. Define a <strong>codified comment</strong>
+recognized by the scanner, placed <strong>immediately before</strong> the flagged line. An
+example directive:</t>
+
+<artwork><![CDATA[# ipv6-readiness: ignore-next-line -- see TICKET-123
+]]></artwork>
+<t>The project <bcp14>MUST</bcp14> document the exact directive string, required rationale
+format, and whether ticket references are mandatory. Blanket disables of entire
+files <bcp14>SHOULD NOT</bcp14> be allowed without security team approval.</t>
+</section>
+</section>
+
+<section anchor="documentation-examples"><name>Documentation and Presentations</name>
+<t>Runbooks, architecture diagrams, wikis, training decks, and conference slides
+<strong>SHOULD use IPv6 addresses in examples by default</strong>, unless the example is
+inherently IPv4-specific. Using IPv4-only literals in internal documentation
+normalizes the wrong protocol for new engineers and hides gaps until production
+rollout. IETF documents follow the same principle: examples <bcp14>SHOULD</bcp14> use IPv6
+and reserved documentation prefixes rather than arbitrary or production
+addresses <xref target="RFC3849"></xref> <xref target="RFC5737"></xref>.</t>
+<t>When an example needs an IP address or prefix, follow <strong>IETF documentation
+address rules</strong>:</t>
+
+<ul spacing="compact">
+<li><strong>IPv6 (preferred):</strong> use the documentation prefixes reserved in <xref target="RFC3849"></xref>
+(<tt>2001:db8::/32</tt>) and <xref target="RFC9637"></xref> (<tt>3fff::/20</tt> for larger or more realistic
+layouts). Represent addresses in <strong>canonical text form</strong> per <xref target="RFC5952"></xref>
+(lowercase hex, suppress leading zeros, use <tt>::</tt> compression).</li>
+<li><strong>IPv4 (only when required):</strong> use the TEST-NET blocks in <xref target="RFC5737"></xref>
+(<tt>192.0.2.0/24</tt>, <tt>198.51.100.0/24</tt>, <tt>203.0.113.0/24</tt>) --- not production
+space, arbitrary <tt>10.0.0.0/8</tt> lab subnets, or other unreserved ranges that
+could collide with real deployments.</li>
+<li><strong>Names:</strong> use example domain names from <xref target="RFC2606"></xref> (<tt>example.com</tt>,
+<tt>example.net</tt>, <tt>example.org</tt>) rather than real operator domains.</li>
+</ul>
+<t>Review documentation the same way code is reviewed: a slide full of <tt>10.x.x.x</tt>
+or <tt>192.168.x.x</tt> examples teaches habits that conflict with IPv6-first data
+center operation. Prefer <tt>2001:db8:...</tt> and service names unless the document
+explicitly covers legacy IPv4 behavior.</t>
+</section>
+</section>
+
+<section anchor="dns-registration"><name>DNS Registration and Dynamic Addressing</name>
+<t>IPv6's default autoconfiguration (SLAAC) generates addresses from interface
+identifiers. Without operational discipline, <strong>DNS lags behind actual
+addresses</strong>, and break-glass access by name fails.</t>
+
+<section anchor="slaac-switches-and-the-dns-gap"><name>SLAAC, Switches, and the DNS Gap</name>
+<t>Wi-Fi controllers often integrate with DNS to register client names; <strong>access
+switches frequently do not</strong>. To populate DNS for wired servers using SLAAC,
+operators need <strong>MAC and address visibility</strong> from switches (for example, via
+Neighbor Discovery logging or sFlow/IPFIX) correlated with inventory to derive
+hostnames. Ideally, selected <strong>Neighbor Discovery events</strong> would be exported to
+a registration service --- a gap in many switch implementations.</t>
+</section>
+
+<section anchor="dhcpv6-and-hostname-registration"><name>DHCPv6 and Hostname Registration</name>
+<t>Enterprises that distrust client self-registration prefer <strong>DHCPv6</strong> with
+central lease logging. Clients <bcp14>SHOULD</bcp14> send <strong>DHCPv6 Option 39 (Client
+FQDN)</strong> so the server can register forward and reverse DNS <xref target="RFC4704"></xref>
+<xref target="RFC8415"></xref>. Support for Option 39 has varied by OS; operators <bcp14>SHOULD</bcp14>
+verify current behavior on every deployed OS image (including macOS, Windows,
+Linux, and container base images) rather than assuming parity.</t>
+<t>Device-side <strong>Dynamic DNS updates</strong> remain possible but are often disabled in
+enterprise policy.</t>
+</section>
+</section>
+
+<section anchor="icmpv6-pmtud"><name>ICMPv6, PMTUD, and Middleboxes</name>
+
+<section anchor="do-not-block-icmpv6"><name>Do Not Block ICMPv6</name>
+<t>Teams trained to block ICMPv4 &quot;for security&quot; sometimes apply the same policy
+to ICMPv6. <strong>ND and PMTUD depend on ICMPv6</strong> <xref target="RFC4443"></xref> <xref target="RFC8201"></xref>. Blocking
+ICMPv6 produces hung connections, mysterious TLS timeouts, and DNS failures
+that are misdiagnosed as application bugs. Filter <strong>specific message types</strong>
+judiciously; do not implement blanket deny rules.</t>
+</section>
+
+<section anchor="path-mtu-discovery"><name>Path MTU Discovery</name>
+<t>When LinkedIn first enabled IPv6 on production servers, <strong>Path MTU Discovery
+issues</strong> required lowering TCP MSS via Apache configuration until paths were
+validated --- a reminder that IPv6 MTU assumptions differ from internal IPv4
+MTU 1500 end-to-end paths. Mobile operators (for example, T-Mobile USA and
+Reliance Jio in India) run <strong>IPv6-only</strong> access networks successfully at scale;
+problems on enterprise fixed networks often come from <strong>middleboxes and
+policy</strong>, not from IPv6 itself.</t>
+<t>Hard PMTUD failures also interact with <strong>DNS over large responses</strong> when
+fragmentation is mishandled. If fragmented UDP is dropped, DNS appears
+&quot;flaky&quot; only for some records.</t>
+</section>
+
+<section anchor="vpns-and-nat64"><name>VPNs and NAT64</name>
+<t>Some VPN products treat translated packets as attacks. <strong>NAT64</strong> <xref target="RFC6146"></xref>
+changes headers; a VPN that validates packet integrity on IPv4 paths may <strong>drop
+NAT64 flows</strong>. Prefer <strong>edge gateways</strong> for translation as described in
+<xref target="internet-egress"></xref> and <xref target="ipv4-only-wrappers"></xref> rather than sprouting translators on
+every host. Long-term, <strong>VPN endpoints should be native IPv6</strong> on the data
+center side. Until then, document which access paths require IPv4 literal
+connectivity vs IPv6.</t>
+</section>
+</section>
+
+<section anchor="client-load-balancing"><name>Client-Side Load Balancing</name>
+<t>As described in <xref target="address-selection"></xref>, <strong>RFC 6724 Rule 9</strong> reorders addresses
+returned from DNS. In data centers that rely on multiple AAAA records for
+spread, connection counts can skew badly --- one backend receives most IPv6
+connections while others appear idle. This section assumes the application has
+already obtained the <strong>full address list</strong> using the patterns in
+<xref target="name-resolution"></xref>.</t>
+<t><strong>Recommended pattern:</strong></t>
+
+<ol spacing="compact">
+<li>Resolve the service name to all addresses.</li>
+<li>Partition addresses by address family.</li>
+<li>Apply family preference policy (operator choice: IPv6-first, happy eyeballs,
+or parallel).</li>
+<li><strong>Randomize or round-robin within each family</strong> rather than trusting DNS
+order after <tt>getaddrinfo()</tt>.</li>
+<li>Optionally implement retries across the full set on failure.</li>
+</ol>
+<t>Implement load balancing in <strong>shared client libraries</strong> so every service does
+not rediscover the same RFC 6724 interaction.</t>
+</section>
+
+<section anchor="observability"><name>Observability and Metrics</name>
+<t>IPv6 migration needs <strong>inventory plus measurement</strong>: a service list with IPv6
+readiness labels, automated discovery of what is missing from that list, and
+time-series metrics that show progress toward dual-stack or IPv6-only targets.</t>
+
+<section anchor="service-inventory-and-discovery"><name>Service Inventory and Discovery</name>
+<t>The inventory in <xref target="application-readiness"></xref> <bcp14>MUST</bcp14> list every application and
+platform component with a readiness state (for example: IPv6-only ready,
+dual-stack, IPv4-only, unknown). Inventory alone is not enough --- operators
+<bcp14>SHOULD</bcp14> run periodic <strong>discovery</strong> that compares running processes, container
+images, load balancer pools, and DNS names against the catalog and <strong>flags
+unregistered services</strong>. Shadow deployments and shared hosts routinely run
+software that no team has classified.</t>
+</section>
+
+<section anchor="progress-metrics"><name>Progress Metrics</name>
+<t>Dashboards <bcp14>SHOULD</bcp14> expose fleet-level indicators, for example:</t>
+
+<ul spacing="compact">
+<li>Percentage of services <strong>IPv6-only</strong>, <strong>dual-stack</strong>, or <strong>IPv4-only</strong> (by
+count and by criticality tier)</li>
+<li>Trend of <strong>AAAA vs A-only</strong> DNS names for production hostnames</li>
+<li>Ratio of <strong>ingress bytes or connections</strong> over IPv6 vs IPv4 at load balancers</li>
+<li>Count of hosts or pods <strong>without any IPv6 address</strong> in IPAM or configuration
+management</li>
+</ul>
+<t>Set explicit targets (for example, &quot;90% of tier-1 APIs dual-stack by Q4&quot;) and
+review the same metrics in change advisory boards.</t>
+</section>
+
+<section anchor="host-level-listen-socket-audit"><name>Host-Level Listen-Socket Audit</name>
+<t>On each host, collect which services <strong>listen on IPv4-only</strong>, <strong>IPv6-only</strong>, or
+<strong>dual-stack</strong>. On Linux, <tt>ss -tulnp</tt> (or <tt>/proc/net/tcp</tt> and <tt>tcp6</tt>) is the
+usual source, but classification is <strong>non-trivial</strong>:</t>
+
+<ul spacing="compact">
+<li>Separate <tt>tcp</tt>/<tt>udp</tt> vs <tt>tcp6</tt>/<tt>udp6</tt> lines are often <strong>IPv4-only</strong> vs
+<strong>IPv6-only</strong> listeners.</li>
+<li>A single IPv6 socket with <tt>IPV6_V6ONLY=0</tt> may accept IPv4-mapped traffic
+without a matching <tt>tcp</tt> line --- treat as <strong>dual-stack</strong> only after checking
+socket options or process documentation.</li>
+<li>Match rows by <strong>PID, port, and inode</strong> when correlating multiple lines for one
+daemon; export a normalized label (<tt>v4-only</tt>, <tt>v6-only</tt>, <tt>dual-stack</tt>,
+<tt>unknown</tt>) for metrics.</li>
+</ul>
+<t>Run this audit on a schedule and on every deploy; alert when a tier-1 service
+regresses to IPv4-only.</t>
+</section>
+
+<section anchor="host-agents"><name>Host Agents Before Application Provisioning</name>
+<t>Before any application software is installed, <strong>inventory every agent and
+daemon already running on the host</strong> --- configuration management, monitoring,
+log shippers, vulnerability scanners, <strong>EDR</strong>, host firewalls, and other
+platform packages the fleet image includes by default. These components often
+<strong>bind IPv4-only</strong>, ship IPv4-only policy from a central console, or break when
+the host loses IPv4 even if the workload you plan to deploy is IPv6-ready.</t>
+<t>Run this baseline check on <strong>golden images and freshly provisioned servers</strong>, not
+only on production services. A host cannot safely move to dual-stack or
+IPv6-only if an unknown agent still requires IPv4 loopback, RFC 1918 reachability,
+or IPv4-only reporting to its controller. Export agent name, version, listen
+sockets (see above), and <strong>IPv6 readiness</strong> into the same catalog as
+<xref target="application-readiness"></xref>. Re-run when the image or security baseline changes.</t>
+</section>
+
+<section anchor="traffic-by-protocol-and-address-family"><name>Traffic by Protocol and Address Family</name>
+<t>Switches and routers expose <strong>IPv4 and IPv6 packet counters</strong> but often <strong>do
+not break out TCP and UDP by IP version</strong> (TCPv4 vs TCPv6, UDPv4 vs UDPv6).
+Where the platform allows, collect <strong><tt>tcp4</tt>/<tt>udp4</tt> vs <tt>tcp6</tt>/<tt>udp6</tt></strong> (or
+equivalent flow records) on hosts, hypervisors, and top-of-rack devices.
+Application SREs need <strong>L4 metrics split by address family</strong> to confirm traffic
+is migrating and to find stragglers still on IPv4-only or translated paths.</t>
+<t>Log pipelines <bcp14>SHOULD</bcp14> record address family explicitly (<tt>AF_INET</tt> vs
+<tt>AF_INET6</tt>) rather than inferring from string shape.</t>
+</section>
+
+<section anchor="http-signaling-and-planned-ipv4-drills"><name>HTTP Signaling and Planned IPv4 Drills</name>
+<t>For HTTP services, implementing <eref target="https://datatracker.ietf.org/doc/draft-martin-retry-over-ipv6/">HTTP Signaling of Planned IPv4
+Unavailability</eref>
+(<tt>566</tt> responses, <tt>Retry-Over-IPv6</tt>, and related headers) gives <strong>measurable
+signals</strong> during planned IPv4 outages: count <tt>566</tt> responses, soft vs hard
+failures after IPv6 retry, and clients still hitting IPv4. That data belongs on
+the same dashboards as listen-socket and byte-ratio metrics when rolling out
+dual-stack or IPv6-only frontends.</t>
+</section>
+
+<section anchor="live-traffic-and-service-call-trees"><name>Live Traffic and Service Call Trees</name>
+<t>Inventory and socket audits show <strong>what could</strong> run on IPv6; live traffic shows
+<strong>what does</strong>. Instrument outbound and inbound connections (service mesh,
+eBPF, proxy access logs, or APM) to tag each hop with <strong>address family</strong>.
+Roll those tags into a <strong>call tree or dependency graph per service</strong> so teams
+see, for example, &quot;API gateway is dual-stack but 80% of backend calls still use
+IPv4&quot; or &quot;this batch job is IPv4-only despite an IPv6-ready binary.&quot;</t>
+<t>Use call-tree family breakdown to prioritize refactors: fix the highest-volume
+IPv4-only edges first. Reconcile call-tree findings with the inventory --- a
+service marked &quot;IPv6 ready&quot; with no IPv6 traffic is not done.</t>
+</section>
+</section>
+
+<section anchor="oob-management"><name>Out-of-Band Management and Network Boot</name>
+<t>Software readiness is insufficient if servers cannot be <strong>installed, booted, or
+power-cycled</strong> over IPv6. This area <strong>SHOULD be tackled very early</strong> in an IPv6
+program --- before application tiers --- because <strong>hardware refresh cycles can
+take up to five years</strong>. A server bought today with an IPv4-only baseboard
+management controller (BMC) or provisioning stack may still block IPv6-only
+operation long after application code is ready.</t>
+
+<section anchor="often-forgotten-infrastructure-devices"><name>Often-Forgotten Infrastructure Devices</name>
+<t>Out-of-band work is not limited to compute <strong>IPMI</strong>, <strong>Redfish</strong>, and <strong>PXE</strong>.
+Teams routinely overlook <strong>facility and operations gear</strong> that shares the same
+management VLANs and must be reachable during incidents:</t>
+
+<ul spacing="compact">
+<li><strong>UPS</strong> and power distribution monitoring</li>
+<li><strong>Climate control</strong> (CRAC, chillers, environmental sensors)</li>
+<li><strong>NTP</strong> appliances or stratum servers on dedicated hardware</li>
+<li><strong>Console servers</strong> and serial concentrators</li>
+<li><strong>KVM switches</strong>, rack PDUs, and other <strong>data center infrastructure
+management</strong> devices</li>
+</ul>
+<t>These systems often ship with <strong>fixed IPv4-only interfaces</strong>, embedded web UIs
+bound to <tt>192.168.x.x</tt>, and long firmware cadences. Include them in the same
+IPv6 readiness inventory as production servers (see <xref target="application-readiness"></xref> and
+<xref target="observability"></xref>); they become blockers during IPv4 decommissioning even when
+every application pod is dual-stack.</t>
+</section>
+
+<section anchor="firmware-and-pxe-uefi-boot"><name>Firmware and PXE/UEFI Boot</name>
+<t>Many <strong>BIOS</strong> implementations still lack usable IPv6. <strong>UEFI network boot</strong>
+over IPv6 exists but <strong>varies by server vendor</strong> in ways that affect
+automated provisioning. Network appliance <strong>EFI</strong> implementations are similarly
+inconsistent. An IPv6-only provisioning VLAN requires explicit qualification of
+every hardware generation in the fleet.</t>
+</section>
+
+<section anchor="ipmi-and-redfish"><name>IPMI and Redfish</name>
+<t><strong>IPMI</strong> and <strong>Redfish</strong> IPv6 support differs by vendor and firmware generation:
+some platforms support SLAAC, others DHCPv6, others require initial IPv4
+configuration before enabling IPv6. Linux <tt>ipmitool</tt> subcommands and output
+formats vary with firmware. Enterprises often <strong>defer firmware upgrades</strong> because
+failed BMC updates require physical data center visits --- plan IPv6 on management
+networks with spare in-rack capacity and conservative change windows.</t>
+</section>
+</section>
+
+<section anchor="transition"><name>Transition Strategies</name>
+
+<section anchor="provision-not-transform"><name>Easier to Provision Than to Transform</name>
+<t><strong>It is easier to provision IPv6 correctly than to transform a running service.</strong>
+Enabling dual-stack or IPv6-only on a server, container, or service that was
+deployed IPv4-only means changing addresses, ACLs, DNS, health checks, and
+often application configuration --- then <strong>restarting in place</strong> and hoping
+nothing was missed. Provisioning time already runs those checks, supports
+canary or phased ramp-up, and catches failures before the service takes
+production traffic.</t>
+<t>Teams <bcp14>SHOULD</bcp14> treat every <strong>new service</strong>, <strong>new software version</strong>, and
+<strong>rewrite of an existing application</strong> as an opportunity to ship <strong>IPv6-only
+from the start</strong> (or dual-stack with IPv6 validated in the same pipeline), rather
+than cloning an IPv4-only template and scheduling conversion later. Brownfield
+conversion remains necessary for legacy estates, but the default for greenfield
+work <bcp14>SHOULD NOT</bcp14> be &quot;IPv4 now, IPv6 someday.&quot;</t>
+</section>
+
+<section anchor="ipv6-only-jump-hosts"><name>IPv6-Only Jump Hosts</name>
+<t>A practical staged transition puts <strong>administrative jump hosts on IPv6-only</strong>
+access while leaving application tiers dual-stack temporarily. Engineers run
+configuration management, monitoring CLI tools, and break-glass SSH from those
+hosts, forcing administrative tooling onto IPv6. Maintain at least one
+<strong>dual-stack backup jump host</strong> during migration and <strong>audit who connects and
+which commands run</strong> until parity is proven.</t>
+<t>Temporarily <strong>reducing IPv4 SSH session timeouts</strong> on jump hosts can accelerate
+detection of accidental IPv4 dependency without blocking emergency access.</t>
+</section>
+</section>
+
+<section anchor="security-considerations"><name>Security Considerations</name>
+<t>IPv6 restores global routability; <strong>absence of NAT is not absence of need for
+firewall policy</strong>. ULAs and link-local addresses still require filtering at
+boundaries. ICMPv6 filtering must preserve ND and PMTUD. Application-level
+ACLs and security products must parse IPv6 literals correctly (see
+<xref target="application-readiness"></xref>).</t>
+<t><strong>Security appliances and host security software are notoriously weak on IPv6</strong>
+--- incomplete decode, IPv4-only dashboards, agents that drop or mislabel v6
+traffic, and policies that silently fail open or closed. Engage the <strong>security
+organization very early</strong> in the IPv6 program, in parallel with out-of-band and
+network design (see <xref target="oob-management"></xref>). In many enterprises, application SREs
+<strong>do not have full visibility</strong> into which tools the security team deploys;
+there is often deliberate <strong>operational secrecy</strong> around EDR, NDR, DLP, and
+forensics platforms. Assume unknown agents exist on every host until proven
+otherwise (see <xref target="host-agents"></xref>); establish a shared readiness process with
+security leadership rather than discovering blockers during the first IPv6-only
+pilot.</t>
+<t>Security monitoring systems <bcp14>MUST</bcp14> receive IPv6 traffic mirrors, tap coverage,
+and metadata <strong>on parity with IPv4</strong> before declaring IPv6 production-ready.
+Validate that incident response playbooks (pcap collection, IP blocking,
+geo blocking, threat intel feeds) work with <strong>128-bit addresses</strong> and canonical
+text forms <xref target="RFC5952"></xref>. PR static analysis for IPv4-only patterns
+(see <xref target="static-analysis"></xref>) complements but does not replace security-tool
+qualification.</t>
+<t>Operator inventory practices in <xref target="application-readiness"></xref> also reduce supply-chain
+risk from undeclared IPv4-only dependencies in the control plane.</t>
+</section>
+
+<section anchor="iana-considerations"><name>IANA Considerations</name>
+<t>This document has no IANA actions.</t>
+</section>
+
+</middle>
+
+<back>
+<references><name>Normative References</name>
+<xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.1918.xml"/>
+<xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.2119.xml"/>
+<xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.3493.xml"/>
+<xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.3849.xml"/>
+<xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.4193.xml"/>
+<xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.4291.xml"/>
+<xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.4443.xml"/>
+<xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.4704.xml"/>
+<xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.4861.xml"/>
+<xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.5737.xml"/>
+<xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.5952.xml"/>
+<xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.6146.xml"/>
+<xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.6724.xml"/>
+<xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.6890.xml"/>
+<xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8174.xml"/>
+<xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8200.xml"/>
+<xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8201.xml"/>
+<xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8415.xml"/>
+</references>
+<references><name>Informative References</name>
+<reference anchor="ARCEP-IPV6-GUIDE" target="https://www.arcep.fr/fileadmin/cru-1648459125/reprise/observatoire/ipv6/guide-entreprises-how-to-deploy-IPv6-march-2022.pdf">
+  <front>
+    <title>How to Deploy IPv6 in Your Enterprise (Guide for Enterprises)</title>
+    <author>
+      <organization>ARCEP</organization>
+    </author>
+    <date year="2022" month="March"></date>
+  </front>
+</reference>
+<reference anchor="ARIN-APPS-V6" target="https://www.arin.net/resources/guide/ipv6/preparing_apps_for_v6.pdf">
+  <front>
+    <title>Preparing Applications for IPv6: A Software Developers Guide to Writing and Migrating Networked Applications for Use on IPv6 Networks</title>
+    <author>
+      <organization>ARIN</organization>
+    </author>
+  </front>
+</reference>
+<xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.2606.xml"/>
+<xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8305.xml"/>
+<xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.9637.xml"/>
+</references>
+
+</back>
+
+</rfc>

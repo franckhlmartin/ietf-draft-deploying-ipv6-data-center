@@ -1,0 +1,2906 @@
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>Deploying IPv6 in Data Centers</title>
+<meta content="Franck Martin" name="author">
+<meta content="
+       Data center operators are moving toward IPv6-only operation to simplify
+addressing, restore end-to-end connectivity, and meet operator and
+government timelines. Much published IPv6 guidance targets network engineers;
+this document instead addresses  Software Release Engineers (SREs)  and
+ Software Engineers (SWEs)  who deploy, operate, and debug services in
+data centers. It explains IPv6 fundamentals that affect application code,
+observability, DNS, load balancing, and out-of-band management; documents
+common software and infrastructure gaps; and offers practical deployment
+patterns aligned with the IPv6 Operations (v6ops) working group charter. 
+    " name="description">
+<meta content="xml2rfc 3.34.0" name="generator">
+<meta content="IPv6" name="keyword">
+<meta content="data center" name="keyword">
+<meta content="SRE" name="keyword">
+<meta content="software" name="keyword">
+<meta content="operations" name="keyword">
+<meta content="deployment" name="keyword">
+<meta content="draft-martin-deploying-ipv6-data-center-00" name="ietf.draft">
+<!-- Generator version information:
+  xml2rfc 3.34.0
+    Python 3.14.5
+    ConfigArgParse 1.7.5
+    google-i18n-address 3.1.1
+    intervaltree 3.2.1
+    Jinja2 3.1.6
+    lxml 6.1.1
+    natsort 8.4.0
+    platformdirs 4.10.0
+    pycountry 26.2.16
+    PyYAML 6.0.3
+    requests 2.34.2
+    wcwidth 0.7.0
+-->
+<link href="draft-martin-deploying-ipv6-data-center-00.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">/*
+
+  NOTE: Changes at the bottom of this file overrides some earlier settings.
+
+  Once the style has stabilized and has been adopted as an official RFC style,
+  this can be consolidated so that style settings occur only in one place, but
+  for now the contents of this file consists first of the initial CSS work as
+  provided to the RFC Formatter (xml2rfc) work, followed by itemized and
+  commented changes found necessary during the development of the v3
+  formatters.
+
+*/
+
+/* fonts */
+@import url('https://static.ietf.org/fonts/noto-sans/import.css'); /* Sans-serif */
+@import url('https://static.ietf.org/fonts/noto-serif/import.css'); /* Serif (print) */
+@import url('https://static.ietf.org/fonts/roboto-mono/import.css'); /* Monospace */
+
+:root {
+  --font-sans: 'Noto Sans', Arial, Helvetica, sans-serif;
+  --font-serif: 'Noto Serif', 'Times', 'Times New Roman', serif;
+  --font-mono: 'Roboto Mono', Courier, 'Courier New', monospace;
+}
+
+@viewport {
+  zoom: 1.0;
+}
+@-ms-viewport {
+  width: extend-to-zoom;
+  zoom: 1.0;
+}
+/* general and mobile first */
+html {
+}
+body {
+  max-width: 90%;
+  margin: 1.5em auto;
+  color: #222;
+  background-color: #fff;
+  font-size: 14px;
+  font-family: var(--font-sans);
+  line-height: 1.6;
+  scroll-behavior: smooth;
+  overflow-wrap: break-word;
+}
+.ears {
+  display: none;
+}
+
+/* headings */
+#title, h1, h2, h3, h4, h5, h6 {
+  margin: 1em 0 0.5em;
+  font-weight: bold;
+  line-height: 1.3;
+}
+#title {
+  clear: both;
+  border-bottom: 1px solid #ddd;
+  margin: 0 0 0.5em 0;
+  padding: 1em 0 0.5em;
+}
+.author {
+  padding-bottom: 4px;
+}
+h1 {
+  font-size: 26px;
+  margin: 1em 0;
+}
+h2 {
+  font-size: 22px;
+  margin-top: -20px;  /* provide offset for in-page anchors */
+  padding-top: 33px;
+}
+h3 {
+  font-size: 18px;
+  margin-top: -36px;  /* provide offset for in-page anchors */
+  padding-top: 42px;
+}
+h4 {
+  font-size: 16px;
+  margin-top: -36px;  /* provide offset for in-page anchors */
+  padding-top: 42px;
+}
+h5, h6 {
+  font-size: 14px;
+}
+#n-copyright-notice {
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 1em;
+  margin-bottom: 1em;
+}
+/* general structure */
+p {
+  padding: 0;
+  margin: 0 0 1em 0;
+  text-align: left;
+}
+div, span {
+  position: relative;
+}
+div {
+  margin: 0;
+}
+.alignRight.art-text {
+  background-color: #f9f9f9;
+  border: 1px solid #eee;
+  border-radius: 3px;
+  padding: 1em 1em 0;
+  margin-bottom: 1.5em;
+}
+.alignRight.art-text pre {
+  padding: 0;
+}
+.alignRight {
+  margin: 1em 0;
+}
+.alignRight > *:first-child {
+  border: none;
+  margin: 0;
+  float: right;
+  clear: both;
+}
+.alignRight > *:nth-child(2) {
+  clear: both;
+  display: block;
+  border: none;
+}
+svg {
+  display: block;
+}
+@media print {
+  svg {
+    max-height: 850px;
+    max-width: 660px;
+  }
+}
+svg[font-family~="serif" i], svg [font-family~="serif" i] {
+  font-family: var(--font-serif);
+}
+svg[font-family~="sans-serif" i], svg [font-family~="sans-serif" i] {
+  font-family: var(--font-sans);
+}
+svg[font-family~="monospace" i], svg [font-family~="monospace" i] {
+  font-family: var(--font-mono);
+}
+.alignCenter.art-text {
+  background-color: #f9f9f9;
+  border: 1px solid #eee;
+  border-radius: 3px;
+  padding: 1em 1em 0;
+  margin-bottom: 1.5em;
+}
+.alignCenter.art-text pre {
+  padding: 0;
+}
+.alignCenter {
+  margin: 1em 0;
+}
+.alignCenter > *:first-child {
+  display: table;
+  border: none;
+  margin: 0 auto;
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 1em 2em;
+}
+ol ol, ul ul, ol ul, ul ol {
+  margin-left: 1em;
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+.ulCompact li {
+  margin: 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+}
+ul.empty li, .ulEmpty li {
+  margin-top: 0.5em;
+}
+ul.ulBare, li.ulBare {
+  margin-left: 0em !important;
+}
+ul.compact, .ulCompact,
+ol.compact, .olCompact {
+  line-height: 100%;
+  margin: 0 0 0 2em;
+}
+
+/* definition lists */
+dl {
+}
+dl > dt {
+  float: left;
+  margin-right: 1em;
+}
+/* 
+dl.nohang > dt {
+  float: none;
+}
+*/
+dl > dd {
+  margin-bottom: .8em;
+  min-height: 1.3em;
+}
+dl.compact > dd, .dlCompact > dd {
+  margin-bottom: 0em;
+}
+dl > dd > dl {
+  margin-top: 0.5em;
+  margin-bottom: 0em;
+}
+
+/* links */
+a {
+  text-decoration: none;
+}
+a[href] {
+  color: #22e; /* Arlen: WCAG 2019 */
+}
+a[href]:hover {
+  background-color: #f2f2f2;
+}
+figcaption a[href],
+a[href].selfRef {
+  color: #222;
+}
+/* XXX probably not this:
+a.selfRef:hover {
+  background-color: transparent;
+  cursor: default;
+} */
+
+/* Figures */
+tt, code, pre {
+  background-color: #f9f9f9;
+  font-family: var(--font-mono);
+}
+pre {
+  border: 1px solid #eee;
+  margin: 0;
+  padding: 1em;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0;
+}
+figure blockquote {
+  margin: 0.8em 0.4em 0.4em;
+}
+figcaption {
+  font-style: italic;
+  margin: 0 0 1em 0;
+}
+@media screen {
+  pre {
+    overflow-x: auto;
+    max-width: 100%;
+    max-width: calc(100% - 22px);
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 1.2em 2em;
+}
+blockquote {
+  background-color: #f9f9f9;
+  color: #111; /* Arlen: WCAG 2019 */
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  margin: 1em 0;
+}
+blockquote > *:last-child {
+  margin-bottom: 0;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+.xref {
+  overflow-wrap: normal;
+}
+
+/* tables */
+table {
+  width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  border: 1px solid #eee;
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 0.5em 0.75em;
+}
+th {
+  text-align: left;
+  background-color: #e9e9e9;
+}
+tr:nth-child(2n+1) > td {
+  background-color: #f5f5f5;
+}
+table caption {
+  font-style: italic;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+}
+table p {
+  /* XXX to avoid bottom margin on table row signifiers. If paragraphs should
+     be allowed within tables more generally, it would be far better to select on a class. */
+  margin: 0;
+}
+
+/* pilcrow */
+a.pilcrow {
+  color: #666; /* Arlen: AHDJ 2019 */
+  text-decoration: none;
+  visibility: hidden;
+  user-select: none;
+  -ms-user-select: none;
+  -o-user-select:none;
+  -moz-user-select: none;
+  -khtml-user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+@media screen {
+  aside:hover > a.pilcrow,
+  p:hover > a.pilcrow,
+  blockquote:hover > a.pilcrow,
+  div:hover > a.pilcrow,
+  li:hover > a.pilcrow,
+  pre:hover > a.pilcrow {
+    visibility: visible;
+  }
+  a.pilcrow:hover {
+    background-color: transparent;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid #eee;
+}
+.bcp14 {
+  font-variant: small-caps;
+}
+
+.role {
+  font-variant: all-small-caps;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: 0.9em;
+}
+#identifiers dt {
+  width: 3em;
+  clear: left;
+}
+#identifiers dd {
+  float: left;
+  margin-bottom: 0;
+}
+/* Fix PDF info block run off issue */
+@media print {
+  #identifiers dd {
+    max-width: 100%;
+  }
+}
+#identifiers .authors .author {
+  display: inline-block;
+  margin-right: 1.5em;
+}
+#identifiers .authors .org {
+  font-style: italic;
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #666; /* Arlen: WCAG 2019 */
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+}
+.docInfo .prepared {
+  float: left;
+}
+.docInfo .prepared {
+  float: right;
+}
+
+/* table of contents */
+#toc  {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+}
+nav.toc ul {
+  margin: 0 0.5em 0 0;
+  padding: 0;
+  list-style: none;
+}
+nav.toc li {
+  line-height: 1.3em;
+  margin: 0.75em 0;
+  padding-left: 1.2em;
+  text-indent: -1.2em;
+}
+/* references */
+.references dt {
+  text-align: right;
+  font-weight: bold;
+  min-width: 7em;
+}
+.references dd {
+  margin-left: 8em;
+  overflow: auto;
+}
+
+.refInstance {
+  margin-bottom: 1.25em;
+}
+
+.refSubseries {
+  margin-bottom: 1.25em;
+}
+
+.references .ascii {
+  margin-bottom: 0.25em;
+}
+
+/* index */
+.index ul {
+  margin: 0 0 0 1em;
+  padding: 0;
+  list-style: none;
+}
+.index ul ul {
+  margin: 0;
+}
+.index li {
+  margin: 0;
+  text-indent: -2em;
+  padding-left: 2em;
+  padding-bottom: 5px;
+}
+.indexIndex {
+  margin: 0.5em 0 1em;
+}
+.index a {
+  font-weight: 700;
+}
+/* make the index two-column on all but the smallest screens */
+@media (min-width: 600px) {
+  .index ul {
+    -moz-column-count: 2;
+    -moz-column-gap: 20px;
+  }
+  .index ul ul {
+    -moz-column-count: 1;
+    -moz-column-gap: 0;
+  }
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  margin: 1em 0;
+}
+
+address.vcard .nameRole {
+  font-weight: 700;
+  margin-left: 0;
+}
+address.vcard .label {
+  font-family: var(--font-sans);
+  margin: 0.5em 0;
+}
+address.vcard .type {
+  display: none;
+}
+.alternative-contact {
+  margin: 1.5em 0 1em;
+}
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+
+/* temporary notes */
+.rfcEditorRemove::before {
+  position: absolute;
+  top: 0.2em;
+  right: 0.2em;
+  padding: 0.2em;
+  content: "The RFC Editor will remove this note";
+  color: #9e2a00; /* Arlen: WCAG 2019 */
+  background-color: #ffd; /* Arlen: WCAG 2019 */
+}
+.rfcEditorRemove {
+  position: relative;
+  padding-top: 1.8em;
+  background-color: #ffd; /* Arlen: WCAG 2019 */
+  border-radius: 3px;
+}
+.cref {
+  background-color: #ffd; /* Arlen: WCAG 2019 */
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+/* alternative layout for smaller screens */
+@media screen and (max-width: 1023px) {
+  body {
+    padding-top: 2em;
+  }
+  #title {
+    padding: 1em 0;
+  }
+  h1 {
+    font-size: 24px;
+  }
+  h2 {
+    font-size: 20px;
+    margin-top: -18px;  /* provide offset for in-page anchors */
+    padding-top: 38px;
+  }
+  #identifiers dd {
+    max-width: 60%;
+  }
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 0;
+    margin: 0;
+    background-color: inherit;
+    border-bottom: 1px solid #ccc;
+  }
+  #toc h2 {
+    margin: -1px 0 0 0;
+    padding: 4px 0 4px 6px;
+    padding-right: 1em;
+    min-width: 190px;
+    font-size: 1.1em;
+    text-align: right;
+    background-color: #444;
+    color: white;
+    cursor: pointer;
+  }
+  #toc h2::before { /* css hamburger */
+    float: right;
+    position: relative;
+    width: 1em;
+    height: 1px;
+    left: -164px;
+    margin: 6px 0 0 0;
+    background: white none repeat scroll 0 0;
+    box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+    content: "";
+  }
+  #toc nav {
+    display: none;
+    padding: 0.5em 1em 1em;
+    overflow: auto;
+    height: calc(100vh - 48px);
+    border-left: 1px solid #ddd;
+  }
+}
+
+/* alternative layout for wide screens */
+@media screen and (min-width: 1024px) {
+  body {
+    max-width: 724px;
+    margin: 42px auto;
+    padding-left: 1.5em;
+    padding-right: 29em;
+  }
+  #toc {
+    position: fixed;
+    top: 42px;
+    right: 42px;
+    width: 25%;
+    margin: 0;
+    padding: 0 1em;
+    z-index: 1;
+  }
+  #toc h2 {
+    border-top: none;
+    border-bottom: 1px solid #ddd;
+    font-size: 1em;
+    font-weight: normal;
+    margin: 0;
+    padding: 0.25em 1em 1em 0;
+  }
+  #toc nav {
+    display: block;
+    height: calc(90vh - 84px);
+    bottom: 0;
+    padding: 0.5em 0 0;
+    overflow: auto;
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc, #n-introduction {
+    page-break-before: always;
+  }
+  #toc {
+    border-top: none;
+    padding-top: 0;
+  }
+  figure, pre {
+    page-break-inside: avoid;
+  }
+  figure {
+    overflow: scroll;
+  }
+  .breakable pre {
+    break-inside: auto;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  h2+*, h3+*, h4+*, h5+*, h6+* {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+/* This is commented out here, as the string-set: doesn't
+   pass W3C validation currently */
+/*
+.ears thead .left {
+  string-set: ears-top-left content();
+}
+
+.ears thead .center {
+  string-set: ears-top-center content();
+}
+
+.ears thead .right {
+  string-set: ears-top-right content();
+}
+
+.ears tfoot .left {
+  string-set: ears-bottom-left content();
+}
+
+.ears tfoot .center {
+  string-set: ears-bottom-center content();
+}
+
+.ears tfoot .right {
+  string-set: ears-bottom-right content();
+}
+*/
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+  /* The following is commented out here, but set appropriately by in code, as
+     the content depends on the document */
+  /*
+  @top-left {
+    content: 'Internet-Draft';
+    vertical-align: bottom;
+    border-bottom: solid 1px #ccc;
+  }
+  @top-left {
+    content: string(ears-top-left);
+    vertical-align: bottom;
+    border-bottom: solid 1px #ccc;
+  }
+  @top-center {
+    content: string(ears-top-center);
+    vertical-align: bottom;
+    border-bottom: solid 1px #ccc;
+  }
+  @top-right {
+    content: string(ears-top-right);
+    vertical-align: bottom;
+    border-bottom: solid 1px #ccc;
+  }
+  @bottom-left {
+    content: string(ears-bottom-left);
+    vertical-align: top;
+    border-top: solid 1px #ccc;
+  }
+  @bottom-center {
+    content: string(ears-bottom-center);
+    vertical-align: top;
+    border-top: solid 1px #ccc;
+  }
+  @bottom-right {
+      content: '[Page ' counter(page) ']';
+      vertical-align: top;
+      border-top: solid 1px #ccc;
+  }
+  */
+
+}
+
+/* Changes introduced to fix issues found during implementation */
+/* Make sure links are clickable even if overlapped by following H* */
+a {
+  z-index: 2;
+}
+/* Separate body from document info even without intervening H1 */
+section {
+  clear: both;
+}
+
+
+/* Top align author divs, to avoid names without organization dropping level with org names */
+.author {
+  vertical-align: top;
+}
+
+/* Leave room in document info to show Internet-Draft on one line */
+#identifiers dt {
+  width: 8em;
+}
+
+/* Don't waste quite as much whitespace between label and value in doc info */
+#identifiers dd {
+  margin-left: 1em;
+}
+
+/* Give floating toc a background color (needed when it's a div inside section */
+#toc {
+  background-color: white;
+}
+
+/* Make the collapsed ToC header render white on gray also when it's a link */
+@media screen and (max-width: 1023px) {
+  #toc h2 a,
+  #toc h2 a:link,
+  #toc h2 a:focus,
+  #toc h2 a:hover,
+  #toc a.toplink,
+  #toc a.toplink:hover {
+    color: white;
+    background-color: #444;
+    text-decoration: none;
+  }
+}
+
+/* Give the bottom of the ToC some whitespace */
+@media screen and (min-width: 1024px) {
+  #toc {
+    padding: 0 0 1em 1em;
+  }
+}
+
+/* Style section numbers with more space between number and title */
+.section-number {
+  padding-right: 0.5em;
+}
+
+/* prevent monospace from becoming overly large */
+tt, code, pre {
+  font-size: 95%;
+}
+
+/* Fix the height/width aspect for ascii art*/
+.sourcecode pre,
+.art-text pre {
+  line-height: 1.12;
+}
+
+
+/* Add styling for a link in the ToC that points to the top of the document */
+a.toplink {
+  float: right;
+  margin-right: 0.5em;
+}
+
+/* Fix the dl styling to match the RFC 7992 attributes */
+dl > dt,
+dl.dlParallel > dt {
+  float: left;
+  margin-right: 1em;
+}
+dl.dlNewline > dt {
+  float: none;
+}
+
+/* Provide styling for table cell text alignment */
+table td.text-left,
+table th.text-left {
+  text-align: left;
+}
+table td.text-center,
+table th.text-center {
+  text-align: center;
+}
+table td.text-right,
+table th.text-right {
+  text-align: right;
+}
+
+/* Make the alternative author contact information look less like just another
+   author, and group it closer with the primary author contact information */
+.alternative-contact {
+  margin: 0.5em 0 0.25em 0;
+}
+address .non-ascii {
+  margin: 0 0 0 2em;
+}
+
+/* With it being possible to set tables with alignment
+  left, center, and right, { width: 100%; } does not make sense */
+table {
+  width: auto;
+}
+
+/* Avoid reference text that sits in a block with very wide left margin,
+   because of a long floating dt label.*/
+.references dd {
+  overflow: visible;
+}
+
+/* Control caption placement */
+caption {
+  caption-side: bottom;
+}
+
+/* Limit the width of the author address vcard, so names in right-to-left
+   script don't end up on the other side of the page. */
+
+address.vcard {
+  max-width: 30em;
+  margin-right: auto;
+}
+
+/* For address alignment dependent on LTR or RTL scripts */
+address div.left {
+  text-align: left;
+}
+address div.right {
+  text-align: right;
+}
+
+/* Provide table alignment support.  We can't use the alignX classes above
+   since they do unwanted things with caption and other styling. */
+table.right {
+ margin-left: auto;
+ margin-right: 0;
+}
+table.center {
+ margin-left: auto;
+ margin-right: auto;
+}
+table.left {
+ margin-left: 0;
+ margin-right: auto;
+}
+
+/* Give the table caption label the same styling as the figcaption */
+caption a[href] {
+  color: #222;
+}
+
+@media print {
+  .toplink {
+    display: none;
+  }
+
+  /* avoid overwriting the top border line with the ToC header */
+  #toc {
+    padding-top: 1px;
+  }
+
+  /* Avoid page breaks inside dl and author address entries */
+  .vcard {
+    page-break-inside: avoid;
+  }
+
+}
+/* Tweak the bcp14 keyword presentation */
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: bold;
+  font-size: 0.9em;
+}
+/* Tweak the invisible space above H* in order not to overlay links in text above */
+ h2 {
+  margin-top: -18px;  /* provide offset for in-page anchors */
+  padding-top: 31px;
+ }
+ h3 {
+  margin-top: -18px;  /* provide offset for in-page anchors */
+  padding-top: 24px;
+ }
+ h4 {
+  margin-top: -18px;  /* provide offset for in-page anchors */
+  padding-top: 24px;
+ }
+/* Float artwork pilcrow to the right */
+@media screen {
+  .artwork a.pilcrow {
+    display: block;
+    line-height: 0.7;
+    margin-top: 0.15em;
+  }
+}
+/* Make pilcrows on dd visible */
+@media screen {
+  dd:hover > a.pilcrow {
+    visibility: visible;
+  }
+}
+/* Make the placement of figcaption match that of a table's caption
+   by removing the figure's added bottom margin */
+.alignLeft.art-text,
+.alignCenter.art-text,
+.alignRight.art-text {
+   margin-bottom: 0;
+}
+.alignLeft,
+.alignCenter,
+.alignRight {
+  margin: 1em 0 0 0;
+}
+/* In print, the pilcrow won't show on hover, so prevent it from taking up space,
+   possibly even requiring a new line */
+@media print {
+  a.pilcrow {
+    display: none;
+  }
+}
+/* Styling for the external metadata */
+div#external-metadata {
+  background-color: #eee;
+  padding: 0.5em;
+  margin-bottom: 0.5em;
+  display: none;
+}
+div#internal-metadata {
+  padding: 0.5em;                       /* to match the external-metadata padding */
+}
+/* Styling for title RFC Number */
+h1#rfcnum {
+  clear: both;
+  margin: 0 0 -1em;
+  padding: 1em 0 0 0;
+}
+/* Make .olPercent look the same as <ol><li> */
+dl.olPercent > dd {
+  margin-bottom: 0.25em;
+  min-height: initial;
+}
+/* Give aside some styling to set it apart */
+aside {
+  border-left: 1px solid #ddd;
+  margin: 1em 0 1em 2em;
+  padding: 0.2em 2em;
+}
+aside > dl,
+aside > ol,
+aside > ul,
+aside > table,
+aside > p {
+  margin-bottom: 0.5em;
+}
+/* Additional page break settings */
+@media print {
+  figcaption, table caption {
+    page-break-before: avoid;
+  }
+}
+/* Font size adjustments for print */
+@media print {
+  body  { font-size: 10pt;      line-height: normal; max-width: 96%; }
+  h1    { font-size: 1.72em;    padding-top: 1.5em; } /* 1*1.2*1.2*1.2 */
+  h2    { font-size: 1.44em;    padding-top: 1.5em; } /* 1*1.2*1.2 */
+  h3    { font-size: 1.2em;     padding-top: 1.5em; } /* 1*1.2 */
+  h4    { font-size: 1em;       padding-top: 1.5em; }
+  h5, h6 { font-size: 1em;      margin: initial; padding: 0.5em 0 0.3em; }
+}
+/* Sourcecode margin in print, when there's no pilcrow */
+@media print {
+  .artwork,
+  .artwork > pre,
+  .sourcecode {
+    margin-bottom: 1em;
+  }
+}
+/* Avoid narrow tables forcing too narrow table captions, which may render badly */
+table {
+  min-width: 20em;
+}
+/* ol type a */
+ol.type-a { list-style-type: lower-alpha; }
+ol.type-A { list-style-type: upper-alpha; }
+ol.type-i { list-style-type: lower-roman; }
+ol.type-I { list-style-type: upper-roman; }
+/* Apply the print table and row borders in general, on request from the RPC,
+and increase the contrast between border and odd row background slightly */
+table {
+  border: 1px solid #ddd;
+}
+td {
+  border-top: 1px solid #ddd;
+}
+tr {
+  break-inside: avoid;
+}
+tr:nth-child(2n+1) > td {
+  background-color: #f8f8f8;
+}
+/* Use style rules to govern display of the TOC. */
+@media screen and (max-width: 1023px) {
+  #toc nav { display: none; }
+  #toc.active nav { display: block; }
+}
+/* Add support for keepWithNext */
+.keepWithNext {
+  break-after: avoid-page;
+  break-after: avoid-page;
+}
+/* Add support for keepWithPrevious */
+.keepWithPrevious {
+  break-before: avoid-page;
+}
+/* Change the approach to avoiding breaks inside artwork etc. */
+figure, pre, table, .artwork, .sourcecode  {
+  break-before: auto;
+  break-after: auto;
+}
+/* Avoid breaks between <dt> and <dd> */
+dl {
+  break-before: auto;
+  break-inside: auto;
+}
+dt {
+  break-before: auto;
+  break-after: avoid-page;
+}
+dd {
+  break-before: avoid-page;
+  break-after: auto;
+  orphans: 3;
+  widows: 3
+}
+span.break, dd.break {
+  margin-bottom: 0;
+  min-height: 0;
+  break-before: auto;
+  break-inside: auto;
+  break-after: auto;
+}
+/* Undo break-before ToC */
+@media print {
+  #toc {
+    break-before: auto;
+  }
+}
+/* Text in compact lists should not get extra bottom margin space,
+   since that would makes the list not compact */
+ul.compact p, .ulCompact p,
+ol.compact p, .olCompact p {
+ margin: 0;
+}
+/* But the list as a whole needs the extra space at the end */
+section ul.compact,
+section .ulCompact,
+section ol.compact,
+section .olCompact {
+  margin-bottom: 1em;                    /* same as p not within ul.compact etc. */
+}
+/* The tt and code background above interferes with for instance table cell
+   backgrounds.  Changed to something a bit more selective. */
+tt, code {
+  background-color: transparent;
+}
+p tt, p code, li tt, li code, dt tt, dt code {
+  background-color: #f8f8f8;
+}
+/* Tweak the pre margin -- 0px doesn't come out well */
+pre {
+   margin-top: 0.5px;
+}
+/* Tweak the compact list text */
+ul.compact, .ulCompact,
+ol.compact, .olCompact,
+dl.compact, .dlCompact {
+  line-height: normal;
+}
+/* Don't add top margin for nested lists */
+li > ul, li > ol, li > dl,
+dd > ul, dd > ol, dd > dl,
+dl > dd > dl {
+  margin-top: initial;
+}
+/* Elements that should not be rendered on the same line as a <dt> */
+/* This should match the element list in writer.text.TextWriter.render_dl() */
+dd > div.artwork:first-child,
+dd > aside:first-child,
+dd > blockquote:first-child,
+dd > figure:first-child,
+dd > ol:first-child,
+dd > div.sourcecode:first-child,
+dd > table:first-child,
+dd > ul:first-child {
+  clear: left;
+}
+/* fix for weird browser behaviour when <dd/> is empty */
+dt+dd:empty::before{
+  content: "\00a0";
+}
+/* Make paragraph spacing inside <li> smaller than in body text, to fit better within the list */
+li > p {
+  margin-bottom: 0.5em
+}
+/* Don't let p margin spill out from inside list items */
+li > p:last-of-type:only-child {
+  margin-bottom: 0;
+}
+</style>
+<link href="rfc-local.css" rel="stylesheet" type="text/css">
+<script type="application/javascript">async function addMetadata(){try{const e=document.styleSheets[0].cssRules;for(let t=0;t<e.length;t++)if(/#identifiers/.exec(e[t].selectorText)){const a=e[t].cssText.replace("#identifiers","#external-updates");document.styleSheets[0].insertRule(a,document.styleSheets[0].cssRules.length)}}catch(e){console.log(e)}const e=document.getElementById("external-metadata");if(e)try{var t,a="",o=function(e){const t=document.getElementsByTagName("meta");for(let a=0;a<t.length;a++)if(t[a].getAttribute("name")===e)return t[a].getAttribute("content");return""}("rfc.number");if(o){t="https://www.rfc-editor.org/rfc/rfc"+o+".json";try{const e=await fetch(t);a=await e.json()}catch(e){t=document.URL.indexOf("html")>=0?document.URL.replace(/html$/,"json"):document.URL+".json";const o=await fetch(t);a=await o.json()}}if(!a)return;e.style.display="block";const s="",d="https://datatracker.ietf.org/doc",n="https://datatracker.ietf.org/ipr/search",c="https://www.rfc-editor.org/info",l=a.doc_id.toLowerCase(),i=a.doc_id.slice(0,3).toLowerCase(),f=a.doc_id.slice(3).replace(/^0+/,""),u={status:"Status",obsoletes:"Obsoletes",obsoleted_by:"Obsoleted By",updates:"Updates",updated_by:"Updated By",see_also:"See Also",errata_url:"Errata"};let h="<dl style='overflow:hidden' id='external-updates'>";["status","obsoletes","obsoleted_by","updates","updated_by","see_also","errata_url"].forEach(e=>{if("status"==e){a[e]=a[e].toLowerCase();var t=a[e].split(" "),o=t.length,w="",p=1;for(let e=0;e<o;e++)p<o?w=w+r(t[e])+" ":w+=r(t[e]),p++;a[e]=w}else if("obsoletes"==e||"obsoleted_by"==e||"updates"==e||"updated_by"==e){var g,m="",b=1;g=a[e].length;for(let t=0;t<g;t++)a[e][t]&&(a[e][t]=String(a[e][t]).toLowerCase(),m=b<g?m+"<a href='"+s+"/rfc/".concat(a[e][t])+"'>"+a[e][t].slice(3)+"</a>, ":m+"<a href='"+s+"/rfc/".concat(a[e][t])+"'>"+a[e][t].slice(3)+"</a>",b++);a[e]=m}else if("see_also"==e){var y,L="",C=1;y=a[e].length;for(let t=0;t<y;t++)if(a[e][t]){a[e][t]=String(a[e][t]);var _=a[e][t].slice(0,3),v=a[e][t].slice(3).replace(/^0+/,"");L=C<y?"RFC"!=_?L+"<a href='"+s+"/info/"+_.toLowerCase().concat(v.toLowerCase())+"'>"+_+" "+v+"</a>, ":L+"<a href='"+s+"/info/"+_.toLowerCase().concat(v.toLowerCase())+"'>"+v+"</a>, ":"RFC"!=_?L+"<a href='"+s+"/info/"+_.toLowerCase().concat(v.toLowerCase())+"'>"+_+" "+v+"</a>":L+"<a href='"+s+"/info/"+_.toLowerCase().concat(v.toLowerCase())+"'>"+v+"</a>",C++}a[e]=L}else if("errata_url"==e){var R="";R=a[e]?R+"<a href='"+a[e]+"'>Errata exist</a> | <a href='"+d+"/"+l+"'>Datatracker</a>| <a href='"+n+"/?"+i+"="+f+"&submit="+i+"'>IPR</a> | <a href='"+c+"/"+l+"'>Info page</a>":"<a href='"+d+"/"+l+"'>Datatracker</a> | <a href='"+n+"/?"+i+"="+f+"&submit="+i+"'>IPR</a> | <a href='"+c+"/"+l+"'>Info page</a>",a[e]=R}""!=a[e]?"Errata"==u[e]?h+=`<dt>More info:</dt><dd>${a[e]}</dd>`:h+=`<dt>${u[e]}:</dt><dd>${a[e]}</dd>`:"Errata"==u[e]&&(h+=`<dt>More info:</dt><dd>${a[e]}</dd>`)}),h+="</dl>",e.innerHTML=h}catch(e){console.log(e)}else console.log("Could not locate metadata <div> element");function r(e){return e.charAt(0).toUpperCase()+e.slice(1)}}window.removeEventListener("load",addMetadata),window.addEventListener("load",addMetadata);</script>
+</head>
+<body class="xml2rfc">
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">deploying-ipv6-data-center</td>
+<td class="right">June 2026</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">Martin</td>
+<td class="center">Expires 7 December 2026</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">IPv6 Operations</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-martin-deploying-ipv6-data-center-00</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2026-06-05" class="published">5 June 2026</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Informational</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2026-12-07">7 December 2026</time></dd>
+<dt class="label-authors">Author:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">F. Martin</div>
+<div class="org">Peachymango.org</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">Deploying IPv6 in Data Centers</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">Data center operators are moving toward IPv6-only operation to simplify
+addressing, restore end-to-end connectivity, and meet operator and
+government timelines. Much published IPv6 guidance targets network engineers;
+this document instead addresses <strong>Software Release Engineers (SREs)</strong> and
+<strong>Software Engineers (SWEs)</strong> who deploy, operate, and debug services in
+data centers. It explains IPv6 fundamentals that affect application code,
+observability, DNS, load balancing, and out-of-band management; documents
+common software and infrastructure gaps; and offers practical deployment
+patterns aligned with the IPv6 Operations (v6ops) working group charter.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 7 December 2026.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2026 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Revised BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Revised BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.1">
+                <p id="section-toc.1-1.1.2.1.1" class="keepWithNext"><a href="#section-1.1" class="auto internal xref">1.1</a>.  <a href="#name-audience-and-purpose" class="internal xref">Audience and Purpose</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.2">
+                <p id="section-toc.1-1.1.2.2.1" class="keepWithNext"><a href="#section-1.2" class="auto internal xref">1.2</a>.  <a href="#name-related-guides" class="internal xref">Related Guides</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.3">
+                <p id="section-toc.1-1.1.2.3.1" class="keepWithNext"><a href="#section-1.3" class="auto internal xref">1.3</a>.  <a href="#name-document-structure" class="internal xref">Document Structure</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.4">
+                <p id="section-toc.1-1.1.2.4.1"><a href="#section-1.4" class="auto internal xref">1.4</a>.  <a href="#name-requirements-language" class="internal xref">Requirements Language</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-ipv6-fundamentals-for-softw" class="internal xref">IPv6 Fundamentals for Software Engineers</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.1">
+                <p id="section-toc.1-1.2.2.1.1"><a href="#section-2.1" class="auto internal xref">2.1</a>.  <a href="#name-address-size-and-header-for" class="internal xref">Address Size and Header Format</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.2">
+                <p id="section-toc.1-1.2.2.2.1"><a href="#section-2.2" class="auto internal xref">2.2</a>.  <a href="#name-checksums-jumbo-frames-and-" class="internal xref">Checksums, Jumbo Frames, and Fragmentation</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.3">
+                <p id="section-toc.1-1.2.2.3.1"><a href="#section-2.3" class="auto internal xref">2.3</a>.  <a href="#name-icmpv6-and-neighbor-discove" class="internal xref">ICMPv6 and Neighbor Discovery</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.4">
+                <p id="section-toc.1-1.2.2.4.1"><a href="#section-2.4" class="auto internal xref">2.4</a>.  <a href="#name-end-to-end-connectivity" class="internal xref">End-to-End Connectivity</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.5">
+                <p id="section-toc.1-1.2.2.5.1"><a href="#section-2.5" class="auto internal xref">2.5</a>.  <a href="#name-address-types-and-terminolo" class="internal xref">Address Types and Terminology</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.6">
+                <p id="section-toc.1-1.2.2.6.1"><a href="#section-2.6" class="auto internal xref">2.6</a>.  <a href="#name-address-representation" class="internal xref">Address Representation</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.7">
+                <p id="section-toc.1-1.2.2.7.1"><a href="#section-2.7" class="auto internal xref">2.7</a>.  <a href="#name-prefix-length-and-the-64-co" class="internal xref">Prefix Length and the /64 Convention</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.8">
+                <p id="section-toc.1-1.2.2.8.1"><a href="#section-2.8" class="auto internal xref">2.8</a>.  <a href="#name-link-local-gateways" class="internal xref">Link-Local Gateways</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.9">
+                <p id="section-toc.1-1.2.2.9.1"><a href="#section-2.9" class="auto internal xref">2.9</a>.  <a href="#name-naming-services" class="internal xref">Naming Services</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-resolving-hostnames-to-addr" class="internal xref">Resolving Hostnames to Addresses</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.1">
+                <p id="section-toc.1-1.3.2.1.1"><a href="#section-3.1" class="auto internal xref">3.1</a>.  <a href="#name-use-getaddrinfo-not-legacy-" class="internal xref">Use getaddrinfo(), Not Legacy One-Address APIs</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.2">
+                <p id="section-toc.1-1.3.2.2.1"><a href="#section-3.2" class="auto internal xref">3.2</a>.  <a href="#name-why-the-full-list-matters" class="internal xref">Why the Full List Matters</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.3">
+                <p id="section-toc.1-1.3.2.3.1"><a href="#section-3.3" class="auto internal xref">3.3</a>.  <a href="#name-numeric-input-at-the-edge" class="internal xref">Numeric Input at the Edge</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.4">
+                <p id="section-toc.1-1.3.2.4.1"><a href="#section-3.4" class="auto internal xref">3.4</a>.  <a href="#name-address-selection-gaiconf-a" class="internal xref">Address Selection, gai.conf, and DNS Round Robin</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-internet-and-data-center-ad" class="internal xref">Internet and Data Center Addressing</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.1">
+                <p id="section-toc.1-1.4.2.1.1"><a href="#section-4.1" class="auto internal xref">4.1</a>.  <a href="#name-prefix-allocation-for-hosts" class="internal xref">Prefix Allocation for Hosts and Containers</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.2">
+                <p id="section-toc.1-1.4.2.2.1"><a href="#section-4.2" class="auto internal xref">4.2</a>.  <a href="#name-static-addressing-router-ad" class="internal xref">Static Addressing, Router Advertisements, and IPAM</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.3">
+                <p id="section-toc.1-1.4.2.3.1"><a href="#section-4.3" class="auto internal xref">4.3</a>.  <a href="#name-semantic-prefixes-for-inter" class="internal xref">Semantic Prefixes for Internal Traffic</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.4">
+                <p id="section-toc.1-1.4.2.4.1"><a href="#section-4.4" class="auto internal xref">4.4</a>.  <a href="#name-internet-egress-and-edge-ga" class="internal xref">Internet Egress and Edge Gateways</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.5">
+                <p id="section-toc.1-1.4.2.5.1"><a href="#section-4.5" class="auto internal xref">4.5</a>.  <a href="#name-frontends-for-ipv4-only-ser" class="internal xref">Frontends for IPv4-Only Services</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.6">
+                <p id="section-toc.1-1.4.2.6.1"><a href="#section-4.6" class="auto internal xref">4.6</a>.  <a href="#name-access-control-list-propaga" class="internal xref">Access Control List Propagation</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.6.2.1">
+                    <p id="section-toc.1-1.4.2.6.2.1.1"><a href="#section-4.6.1" class="auto internal xref">4.6.1</a>.  <a href="#name-ipam-based-ipv4-to-ipv6-map" class="internal xref">IPAM-Based IPv4-to-IPv6 Mapping for ACLs</a></p>
+</li>
+                </ul>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-application-and-software-re" class="internal xref">Application and Software Readiness</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.1">
+                <p id="section-toc.1-1.5.2.1.1"><a href="#section-5.1" class="auto internal xref">5.1</a>.  <a href="#name-enterprise-platform-invento" class="internal xref">Enterprise Platform Inventory</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.2">
+                <p id="section-toc.1-1.5.2.2.1"><a href="#section-5.2" class="auto internal xref">5.2</a>.  <a href="#name-hard-coded-addresses-and-lo" class="internal xref">Hard-Coded Addresses and Localhost Pitfalls</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.3">
+                <p id="section-toc.1-1.5.2.3.1"><a href="#section-5.3" class="auto internal xref">5.3</a>.  <a href="#name-ip-address-storage-in-appli" class="internal xref">IP Address Storage in Application Data</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.4">
+                <p id="section-toc.1-1.5.2.4.1"><a href="#section-5.4" class="auto internal xref">5.4</a>.  <a href="#name-databases-acls-and-security" class="internal xref">Databases, ACLs, and Security Tools</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.5">
+                <p id="section-toc.1-1.5.2.5.1"><a href="#section-5.5" class="auto internal xref">5.5</a>.  <a href="#name-language-runtimes-and-libra" class="internal xref">Language Runtimes and Libraries</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.6">
+                <p id="section-toc.1-1.5.2.6.1"><a href="#section-5.6" class="auto internal xref">5.6</a>.  <a href="#name-static-analysis-and-pull-re" class="internal xref">Static Analysis and Pull Request Automation</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.6.2.1">
+                    <p id="section-toc.1-1.5.2.6.2.1.1"><a href="#section-5.6.1" class="auto internal xref">5.6.1</a>.  <a href="#name-pattern-scanners-in-ci" class="internal xref">Pattern Scanners in CI</a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.6.2.2">
+                    <p id="section-toc.1-1.5.2.6.2.2.1"><a href="#section-5.6.2" class="auto internal xref">5.6.2</a>.  <a href="#name-automated-remediation-pull-" class="internal xref">Automated Remediation Pull Requests</a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.6.2.3">
+                    <p id="section-toc.1-1.5.2.6.2.3.1"><a href="#section-5.6.3" class="auto internal xref">5.6.3</a>.  <a href="#name-opt-out-annotations-for-eng" class="internal xref">Opt-Out Annotations for Engineers</a></p>
+</li>
+                </ul>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.7">
+                <p id="section-toc.1-1.5.2.7.1"><a href="#section-5.7" class="auto internal xref">5.7</a>.  <a href="#name-documentation-and-presentat" class="internal xref">Documentation and Presentations</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-dns-registration-and-dynami" class="internal xref">DNS Registration and Dynamic Addressing</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.1">
+                <p id="section-toc.1-1.6.2.1.1"><a href="#section-6.1" class="auto internal xref">6.1</a>.  <a href="#name-slaac-switches-and-the-dns-" class="internal xref">SLAAC, Switches, and the DNS Gap</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.2">
+                <p id="section-toc.1-1.6.2.2.1"><a href="#section-6.2" class="auto internal xref">6.2</a>.  <a href="#name-dhcpv6-and-hostname-registr" class="internal xref">DHCPv6 and Hostname Registration</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-icmpv6-pmtud-and-middleboxe" class="internal xref">ICMPv6, PMTUD, and Middleboxes</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.1">
+                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-do-not-block-icmpv6" class="internal xref">Do Not Block ICMPv6</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2">
+                <p id="section-toc.1-1.7.2.2.1"><a href="#section-7.2" class="auto internal xref">7.2</a>.  <a href="#name-path-mtu-discovery" class="internal xref">Path MTU Discovery</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.3">
+                <p id="section-toc.1-1.7.2.3.1"><a href="#section-7.3" class="auto internal xref">7.3</a>.  <a href="#name-vpns-and-nat64" class="internal xref">VPNs and NAT64</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-client-side-load-balancing" class="internal xref">Client-Side Load Balancing</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-observability-and-metrics" class="internal xref">Observability and Metrics</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.1">
+                <p id="section-toc.1-1.9.2.1.1"><a href="#section-9.1" class="auto internal xref">9.1</a>.  <a href="#name-service-inventory-and-disco" class="internal xref">Service Inventory and Discovery</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.2">
+                <p id="section-toc.1-1.9.2.2.1"><a href="#section-9.2" class="auto internal xref">9.2</a>.  <a href="#name-progress-metrics" class="internal xref">Progress Metrics</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.3">
+                <p id="section-toc.1-1.9.2.3.1"><a href="#section-9.3" class="auto internal xref">9.3</a>.  <a href="#name-host-level-listen-socket-au" class="internal xref">Host-Level Listen-Socket Audit</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.4">
+                <p id="section-toc.1-1.9.2.4.1"><a href="#section-9.4" class="auto internal xref">9.4</a>.  <a href="#name-host-agents-before-applicat" class="internal xref">Host Agents Before Application Provisioning</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.5">
+                <p id="section-toc.1-1.9.2.5.1"><a href="#section-9.5" class="auto internal xref">9.5</a>.  <a href="#name-traffic-by-protocol-and-add" class="internal xref">Traffic by Protocol and Address Family</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.6">
+                <p id="section-toc.1-1.9.2.6.1"><a href="#section-9.6" class="auto internal xref">9.6</a>.  <a href="#name-http-signaling-and-planned-" class="internal xref">HTTP Signaling and Planned IPv4 Drills</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.7">
+                <p id="section-toc.1-1.9.2.7.1"><a href="#section-9.7" class="auto internal xref">9.7</a>.  <a href="#name-live-traffic-and-service-ca" class="internal xref">Live Traffic and Service Call Trees</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-out-of-band-management-and-" class="internal xref">Out-of-Band Management and Network Boot</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1">
+                <p id="section-toc.1-1.10.2.1.1"><a href="#section-10.1" class="auto internal xref">10.1</a>.  <a href="#name-often-forgotten-infrastruct" class="internal xref">Often-Forgotten Infrastructure Devices</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.2">
+                <p id="section-toc.1-1.10.2.2.1"><a href="#section-10.2" class="auto internal xref">10.2</a>.  <a href="#name-firmware-and-pxe-uefi-boot" class="internal xref">Firmware and PXE/UEFI Boot</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.3">
+                <p id="section-toc.1-1.10.2.3.1"><a href="#section-10.3" class="auto internal xref">10.3</a>.  <a href="#name-ipmi-and-redfish" class="internal xref">IPMI and Redfish</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-transition-strategies" class="internal xref">Transition Strategies</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.1">
+                <p id="section-toc.1-1.11.2.1.1"><a href="#section-11.1" class="auto internal xref">11.1</a>.  <a href="#name-easier-to-provision-than-to" class="internal xref">Easier to Provision Than to Transform</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.2">
+                <p id="section-toc.1-1.11.2.2.1"><a href="#section-11.2" class="auto internal xref">11.2</a>.  <a href="#name-ipv6-only-jump-hosts" class="internal xref">IPv6-Only Jump Hosts</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
+            <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
+            <p id="section-toc.1-1.14.1"><a href="#section-14" class="auto internal xref">14</a>. <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
+            <p id="section-toc.1-1.15.1"><a href="#section-15" class="auto internal xref">15</a>. <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
+            <p id="section-toc.1-1.16.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<div id="introduction">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<div id="audience-and-purpose">
+<section id="section-1.1">
+        <h3 id="name-audience-and-purpose">
+<a href="#section-1.1" class="section-number selfRef">1.1. </a><a href="#name-audience-and-purpose" class="section-name selfRef">Audience and Purpose</a>
+        </h3>
+<p id="section-1.1-1">This document is written for <strong>SREs and SWEs</strong> who run services in data
+centers --- not primarily for network engineers designing routing policy.
+Network teams still own prefixes, routing, and firewalls, but IPv6
+deployment succeeds or fails in application code, configuration management,
+monitoring pipelines, and the long tail of enterprise software that assumes
+IPv4.<a href="#section-1.1-1" class="pilcrow">¶</a></p>
+<p id="section-1.1-2">The <a href="https://datatracker.ietf.org/wg/v6ops/about/">IPv6 Operations (v6ops) working group</a>
+charter calls for informational documents that demonstrate how IPv6 can be
+deployed in specific environments, including data centers. This draft meets
+that objective from a <strong>software and operations</strong> perspective: what engineers
+who write and run services need to know before, during, and after enabling
+IPv6 in production.<a href="#section-1.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="related-guides">
+<section id="section-1.2">
+        <h3 id="name-related-guides">
+<a href="#section-1.2" class="section-number selfRef">1.2. </a><a href="#name-related-guides" class="section-name selfRef">Related Guides</a>
+        </h3>
+<p id="section-1.2-1">This document focuses on data center SRE and software engineering practice.
+Operators may also find these <strong>informative deployment guides</strong> useful alongside
+this draft:<a href="#section-1.2-1" class="pilcrow">¶</a></p>
+<ul class="compact">
+<li class="compact" id="section-1.2-2.1">
+            <span>[<a href="#ARCEP-IPV6-GUIDE" class="cite xref">ARCEP-IPV6-GUIDE</a>]</span> --- enterprise IPv6 rollout guidance from ARCEP (France)<a href="#section-1.2-2.1" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-1.2-2.2">
+            <span>[<a href="#ARIN-APPS-V6" class="cite xref">ARIN-APPS-V6</a>]</span> --- application and software developer guidance from ARIN<a href="#section-1.2-2.2" class="pilcrow">¶</a>
+</li>
+        </ul>
+<p id="section-1.2-3">They overlap partially with sections here (applications, addressing, operations)
+but cover broader enterprise and regional context.<a href="#section-1.2-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="document-structure">
+<section id="section-1.3">
+        <h3 id="name-document-structure">
+<a href="#section-1.3" class="section-number selfRef">1.3. </a><a href="#name-document-structure" class="section-name selfRef">Document Structure</a>
+        </h3>
+<p id="section-1.3-1"><a href="#ipv6-fundamentals" class="auto internal xref">Section 2</a> summarizes protocol and addressing differences that
+surprise application developers. <a href="#name-resolution" class="auto internal xref">Section 3</a> explains how to resolve
+names to <strong>full address lists</strong> (not a single address). <a href="#internet-addressing" class="auto internal xref">Section 4</a>
+covers prefix allocation, semantic internal prefixes, edge gateways for Internet
+egress, frontends for IPv4-only services, static addressing, and access-control
+propagation in data centers. <a href="#application-readiness" class="auto internal xref">Section 5</a> catalogs software gaps --- hard-coded
+addresses, weak IP parsing, geo databases, security tools, static analysis
+in CI, and IPv6-first documentation conventions. Later sections
+cover DNS registration, name-to-address resolution APIs, ICMPv6 and path MTU,
+client-side load balancing, <a href="#observability" class="auto internal xref">Section 9</a> for migration metrics,
+out-of-band management, and transition tactics --- <a href="#provision-not-transform" class="auto internal xref">Section 11.1</a>
+and IPv6-only jump hosts.<a href="#section-1.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="requirements-language">
+<section id="section-1.4">
+        <h3 id="name-requirements-language">
+<a href="#section-1.4" class="section-number selfRef">1.4. </a><a href="#name-requirements-language" class="section-name selfRef">Requirements Language</a>
+        </h3>
+<p id="section-1.4-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>",
+"<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>",
+"<span class="bcp14">NOT RECOMMENDED</span>", "<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to
+be interpreted as described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only
+when, they appear in all capitals, as shown here.<a href="#section-1.4-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="ipv6-fundamentals">
+<section id="section-2">
+      <h2 id="name-ipv6-fundamentals-for-softw">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-ipv6-fundamentals-for-softw" class="section-name selfRef">IPv6 Fundamentals for Software Engineers</a>
+      </h2>
+<p id="section-2-1">Software engineers who have worked only in IPv4 environments often discover
+that IPv6 is not "IPv4 with longer addresses." The differences below affect
+code, configuration, monitoring, and troubleshooting daily.<a href="#section-2-1" class="pilcrow">¶</a></p>
+<div id="address-size-and-header-format">
+<section id="section-2.1">
+        <h3 id="name-address-size-and-header-for">
+<a href="#section-2.1" class="section-number selfRef">2.1. </a><a href="#name-address-size-and-header-for" class="section-name selfRef">Address Size and Header Format</a>
+        </h3>
+<p id="section-2.1-1">IPv4 addresses are <strong>32 bits</strong>; IPv6 addresses are <strong>128 bits</strong>
+          <span>[<a href="#RFC8200" class="cite xref">RFC8200</a>]</span>. The IPv4 header has a <strong>variable length</strong> because options are
+carried in the main header. The IPv6 header has a <strong>fixed 40-byte length</strong>,
+which simplifies fast-path processing on routers and hosts. Additional IPv6
+options live in <strong>extension headers</strong> chained after the main header; routers
+<strong>do not need to process</strong> most extension headers for forwarding
+<span>[<a href="#RFC8200" class="cite xref">RFC8200</a>]</span>.<a href="#section-2.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="checksums-jumbo-frames-and-fragmentation">
+<section id="section-2.2">
+        <h3 id="name-checksums-jumbo-frames-and-">
+<a href="#section-2.2" class="section-number selfRef">2.2. </a><a href="#name-checksums-jumbo-frames-and-" class="section-name selfRef">Checksums, Jumbo Frames, and Fragmentation</a>
+        </h3>
+<p id="section-2.2-1">IPv6 removed the header checksum present in IPv4; integrity is assumed to be
+covered by upper-layer protocols (for example, TCP, UDP, and SCTP) and link
+layers where applicable <span>[<a href="#RFC8200" class="cite xref">RFC8200</a>]</span>. Operators can use <strong>jumbo frames</strong> on
+supported paths to reduce per-packet overhead and acknowledgment rates on
+high-throughput links. Jumbo frames are an operational choice on the LAN and
+require end-to-end support; they are not an IPv6 requirement but are often
+easier to reason about once NAT middleboxes are removed.<a href="#section-2.2-1" class="pilcrow">¶</a></p>
+<p id="section-2.2-2">IPv4 allowed routers to fragment packets in transit. IPv6 <strong>fragments only at
+endpoints</strong> <span>[<a href="#RFC8200" class="cite xref">RFC8200</a>]</span>. If a packet exceeds the path MTU, the source discovers
+the limit through Path MTU Discovery (see <a href="#icmpv6-pmtud" class="auto internal xref">Section 7</a>) rather than relying
+on router fragmentation. Application teams that tune MSS or disable PMTUD on
+IPv4 must not copy those habits blindly to IPv6.<a href="#section-2.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="icmpv6-and-neighbor-discovery">
+<section id="section-2.3">
+        <h3 id="name-icmpv6-and-neighbor-discove">
+<a href="#section-2.3" class="section-number selfRef">2.3. </a><a href="#name-icmpv6-and-neighbor-discove" class="section-name selfRef">ICMPv6 and Neighbor Discovery</a>
+        </h3>
+<p id="section-2.3-1">IPv4 Address Resolution Protocol (ARP) is replaced in IPv6 by <strong>Neighbor
+Discovery (ND)</strong> carried in <strong>ICMPv6</strong> <span>[<a href="#RFC4861" class="cite xref">RFC4861</a>]</span> <span>[<a href="#RFC4443" class="cite xref">RFC4443</a>]</span>. ND resolves
+addresses on the local link, discovers routers, and performs other essential
+functions. <strong>ICMPv6 therefore MUST NOT be blocked wholesale</strong> on IPv6 paths
+the way some IPv4 deployments block all ICMP. Blocking ICMPv6 breaks ND and
+PMTUD and produces failures that look like application bugs.<a href="#section-2.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="end-to-end-connectivity">
+<section id="section-2.4">
+        <h3 id="name-end-to-end-connectivity">
+<a href="#section-2.4" class="section-number selfRef">2.4. </a><a href="#name-end-to-end-connectivity" class="section-name selfRef">End-to-End Connectivity</a>
+        </h3>
+<p id="section-2.4-1">IPv4 data centers often rely on Network Address Translation (NAT), carrier-grade
+NAT (CGNAT), and overlapping private address space <span>[<a href="#RFC1918" class="cite xref">RFC1918</a>]</span>. IPv6 restores
+the <strong>end-to-end principle</strong>: globally unique addresses (with deliberate
+exceptions noted below) can be routed on the Internet without translation.
+Routing replaces NAT for many multi-tenant container scenarios, which simplifies
+traffic inspection but requires disciplined prefix planning (see
+<a href="#internet-addressing" class="auto internal xref">Section 4</a>).<a href="#section-2.4-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="address-types">
+<section id="section-2.5">
+        <h3 id="name-address-types-and-terminolo">
+<a href="#section-2.5" class="section-number selfRef">2.5. </a><a href="#name-address-types-and-terminolo" class="section-name selfRef">Address Types and Terminology</a>
+        </h3>
+<p id="section-2.5-1">Careless use of the word "IPv6" causes outages. This document uses the
+following terms:<a href="#section-2.5-1" class="pilcrow">¶</a></p>
+<p id="section-2.5-2"><strong>Link-local address</strong>: An address in <code>fe80::/10</code> used only on a single link
+<span>[<a href="#RFC4291" class="cite xref">RFC4291</a>]</span>. Link-local addresses are <strong>not</strong> routed on the Internet. On
+Linux, connecting to a link-local destination requires a <strong>zone identifier</strong>
+(for example, <code>fe80::1%eth0</code>) because the same link-local prefix exists on
+every interface.<a href="#section-2.5-2" class="pilcrow">¶</a></p>
+<p id="section-2.5-3"><strong>Unique Local Address (ULA)</strong>: An address in <code>fc00::/7</code> intended for local
+use and <strong>not</strong> globally routed <span>[<a href="#RFC4193" class="cite xref">RFC4193</a>]</span>. ULAs resemble IPv4 private space
+in purpose but are uncommon in many data center designs that use provider-
+aggregated global unicast space internally. Like IPv4 private address space,
+ULAs can create <strong>renumbering work</strong> when companies merge or networks are
+combined --- a data center network is never final.<a href="#section-2.5-3" class="pilcrow">¶</a></p>
+<p id="section-2.5-4"><strong>Internal global unicast address</strong>: A globally routable IPv6 address used
+<strong>inside</strong> the data center (for example, from the operator's GUA allocation).
+These addresses are reachable according to routing and security policy, not
+because they are "private."<a href="#section-2.5-4" class="pilcrow">¶</a></p>
+<p id="section-2.5-5"><strong>External global unicast address</strong>: A globally routable address presented to
+clients on the Internet, often via load balancers or anycast.<a href="#section-2.5-5" class="pilcrow">¶</a></p>
+<p id="section-2.5-6">Unlike IPv4, there is <strong>no RFC 1918 equivalent that dominates data center
+design</strong>. With rare exceptions (link-local, ULA, and special-purpose ranges
+in <span>[<a href="#RFC6890" class="cite xref">RFC6890</a>]</span>), <strong>IPv6 unicast addresses are designed to be globally
+unique and routable</strong>. Security boundaries are enforced by routing policy and
+firewall rules, not by assuming addresses are inherently non-routable.<a href="#section-2.5-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="address-representation">
+<section id="section-2.6">
+        <h3 id="name-address-representation">
+<a href="#section-2.6" class="section-number selfRef">2.6. </a><a href="#name-address-representation" class="section-name selfRef">Address Representation</a>
+        </h3>
+<p id="section-2.6-1">IPv6 addresses have several equivalent textual forms <span>[<a href="#RFC4291" class="cite xref">RFC4291</a>]</span>:<a href="#section-2.6-1" class="pilcrow">¶</a></p>
+<ul class="compact">
+<li class="compact" id="section-2.6-2.1">Full form: <code>2001:db8:0:0:0:0:0:1</code><a href="#section-2.6-2.1" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-2.6-2.2">Compressed zeros: <code>2001:db8::1</code><a href="#section-2.6-2.2" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-2.6-2.3">Loopback: <code>::1</code> (compare IPv4 <code>127.0.0.1</code>)<a href="#section-2.6-2.3" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-2.6-2.4">Unspecified: <code>::</code><a href="#section-2.6-2.4" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-2.6-2.5">IPv4-mapped IPv6: <code>::ffff:192.0.2.1</code><a href="#section-2.6-2.5" class="pilcrow">¶</a>
+</li>
+        </ul>
+<p id="section-2.6-3">In <strong>dual-stack</strong> environments, IPv4 addresses also appear in multiple forms
+in code and configuration:<a href="#section-2.6-3" class="pilcrow">¶</a></p>
+<ul class="compact">
+<li class="compact" id="section-2.6-4.1">Dotted decimal: <code>192.0.2.1</code><a href="#section-2.6-4.1" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-2.6-4.2">Integer (historical APIs): <code>3232235521</code><a href="#section-2.6-4.2" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-2.6-4.3">Hex packed in configs: <code>0xC0000201</code><a href="#section-2.6-4.3" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-2.6-4.4">Mapped in IPv6 APIs: <code>::ffff:192.0.2.1</code><a href="#section-2.6-4.4" class="pilcrow">¶</a>
+</li>
+        </ul>
+<p id="section-2.6-5">In software, addresses <span class="bcp14">MUST</span> be stored in a <strong>binary field or structure
+sized for 128 bits</strong> (for example, <code>in6_addr</code>, <code>sockaddr_storage</code>, or an
+equivalent language type), so the same field can hold IPv4 or IPv6. <strong>Do not
+store addresses as strings</strong> in databases, logs-as-data, caches, or message
+payloads. Provide helper functions to convert between the binary form and a
+human-readable representation for display and configuration I/O, and use those
+helpers at boundaries --- <strong>never parse or compare address strings ad hoc</strong> in
+application logic.<a href="#section-2.6-5" class="pilcrow">¶</a></p>
+<p id="section-2.6-6">Applications <span class="bcp14">SHOULD</span> treat names, not literal addresses, as the stable
+interface (see <a href="#naming-services" class="auto internal xref">Section 2.9</a>). To turn a name into addresses, use the
+APIs described in <a href="#name-resolution" class="auto internal xref">Section 3</a> --- not legacy one-address helpers and
+not string parsing.<a href="#section-2.6-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="prefix-length-and-the-64-convention">
+<section id="section-2.7">
+        <h3 id="name-prefix-length-and-the-64-co">
+<a href="#section-2.7" class="section-number selfRef">2.7. </a><a href="#name-prefix-length-and-the-64-co" class="section-name selfRef">Prefix Length and the /64 Convention</a>
+        </h3>
+<p id="section-2.7-1">On most LANs and data center segments, the <strong>network/host split is at the
+64th bit</strong> --- a <code>/64</code> prefix on the wire <span>[<a href="#RFC4291" class="cite xref">RFC4291</a>]</span>. Roughly speaking, a
+<code>/64</code> is the IPv6 analogue of an IPv4 <code>/24</code> in terms of "one subnet per
+broadcast domain," though the address space is vastly larger. A good data
+center pattern assigns a <strong><code>/56</code> per host</strong> so each container can receive its
+own <strong><code>/64</code></strong> (see <a href="#prefix-allocation" class="auto internal xref">Section 4.1</a>).<a href="#section-2.7-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="link-local-gateways">
+<section id="section-2.8">
+        <h3 id="name-link-local-gateways">
+<a href="#section-2.8" class="section-number selfRef">2.8. </a><a href="#name-link-local-gateways" class="section-name selfRef">Link-Local Gateways</a>
+        </h3>
+<p id="section-2.8-1">Many data center designs place the default gateway at <strong><code>fe80::1</code></strong> on each
+link. That choice avoids consuming a global address for the router and matches
+common vendor examples. Servers <span class="bcp14">MUST</span> specify the outgoing interface when
+using link-local next hops (for example, <code>ip -6 route add default via fe80::1
+dev eth0</code>). The router platform <span class="bcp14">MUST</span> actually configure <code>fe80::1</code> on the
+expected interface.<a href="#section-2.8-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="naming-services">
+<section id="section-2.9">
+        <h3 id="name-naming-services">
+<a href="#section-2.9" class="section-number selfRef">2.9. </a><a href="#name-naming-services" class="section-name selfRef">Naming Services</a>
+        </h3>
+<p id="section-2.9-1"><code>::1</code> is home; <code>127.0.0.1</code> is home. <strong>Do not embed IP addresses in
+application code</strong> when a name will do. Use hostnames and service discovery;
+resolve names at connection time.<a href="#section-2.9-1" class="pilcrow">¶</a></p>
+<p id="section-2.9-2">DNS (or an equivalent naming and service registry) becomes <strong>essential</strong> in
+IPv6 because humans cannot memorize 128-bit addresses. Operational maturity
+includes forward and reverse DNS for infrastructure, health checks keyed on
+names, and monitoring that labels series by hostname rather than by address
+literals.<a href="#section-2.9-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="name-resolution">
+<section id="section-3">
+      <h2 id="name-resolving-hostnames-to-addr">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-resolving-hostnames-to-addr" class="section-name selfRef">Resolving Hostnames to Addresses</a>
+      </h2>
+<p id="section-3-1">Turning a hostname into addresses is a separate step from choosing which
+address to connect to. Application code <span class="bcp14">MUST</span> use an API that returns <strong>all</strong>
+candidate addresses, then apply local policy (retries, Happy Eyeballs
+<span>[<a href="#RFC8305" class="cite xref">RFC8305</a>]</span>, load spreading --- see <a href="#address-selection" class="auto internal xref">Section 3.4</a> and
+<a href="#client-load-balancing" class="auto internal xref">Section 8</a>).<a href="#section-3-1" class="pilcrow">¶</a></p>
+<div id="use-getaddrinfo-not-legacy-one-address-apis">
+<section id="section-3.1">
+        <h3 id="name-use-getaddrinfo-not-legacy-">
+<a href="#section-3.1" class="section-number selfRef">3.1. </a><a href="#name-use-getaddrinfo-not-legacy-" class="section-name selfRef">Use getaddrinfo(), Not Legacy One-Address APIs</a>
+        </h3>
+<p id="section-3.1-1">On POSIX systems the correct resolver entry point is <strong><code>getaddrinfo()</code></strong>
+          <span>[<a href="#RFC3493" class="cite xref">RFC3493</a>]</span>. It takes a hostname (or numeric address string), service/port hints,
+and an <code>addrinfo</code> hints structure, and returns a <strong>linked list of <code>addrinfo</code>
+structures</strong> --- one node per address. The caller <strong>MUST iterate the entire
+list</strong> (the <code>ai_next</code> chain), copy each <code>sockaddr</code> into binary form (see
+<a href="#address-representation" class="auto internal xref">Section 2.6</a>), and <span class="bcp14">MUST</span> release the list with <code>freeaddrinfo()</code>.<a href="#section-3.1-1" class="pilcrow">¶</a></p>
+<p id="section-3.1-2">Please note: <strong><code>getaddrinfo()</code></strong> is the name-to-address API for retrieving a
+full list; it is not the same as:<a href="#section-3.1-2" class="pilcrow">¶</a></p>
+<ul class="compact">
+<li class="compact" id="section-3.1-3.1">
+            <strong><code>gethostbyname()</code></strong> and <strong><code>gethostbyname2()</code></strong> --- deprecated, not
+thread-safe, and still present in old tutorials. Many call sites use only the
+first address even when multiple are available.<a href="#section-3.1-3.1" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-3.1-3.2">
+            <strong><code>inet_addr()</code></strong>, <strong><code>inet_aton()</code></strong>, and <strong><code>inet_pton()</code></strong> --- parse a
+<strong>literal</strong> address string into binary; they perform <strong>no DNS lookup</strong> and
+return a single address only.<a href="#section-3.1-3.2" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-3.1-3.3">Higher-level HTTP or RPC helpers that resolve a name internally and connect to
+<strong>one</strong> chosen address without exposing the full set --- fine for quick
+clients, unsuitable when the service relies on multiple A/AAAA records.<a href="#section-3.1-3.3" class="pilcrow">¶</a>
+</li>
+        </ul>
+<p id="section-3.1-4">To request both IPv4 and IPv6 results, set <code>hints.ai_family</code> to <code>AF_UNSPEC</code>
+(unless a deliberate single-family policy applies). Inspect <code>ai_family</code>,
+<code>ai_addrlen</code>, and <code>ai_addr</code> on <strong>each</strong> list element; do not assume every node
+has the same address family.<a href="#section-3.1-4" class="pilcrow">¶</a></p>
+<p id="section-3.1-5">Language runtimes expose the same idea under different names:<a href="#section-3.1-5" class="pilcrow">¶</a></p>
+<ul class="compact">
+<li class="compact" id="section-3.1-6.1">
+            <strong>Python:</strong> <code>socket.getaddrinfo()</code> returns a list of tuples --- iterate all
+entries; avoid <code>socket.gethostbyname()</code>, which returns one IPv4 address.<a href="#section-3.1-6.1" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-3.1-6.2">
+            <strong>Go:</strong> <code>net.DefaultResolver.LookupIPAddr()</code> or <code>LookupIP()</code>; avoid code paths
+that stop after the first returned address.<a href="#section-3.1-6.2" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-3.1-6.3">
+            <strong>Java:</strong> <code>InetAddress.getAllByName()</code> returns an array; <strong><code>getByName()</code></strong>
+returns only the first address and is a common source of "works in the lab"
+failures under round-robin DNS.<a href="#section-3.1-6.3" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-3.1-6.4">
+            <strong>Node.js:</strong> <code>dns.promises.resolve()</code> or <code>dns.lookup()</code> with <code>{ all: true }</code>;
+the default <code>lookup()</code> without <code>all: true</code> returns a single address.<a href="#section-3.1-6.4" class="pilcrow">¶</a>
+</li>
+        </ul>
+</section>
+</div>
+<div id="why-the-full-list-matters">
+<section id="section-3.2">
+        <h3 id="name-why-the-full-list-matters">
+<a href="#section-3.2" class="section-number selfRef">3.2. </a><a href="#name-why-the-full-list-matters" class="section-name selfRef">Why the Full List Matters</a>
+        </h3>
+<p id="section-3.2-1">DNS often publishes <strong>multiple A and AAAA records</strong> for availability and load
+distribution. Connecting to <code>result-&gt;ai_addr</code> and ignoring <code>ai_next</code> defeats
+that design. After collecting the list, the application (or a shared library)
+chooses order: IPv6-first, Happy Eyeballs, random shuffle within a family, or
+explicit retry on failure. <strong><code>getaddrinfo()</code> supplies candidates; it does not
+replace client-side load balancing.</strong><a href="#section-3.2-1" class="pilcrow">¶</a></p>
+<p id="section-3.2-2">Note that libc implementations may <strong>reorder</strong> the list per <span>[<a href="#RFC6724" class="cite xref">RFC6724</a>]</span> before
+returning it (see <a href="#address-selection" class="auto internal xref">Section 3.4</a>). You still need every element --- reorder
+yourself if policy requires --- but you cannot skip resolution and hope DNS
+order survives unchanged.<a href="#section-3.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="numeric-input-at-the-edge">
+<section id="section-3.3">
+        <h3 id="name-numeric-input-at-the-edge">
+<a href="#section-3.3" class="section-number selfRef">3.3. </a><a href="#name-numeric-input-at-the-edge" class="section-name selfRef">Numeric Input at the Edge</a>
+        </h3>
+<p id="section-3.3-1">When configuration or user input contains an address <strong>literal</strong> rather than a
+hostname, <strong><code>inet_pton()</code></strong> (or the language equivalent) converts it to binary
+for storage. When input might be either a name or a literal, <strong><code>getaddrinfo()</code></strong>
+accepts both; alternatively, try literal parse first, then fall back to DNS.
+Either way, convert once to binary and use binary forms internally.<a href="#section-3.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="address-selection">
+<section id="section-3.4">
+        <h3 id="name-address-selection-gaiconf-a">
+<a href="#section-3.4" class="section-number selfRef">3.4. </a><a href="#name-address-selection-gaiconf-a" class="section-name selfRef">Address Selection, gai.conf, and DNS Round Robin</a>
+        </h3>
+<p id="section-3.4-1">The Linux file <code>/etc/gai.conf</code> and the algorithms in <span>[<a href="#RFC6724" class="cite xref">RFC6724</a>]</span> control
+<strong>address selection order</strong> for dual-stack hosts --- which address family and
+which destination address are tried first. This is invisible in application
+source but visible in production load distribution.<a href="#section-3.4-1" class="pilcrow">¶</a></p>
+<p id="section-3.4-2"><strong>RFC 6724 destination address selection Rule 9</strong> ("Use longest matching
+prefix") compares each candidate destination with its likely source address
+and <strong>sorts addresses deterministically</strong> <span>[<a href="#RFC6724" class="cite xref">RFC6724</a>]</span>. Resolver libraries such
+as <strong>glibc</strong> implement this sorting inside <code>getaddrinfo()</code>. The effect:
+<strong>DNS round-robin is not a load-balancing strategy on IPv6</strong> (and is weakened
+on IPv4 in many cases). A round-robin AAAA record can collapse to "always try
+the same address first" once Rule 9 runs, concentrating connections on one
+backend. The problem is subtle on IPv4 but <strong>often severe on IPv6</strong>.<a href="#section-3.4-2" class="pilcrow">¶</a></p>
+<p id="section-3.4-3">Rule 9 is reasonable on the global Internet but <strong>often wrong inside a data
+center</strong>, where many servers are functionally declared equidistant and
+operators expect DNS or
+anycast to spread load. Mitigations include:<a href="#section-3.4-3" class="pilcrow">¶</a></p>
+<ul class="compact">
+<li class="compact" id="section-3.4-4.1">Perform <strong>client-side load balancing</strong> in the application or library.<a href="#section-3.4-4.1" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-3.4-4.2">Fetch all addresses (for example, via <code>getaddrinfo()</code> without premature
+sorting, or via a resolver that preserves DNS order), then choose randomly
+<strong>within the same address family</strong> --- do not shuffle v4 and v6 together in
+ways that accidentally defeat IPv6 preference policy.<a href="#section-3.4-4.2" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-3.4-4.3">Use service meshes, anycast, or explicit endpoint lists rather than naive
+round-robin alone.<a href="#section-3.4-4.3" class="pilcrow">¶</a>
+</li>
+        </ul>
+<p id="section-3.4-5">Changing <code>/etc/gai.conf</code> adjusts precedence tables but <strong>does not fully
+disable Rule 9</strong> in all implementations. Treat load balancing as a <strong>software
+concern</strong>, not something DNS alone provides.<a href="#section-3.4-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="internet-addressing">
+<section id="section-4">
+      <h2 id="name-internet-and-data-center-ad">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-internet-and-data-center-ad" class="section-name selfRef">Internet and Data Center Addressing</a>
+      </h2>
+<p id="section-4-1">Network teams assign prefixes; SREs consume them in orchestration templates,
+container runtimes, and firewall tickets. This section covers patterns that
+reduce outages during rollout.<a href="#section-4-1" class="pilcrow">¶</a></p>
+<div id="prefix-allocation">
+<section id="section-4.1">
+        <h3 id="name-prefix-allocation-for-hosts">
+<a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-prefix-allocation-for-hosts" class="section-name selfRef">Prefix Allocation for Hosts and Containers</a>
+        </h3>
+<p id="section-4.1-1">A common data center pattern assigns a <strong><code>/56</code> to each physical host</strong> (or
+rack entity), providing <strong>256 <code>/64</code> subnets</strong> --- one <code>/64</code> for the host itself
+and up to <strong>255 <code>/64</code> prefixes</strong> for containers, virtual machines, or
+Kubernetes pods. Each container <span class="bcp14">SHOULD</span> receive a full <strong><code>/64</code></strong>, not a
+longer prefix carved out of a single host <code>/64</code>. Routing between <code>/64</code> islands
+replaces NAT for east-west traffic and avoids CGNAT-style visibility loss in
+flow logs. Assigning only a <strong><code>/64</code> per host</strong> is insufficient when multiple
+containers each need their own <code>/64</code>; request a <strong><code>/56</code> (or shorter)</strong> delegation
+from the network team instead.<a href="#section-4.1-1" class="pilcrow">¶</a></p>
+<p id="section-4.1-2">The exact mapping depends on orchestrator and CNI design; the important software
+lesson is that <strong>each tier needs an explicit prefix plan</strong> rather than assuming
+"one address per host" as in legacy IPv4 NAT designs.<a href="#section-4.1-2" class="pilcrow">¶</a></p>
+<p id="section-4.1-3">Kubernetes clusters often use eBPF-based service NAT on the node. Traditional
+Linux tools (<code>ss</code>, <code>/proc/net/tcp</code>) may show node-level sockets, not pod-level
+flows, when NAT is involved. IPv6 routing reduces NAT use but <strong>does not
+remove the need for observability hooks</strong> at the CNI layer.<a href="#section-4.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="static-addressing-router-advertisements-and-ipam">
+<section id="section-4.2">
+        <h3 id="name-static-addressing-router-ad">
+<a href="#section-4.2" class="section-number selfRef">4.2. </a><a href="#name-static-addressing-router-ad" class="section-name selfRef">Static Addressing, Router Advertisements, and IPAM</a>
+        </h3>
+<p id="section-4.2-1">Enterprise data centers usually prefer <strong>static addresses</strong> from an IP Address
+Management (IPAM) system over SLAAC-derived random interface identifiers.
+Disable <strong>Router Advertisements (RA)</strong> on server-facing ports and on servers
+themselves when static addressing is required, so hosts do not acquire
+unexpected addresses alongside provisioned ones.<a href="#section-4.2-1" class="pilcrow">¶</a></p>
+<p id="section-4.2-2">Gateway at <strong><code>fe80::1</code></strong>, global addresses from IPAM, and DNS names registered
+in forward and reverse zones should be one coordinated change set.<a href="#section-4.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="semantic-prefixes">
+<section id="section-4.3">
+        <h3 id="name-semantic-prefixes-for-inter">
+<a href="#section-4.3" class="section-number selfRef">4.3. </a><a href="#name-semantic-prefixes-for-inter" class="section-name selfRef">Semantic Prefixes for Internal Traffic</a>
+        </h3>
+<p id="section-4.3-1">On IPv4, operators quickly tell <strong>internal from Internet</strong> traffic: RFC 1918
+space such as <code>10.0.0.0/8</code> and <code>192.168.0.0/16</code> signals "inside the
+organization" in logs, captures, and mental models <span>[<a href="#RFC1918" class="cite xref">RFC1918</a>]</span>. On IPv6, most
+data center addresses are <strong>global unicast</strong> --- there is no automatic "private
+vs public" heuristic. Debugging and ACL writing become harder unless the site
+<strong>designates a small set of well-known aggregates</strong> in IPAM and teaches SREs to
+use them.<a href="#section-4.3-1" class="pilcrow">¶</a></p>
+<p id="section-4.3-2">A practical pattern is to carve <strong>one prefix for each operational class</strong>, for
+example:<a href="#section-4.3-2" class="pilcrow">¶</a></p>
+<ul class="compact">
+<li class="compact" id="section-4.3-3.1">
+            <strong>Everything in the data center</strong> --- one aggregated prefix (the exact length
+depends on fleet size; a <code>/26</code> under the site GUA is an example when the
+block is purely semantic and routing summarizes wider internally)<a href="#section-4.3-3.1" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-4.3-3.2">
+            <strong>Everything employees</strong> --- corporate VPN, office wired/wireless for staff<a href="#section-4.3-3.2" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-4.3-3.3">
+            <strong>Everything guest Wi-Fi</strong> --- captive portal and untrusted clients<a href="#section-4.3-3.3" class="pilcrow">¶</a>
+</li>
+        </ul>
+<p id="section-4.3-4">SREs then remember <strong>three networks</strong>, not hundreds of <code>/64</code>s, when filtering
+pcaps, writing runbooks, or explaining an incident. Document these prefixes in
+the same place as <a href="#prefix-allocation" class="auto internal xref">Section 4.1</a> and <a href="#acl-propagation" class="auto internal xref">Section 4.6</a> rules so logs,
+firewall objects, and monitoring use consistent names (<code>dc-internal</code>,
+<code>corp-employee</code>, <code>guest-wifi</code>).<a href="#section-4.3-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="internet-egress">
+<section id="section-4.4">
+        <h3 id="name-internet-egress-and-edge-ga">
+<a href="#section-4.4" class="section-number selfRef">4.4. </a><a href="#name-internet-egress-and-edge-ga" class="section-name selfRef">Internet Egress and Edge Gateways</a>
+        </h3>
+<p id="section-4.4-1">On IPv4 it is often convenient to give a data center host Internet access via
+<strong>NAT44</strong> (or operator CGNAT) on a central device. That pattern <strong>SHOULD NOT
+be copied onto IPv6 hosts</strong> --- do not deploy ad hoc <strong>NAT66</strong> or per-server
+masquerading so internal servers "hide" behind random IPv6 ports. Internal
+hosts <span class="bcp14">SHOULD</span> reach the Internet through a <strong>gateway at the edge</strong> (border
+router, firewall, or dedicated translation cluster) with explicit policy and
+logging.<a href="#section-4.4-1" class="pilcrow">¶</a></p>
+<p id="section-4.4-2">That edge model still helps when an <strong>IPv6-only server</strong> must reach an
+<strong>IPv4-only Internet service</strong>: the server sends IPv6 to the edge; the gateway
+performs <strong>NAT64</strong> or protocol translation <span>[<a href="#RFC6146" class="cite xref">RFC6146</a>]</span> (and DNS64 where
+needed) on the way out. Translation is <strong>centralized, observable, and
+rate-limited</strong> --- not duplicated on every app host.<a href="#section-4.4-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="ipv4-only-wrappers">
+<section id="section-4.5">
+        <h3 id="name-frontends-for-ipv4-only-ser">
+<a href="#section-4.5" class="section-number selfRef">4.5. </a><a href="#name-frontends-for-ipv4-only-ser" class="section-name selfRef">Frontends for IPv4-Only Services</a>
+        </h3>
+<p id="section-4.5-1">Legacy applications that remain <strong>IPv4-only</strong> <span class="bcp14">SHOULD NOT</span> be exposed
+directly to dual-stack or IPv6-only clients. Surround them with a <strong>gateway
+tier</strong> --- for example <strong>nginx</strong>, <strong>HAProxy</strong>, or a service-mesh ingress ---
+that accepts <strong>IPv6 (and IPv4 if required)</strong> on the front side and speaks IPv4
+only to the backend. Clients see a normal v6-capable service name; the
+IPv4-only binary stays on an internal path until it is rewritten or replaced
+(see <a href="#provision-not-transform" class="auto internal xref">Section 11.1</a>).<a href="#section-4.5-1" class="pilcrow">¶</a></p>
+<p id="section-4.5-2">An alternative on the host is <strong>NAT64 implemented with eBPF</strong> (similar in spirit
+to Kubernetes node NAT). That can unblock a single service quickly but <strong>often
+does not scale</strong> as a fleet-wide strategy --- connection state, troubleshooting,
+and upgrade churn multiply with every host doing translation. Prefer a <strong>small
+number of shared frontends or edge translators</strong> over per-host NAT64 except in
+controlled exceptions. See also <a href="#icmpv6-pmtud" class="auto internal xref">Section 7</a> for VPN and middlebox
+interactions with translated traffic.<a href="#section-4.5-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="acl-propagation">
+<section id="section-4.6">
+        <h3 id="name-access-control-list-propaga">
+<a href="#section-4.6" class="section-number selfRef">4.6. </a><a href="#name-access-control-list-propaga" class="section-name selfRef">Access Control List Propagation</a>
+        </h3>
+<p id="section-4.6-1">When IPv6 is added to a service that already runs on IPv4, <strong>firewall and ACL
+automation may lag by minutes</strong>. During that window the service can appear
+<strong>healthy on IPv4 but broken on IPv6</strong>, or reachable in one direction only.
+SRE runbooks <span class="bcp14">SHOULD</span> treat "IPv6 enabled on the host" and "IPv6 permitted
+end-to-end" as separate checklist items. Do not announce IPv6 on a load
+balancer until policy propagation completes.<a href="#section-4.6-1" class="pilcrow">¶</a></p>
+<p id="section-4.6-2">Software teams <span class="bcp14">SHOULD NOT</span> create entirely new ACL models per address family
+when the same role-based policy can express both; parallel rule sets double
+drift risk. Where separate rules are unavoidable, generate them from the same
+source of truth.<a href="#section-4.6-2" class="pilcrow">¶</a></p>
+<div id="ipam-based-ipv4-to-ipv6-mapping-for-acls">
+<section id="section-4.6.1">
+          <h4 id="name-ipam-based-ipv4-to-ipv6-map">
+<a href="#section-4.6.1" class="section-number selfRef">4.6.1. </a><a href="#name-ipam-based-ipv4-to-ipv6-map" class="section-name selfRef">IPAM-Based IPv4-to-IPv6 Mapping for ACLs</a>
+          </h4>
+<p id="section-4.6.1-1">When IPAM tracks both address families, operators can <strong>derive a predictable
+IPv6 address from a hostname</strong> before an AAAA record exists in DNS. That
+mapping lets ACL and firewall systems publish <strong>IPv6 rules in advance</strong>, so
+policy is already in place when the service starts listening on IPv6 --- there
+is no window where the host is up on IPv6 but ACL automation is still catching
+up.<a href="#section-4.6.1-1" class="pilcrow">¶</a></p>
+<p id="section-4.6.1-2">This pattern <strong>requires ACL policy to be expressed by hostname (or role)</strong>, not
+by scattered literal addresses maintained separately per family. Given a hostname,
+a controller can resolve or derive addresses with the following <strong>pseudo-rules</strong>:<a href="#section-4.6.1-2" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="compact type-1" id="section-4.6.1-3">
+<li id="section-4.6.1-3.1">Look up the <strong>AAAA</strong> record. If present, use that IPv6 address.<a href="#section-4.6.1-3.1" class="pilcrow">¶</a>
+</li>
+            <li id="section-4.6.1-3.2">If no AAAA exists, look up the <strong>A</strong> record and obtain the IPv4 address.<a href="#section-4.6.1-3.2" class="pilcrow">¶</a>
+</li>
+            <li id="section-4.6.1-3.3">In IPAM, find the <strong>IPv4 network</strong> that contains that address.<a href="#section-4.6.1-3.3" class="pilcrow">¶</a>
+</li>
+            <li id="section-4.6.1-3.4">Find the <strong>associated IPv6 network</strong> paired with that IPv4 network in IPAM.<a href="#section-4.6.1-3.4" class="pilcrow">¶</a>
+</li>
+            <li id="section-4.6.1-3.5">
+              <strong>Embed the IPv4 address</strong> into the IPv6 network according to the site's
+translation plan (for example, a fixed nibble layout or well-known offset).
+The result is the <strong>predicted IPv6 address</strong> for that hostname.<a href="#section-4.6.1-3.5" class="pilcrow">¶</a>
+</li>
+          </ol>
+<p id="section-4.6.1-4">The benefit is operational: <strong>ACLs for IPv6 can be built and deployed everywhere
+before DNS advertises AAAA</strong>, because the IPv6 address is computable from the
+same hostname and IPAM data already used for IPv4. When the service later
+enables IPv6 and the AAAA is published, the pre-provisioned rules should match
+without a second ACL rollout. The site translation plan in step 5 <span class="bcp14">MUST</span> be
+documented and stable; ad hoc embedding layouts defeat this approach.<a href="#section-4.6.1-4" class="pilcrow">¶</a></p>
+<p id="section-4.6.1-5">If ACL systems cannot accept hostnames and expand them through this logic,
+teams fall back to the lag problem described above --- IPv6 goes live while
+firewall tickets are still in flight.<a href="#section-4.6.1-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+</section>
+</div>
+<div id="application-readiness">
+<section id="section-5">
+      <h2 id="name-application-and-software-re">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-application-and-software-re" class="section-name selfRef">Application and Software Readiness</a>
+      </h2>
+<p id="section-5-1">IPv6 deployment exposes software that "worked on the LAN" only because the LAN
+was IPv4. This section lists classes of problems seen in production data
+centers and enterprise rollouts.<a href="#section-5-1" class="pilcrow">¶</a></p>
+<div id="enterprise-platform-inventory">
+<section id="section-5.1">
+        <h3 id="name-enterprise-platform-invento">
+<a href="#section-5.1" class="section-number selfRef">5.1. </a><a href="#name-enterprise-platform-invento" class="section-name selfRef">Enterprise Platform Inventory</a>
+        </h3>
+<p id="section-5.1-1">Many enterprise platforms still assume IPv4-only access paths. Examples
+reported in operator experience include <strong>Hadoop</strong>, certain <strong>object storage
+APIs</strong>, <strong>Kubernetes</strong> dependencies (especially third-party charts and
+sidecars), <strong>cloud firewalls</strong> (for example, Azure Firewall and third-party
+NGFW images on cloud platforms where IPv6 support lagged vendor roadmaps), and
+<strong>security analytics</strong> pipelines that ingest NetFlow or packet metadata on
+IPv4 only.<a href="#section-5.1-1" class="pilcrow">¶</a></p>
+<p id="section-5.1-2"><strong>Action for SRE teams:</strong> maintain a <strong>living inventory</strong> of software in the
+deployment path (data plane, control plane, CI/CD, security, logging) with an
+explicit <strong>IPv6 supported / broken / untested</strong> classification. Monitoring
+pipelines <span class="bcp14">SHOULD</span> continuously <strong>discover services not yet in that inventory</strong>
+(see <a href="#observability" class="auto internal xref">Section 9</a>). Security research or monitoring that runs IPv4-only
+cannot validate IPv6 attack surface; teams <span class="bcp14">SHOULD</span> require IPv6 parity before
+accepting "no IPv6 security issues" claims.<a href="#section-5.1-2" class="pilcrow">¶</a></p>
+<p id="section-5.1-3">This document does not attempt a canonical vendor matrix --- products change
+--- but the inventory practice is mandatory for sane rollout planning.<a href="#section-5.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="hard-coded-addresses-and-localhost-pitfalls">
+<section id="section-5.2">
+        <h3 id="name-hard-coded-addresses-and-lo">
+<a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-hard-coded-addresses-and-lo" class="section-name selfRef">Hard-Coded Addresses and Localhost Pitfalls</a>
+        </h3>
+<p id="section-5.2-1">A recurring defect is binding services to <strong><code>127.0.0.1</code></strong> instead of
+<strong><code>localhost</code></strong> or <code>::1</code>. On dual-stack hosts, <code>127.0.0.1</code> listens <strong>IPv4
+loopback only</strong>; IPv6 clients cannot connect even when the service "runs
+locally." The fix is to use name-based bind targets (<code>localhost</code>) or explicit
+dual-stack sockets depending on platform API.<a href="#section-5.2-1" class="pilcrow">¶</a></p>
+<p id="section-5.2-2">Similar bugs appear with <strong><code>0.0.0.0</code></strong> vs <strong><code>::</code></strong> listen semantics, health
+probes that curl IPv4 literals, and container images that ship <code>/etc/hosts</code>
+without IPv6 entries.<a href="#section-5.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="ip-address-storage-in-application-data">
+<section id="section-5.3">
+        <h3 id="name-ip-address-storage-in-appli">
+<a href="#section-5.3" class="section-number selfRef">5.3. </a><a href="#name-ip-address-storage-in-appli" class="section-name selfRef">IP Address Storage in Application Data</a>
+        </h3>
+<p id="section-5.3-1">Many services store client or server IP addresses in databases, logs, caches,
+and message queues using <strong>fixed-width fields</strong> (32-bit integers, <code>CHAR(15)</code>)
+or parsers that accept dotted decimal only. IPv6 requires <strong>structured address
+types</strong> (128-bit binary, or text with adequate length) and family-aware
+comparison.<a href="#section-5.3-1" class="pilcrow">¶</a></p>
+<p id="section-5.3-2">Affected areas include:<a href="#section-5.3-2" class="pilcrow">¶</a></p>
+<ul class="compact">
+<li class="compact" id="section-5.3-3.1">
+            <strong>Geolocation databases</strong> (for example, MaxMind and similar) used for
+compliance, fraud, and ad targeting --- coverage and accuracy for IPv6 vary
+widely.<a href="#section-5.3-3.1" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-5.3-3.2">
+            <strong>Real User Monitoring (RUM)</strong> and <strong>DNS steering</strong> products that map clients
+to "nearest" PoP --- if the probe or edge logic is IPv4-only, steering
+decisions silently degrade for IPv6 clients.<a href="#section-5.3-3.2" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-5.3-3.3">
+            <strong>Rate limiting and abuse detection</strong> keyed on "IP" strings with naive
+splitting on <code>.</code> characters.<a href="#section-5.3-3.3" class="pilcrow">¶</a>
+</li>
+        </ul>
+<p id="section-5.3-4">Refactoring often touches every schema, serializer, and analytics job that
+touched the field --- plan migration as a <strong>program</strong>, not a one-line fix.<a href="#section-5.3-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="databases-acls-and-security-tools">
+<section id="section-5.4">
+        <h3 id="name-databases-acls-and-security">
+<a href="#section-5.4" class="section-number selfRef">5.4. </a><a href="#name-databases-acls-and-security" class="section-name selfRef">Databases, ACLs, and Security Tools</a>
+        </h3>
+<p id="section-5.4-1"><strong>MySQL and MariaDB</strong> host-based ACLs are historically <strong>string comparisons</strong>
+on the client address field. IPv6 literals contain colons and zone identifiers;
+copying IPv4 ACL patterns without testing produces false denials or overly
+broad grants. Test <code>USER@'2001:db8::/32'</code>-style entries explicitly.<a href="#section-5.4-1" class="pilcrow">¶</a></p>
+<p id="section-5.4-2">Security agents (EDR, IDS, WAF) may lack IPv6 decode paths even when they claim
+dual-stack support. Validate <strong>both directions</strong> --- ingress to the service and
+egress from the service --- under IPv6-only client paths. The same teams can
+extend PR checks with static analysis rules (see <a href="#static-analysis" class="auto internal xref">Section 5.6</a>).<a href="#section-5.4-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="language-runtimes">
+<section id="section-5.5">
+        <h3 id="name-language-runtimes-and-libra">
+<a href="#section-5.5" class="section-number selfRef">5.5. </a><a href="#name-language-runtimes-and-libra" class="section-name selfRef">Language Runtimes and Libraries</a>
+        </h3>
+<p id="section-5.5-1"><strong>Python</strong> exposes several <strong>deprecated socket helpers that are IPv4-only or
+return only one address</strong>, yet remain common in production code and older
+tutorials. Examples include:<a href="#section-5.5-1" class="pilcrow">¶</a></p>
+<ul class="compact">
+<li class="compact" id="section-5.5-2.1">
+            <strong><code>socket.gethostbyname()</code></strong> and <strong><code>socket.gethostbyname_ex()</code></strong> --- resolve
+a name to IPv4 only; use <strong><code>socket.getaddrinfo()</code></strong> and iterate all results
+(see <a href="#name-resolution" class="auto internal xref">Section 3</a>).<a href="#section-5.5-2.1" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-5.5-2.2">
+            <strong><code>socket.gethostbyaddr()</code></strong> --- reverse lookup with IPv4-centric assumptions;
+prefer <strong><code>getnameinfo()</code></strong> with a binary <code>sockaddr</code> from the connection.<a href="#section-5.5-2.2" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-5.5-2.3">
+            <strong><code>socket.inet_aton()</code></strong> and <strong><code>socket.inet_ntoa()</code></strong> --- convert IPv4
+literals only; use <strong><code>socket.inet_pton()</code></strong> and <strong><code>socket.inet_ntop()</code></strong> for
+both address families.<a href="#section-5.5-2.3" class="pilcrow">¶</a>
+</li>
+        </ul>
+<p id="section-5.5-3">These APIs <strong>will not return IPv6</strong> even when the host has AAAA records and
+IPv6 connectivity. Replacing them is rarely a one-line change --- call sites,
+tests, and error handling often assume 32-bit or dotted-decimal form.<a href="#section-5.5-3" class="pilcrow">¶</a></p>
+<p id="section-5.5-4">Other languages have similar legacy (<code>inet_aton</code> assumptions, IPv4-only standard
+library gaps). Code review checklists <span class="bcp14">SHOULD</span> include:<a href="#section-5.5-4" class="pilcrow">¶</a></p>
+<ul class="compact">
+<li class="compact" id="section-5.5-5.1">No unparsed string IPs in business logic<a href="#section-5.5-5.1" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-5.5-5.2">Resolve names with a <strong>full-list</strong> API (see <a href="#name-resolution" class="auto internal xref">Section 3</a>); never call
+legacy one-address helpers in new code<a href="#section-5.5-5.2" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-5.5-5.3">Tests that run against <strong>IPv6 literals and DNS names with AAAA records</strong><a href="#section-5.5-5.3" class="pilcrow">¶</a>
+</li>
+        </ul>
+</section>
+</div>
+<div id="static-analysis">
+<section id="section-5.6">
+        <h3 id="name-static-analysis-and-pull-re">
+<a href="#section-5.6" class="section-number selfRef">5.6. </a><a href="#name-static-analysis-and-pull-re" class="section-name selfRef">Static Analysis and Pull Request Automation</a>
+        </h3>
+<p id="section-5.6-1">Manual review does not scale across large monorepos. <strong>Security and platform
+teams SHOULD integrate IPv6 readiness checks into pull request (PR) workflows</strong>,
+piggybacking on existing gates rather than relying on a separate audit cycle.<a href="#section-5.6-1" class="pilcrow">¶</a></p>
+<div id="pattern-scanners-in-ci">
+<section id="section-5.6.1">
+          <h4 id="name-pattern-scanners-in-ci">
+<a href="#section-5.6.1" class="section-number selfRef">5.6.1. </a><a href="#name-pattern-scanners-in-ci" class="section-name selfRef">Pattern Scanners in CI</a>
+          </h4>
+<p id="section-5.6.1-1">Ship <strong>Semgrep</strong>, <strong>CodeQL</strong>, or equivalent rules that flag likely IPv4-only
+patterns, for example:<a href="#section-5.6.1-1" class="pilcrow">¶</a></p>
+<ul class="compact">
+<li class="compact" id="section-5.6.1-2.1">Literal <code>127.0.0.1</code>, <code>0.0.0.0</code>, or dotted-decimal regexes used as addresses<a href="#section-5.6.1-2.1" class="pilcrow">¶</a>
+</li>
+            <li class="compact" id="section-5.6.1-2.2">Calls to deprecated Python socket helpers (see <a href="#language-runtimes" class="auto internal xref">Section 5.5</a>)<a href="#section-5.6.1-2.2" class="pilcrow">¶</a>
+</li>
+            <li class="compact" id="section-5.6.1-2.3">
+              <code>AF_INET</code> sockets where dual-stack or <code>AF_INET6</code> is required<a href="#section-5.6.1-2.3" class="pilcrow">¶</a>
+</li>
+            <li class="compact" id="section-5.6.1-2.4">Database columns or structs sized for IPv4-only (<code>CHAR(15)</code>, 32-bit integers)<a href="#section-5.6.1-2.4" class="pilcrow">¶</a>
+</li>
+            <li class="compact" id="section-5.6.1-2.5">String splits on <code>.</code> to parse "IP addresses"<a href="#section-5.6.1-2.5" class="pilcrow">¶</a>
+</li>
+          </ul>
+<p id="section-5.6.1-3">Security teams often own the rule pack; application teams own remediation.
+Rules <span class="bcp14">SHOULD</span> be published internally with examples and fix guidance.<a href="#section-5.6.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="automated-remediation-pull-requests">
+<section id="section-5.6.2">
+          <h4 id="name-automated-remediation-pull-">
+<a href="#section-5.6.2" class="section-number selfRef">5.6.2. </a><a href="#name-automated-remediation-pull-" class="section-name selfRef">Automated Remediation Pull Requests</a>
+          </h4>
+<p id="section-5.6.2-1">Beyond blocking merges, pipelines <span class="bcp14">MAY</span> open <strong>automatic PRs</strong> that propose
+fixes when a scan finds matches on default branches or on a schedule. Some
+findings are straightforward (replace <code>gethostbyname</code> with <code>getaddrinfo</code> usage);
+others need context. <strong>AI-assisted patch generation</strong> can speed up bulk
+refactors, but <span class="bcp14">MUST</span> be reviewed by a human --- expect <strong>false positives</strong>
+(for example, code that intentionally handles IPv4-only legacy clients).<a href="#section-5.6.2-1" class="pilcrow">¶</a></p>
+<p id="section-5.6.2-2">Treat auto-generated PRs like any other contribution: tests, ownership by code
+owners, and rollback plan.<a href="#section-5.6.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="opt-out-annotations-for-engineers">
+<section id="section-5.6.3">
+          <h4 id="name-opt-out-annotations-for-eng">
+<a href="#section-5.6.3" class="section-number selfRef">5.6.3. </a><a href="#name-opt-out-annotations-for-eng" class="section-name selfRef">Opt-Out Annotations for Engineers</a>
+          </h4>
+<p id="section-5.6.3-1">Engineers <span class="bcp14">SHOULD</span> be able to <strong>suppress a finding on a specific line</strong> when
+the IPv4-only behavior is intentional and documented --- for example, a
+compatibility shim with a planned removal date. Define a <strong>codified comment</strong>
+recognized by the scanner, placed <strong>immediately before</strong> the flagged line. An
+example directive:<a href="#section-5.6.3-1" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-5.6.3-2">
+<pre># ipv6-readiness: ignore-next-line -- see TICKET-123
+</pre><a href="#section-5.6.3-2" class="pilcrow">¶</a>
+</div>
+<p id="section-5.6.3-3">The project <span class="bcp14">MUST</span> document the exact directive string, required rationale
+format, and whether ticket references are mandatory. Blanket disables of entire
+files <span class="bcp14">SHOULD NOT</span> be allowed without security team approval.<a href="#section-5.6.3-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="documentation-examples">
+<section id="section-5.7">
+        <h3 id="name-documentation-and-presentat">
+<a href="#section-5.7" class="section-number selfRef">5.7. </a><a href="#name-documentation-and-presentat" class="section-name selfRef">Documentation and Presentations</a>
+        </h3>
+<p id="section-5.7-1">Runbooks, architecture diagrams, wikis, training decks, and conference slides
+<strong>SHOULD use IPv6 addresses in examples by default</strong>, unless the example is
+inherently IPv4-specific. Using IPv4-only literals in internal documentation
+normalizes the wrong protocol for new engineers and hides gaps until production
+rollout. IETF documents follow the same principle: examples <span class="bcp14">SHOULD</span> use IPv6
+and reserved documentation prefixes rather than arbitrary or production
+addresses <span>[<a href="#RFC3849" class="cite xref">RFC3849</a>]</span> <span>[<a href="#RFC5737" class="cite xref">RFC5737</a>]</span>.<a href="#section-5.7-1" class="pilcrow">¶</a></p>
+<p id="section-5.7-2">When an example needs an IP address or prefix, follow <strong>IETF documentation
+address rules</strong>:<a href="#section-5.7-2" class="pilcrow">¶</a></p>
+<ul class="compact">
+<li class="compact" id="section-5.7-3.1">
+            <strong>IPv6 (preferred):</strong> use the documentation prefixes reserved in <span>[<a href="#RFC3849" class="cite xref">RFC3849</a>]</span>
+(<code>2001:db8::/32</code>) and <span>[<a href="#RFC9637" class="cite xref">RFC9637</a>]</span> (<code>3fff::/20</code> for larger or more realistic
+layouts). Represent addresses in <strong>canonical text form</strong> per <span>[<a href="#RFC5952" class="cite xref">RFC5952</a>]</span>
+(lowercase hex, suppress leading zeros, use <code>::</code> compression).<a href="#section-5.7-3.1" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-5.7-3.2">
+            <strong>IPv4 (only when required):</strong> use the TEST-NET blocks in <span>[<a href="#RFC5737" class="cite xref">RFC5737</a>]</span>
+(<code>192.0.2.0/24</code>, <code>198.51.100.0/24</code>, <code>203.0.113.0/24</code>) --- not production
+space, arbitrary <code>10.0.0.0/8</code> lab subnets, or other unreserved ranges that
+could collide with real deployments.<a href="#section-5.7-3.2" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-5.7-3.3">
+            <strong>Names:</strong> use example domain names from <span>[<a href="#RFC2606" class="cite xref">RFC2606</a>]</span> (<code>example.com</code>,
+<code>example.net</code>, <code>example.org</code>) rather than real operator domains.<a href="#section-5.7-3.3" class="pilcrow">¶</a>
+</li>
+        </ul>
+<p id="section-5.7-4">Review documentation the same way code is reviewed: a slide full of <code>10.x.x.x</code>
+or <code>192.168.x.x</code> examples teaches habits that conflict with IPv6-first data
+center operation. Prefer <code>2001:db8:...</code> and service names unless the document
+explicitly covers legacy IPv4 behavior.<a href="#section-5.7-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="dns-registration">
+<section id="section-6">
+      <h2 id="name-dns-registration-and-dynami">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-dns-registration-and-dynami" class="section-name selfRef">DNS Registration and Dynamic Addressing</a>
+      </h2>
+<p id="section-6-1">IPv6's default autoconfiguration (SLAAC) generates addresses from interface
+identifiers. Without operational discipline, <strong>DNS lags behind actual
+addresses</strong>, and break-glass access by name fails.<a href="#section-6-1" class="pilcrow">¶</a></p>
+<div id="slaac-switches-and-the-dns-gap">
+<section id="section-6.1">
+        <h3 id="name-slaac-switches-and-the-dns-">
+<a href="#section-6.1" class="section-number selfRef">6.1. </a><a href="#name-slaac-switches-and-the-dns-" class="section-name selfRef">SLAAC, Switches, and the DNS Gap</a>
+        </h3>
+<p id="section-6.1-1">Wi-Fi controllers often integrate with DNS to register client names; <strong>access
+switches frequently do not</strong>. To populate DNS for wired servers using SLAAC,
+operators need <strong>MAC and address visibility</strong> from switches (for example, via
+Neighbor Discovery logging or sFlow/IPFIX) correlated with inventory to derive
+hostnames. Ideally, selected <strong>Neighbor Discovery events</strong> would be exported to
+a registration service --- a gap in many switch implementations.<a href="#section-6.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="dhcpv6-and-hostname-registration">
+<section id="section-6.2">
+        <h3 id="name-dhcpv6-and-hostname-registr">
+<a href="#section-6.2" class="section-number selfRef">6.2. </a><a href="#name-dhcpv6-and-hostname-registr" class="section-name selfRef">DHCPv6 and Hostname Registration</a>
+        </h3>
+<p id="section-6.2-1">Enterprises that distrust client self-registration prefer <strong>DHCPv6</strong> with
+central lease logging. Clients <span class="bcp14">SHOULD</span> send <strong>DHCPv6 Option 39 (Client
+FQDN)</strong> so the server can register forward and reverse DNS <span>[<a href="#RFC4704" class="cite xref">RFC4704</a>]</span>
+          <span>[<a href="#RFC8415" class="cite xref">RFC8415</a>]</span>. Support for Option 39 has varied by OS; operators <span class="bcp14">SHOULD</span>
+verify current behavior on every deployed OS image (including macOS, Windows,
+Linux, and container base images) rather than assuming parity.<a href="#section-6.2-1" class="pilcrow">¶</a></p>
+<p id="section-6.2-2">Device-side <strong>Dynamic DNS updates</strong> remain possible but are often disabled in
+enterprise policy.<a href="#section-6.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="icmpv6-pmtud">
+<section id="section-7">
+      <h2 id="name-icmpv6-pmtud-and-middleboxe">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-icmpv6-pmtud-and-middleboxe" class="section-name selfRef">ICMPv6, PMTUD, and Middleboxes</a>
+      </h2>
+<div id="do-not-block-icmpv6">
+<section id="section-7.1">
+        <h3 id="name-do-not-block-icmpv6">
+<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-do-not-block-icmpv6" class="section-name selfRef">Do Not Block ICMPv6</a>
+        </h3>
+<p id="section-7.1-1">Teams trained to block ICMPv4 "for security" sometimes apply the same policy
+to ICMPv6. <strong>ND and PMTUD depend on ICMPv6</strong> <span>[<a href="#RFC4443" class="cite xref">RFC4443</a>]</span> <span>[<a href="#RFC8201" class="cite xref">RFC8201</a>]</span>. Blocking
+ICMPv6 produces hung connections, mysterious TLS timeouts, and DNS failures
+that are misdiagnosed as application bugs. Filter <strong>specific message types</strong>
+judiciously; do not implement blanket deny rules.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="path-mtu-discovery">
+<section id="section-7.2">
+        <h3 id="name-path-mtu-discovery">
+<a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-path-mtu-discovery" class="section-name selfRef">Path MTU Discovery</a>
+        </h3>
+<p id="section-7.2-1">When LinkedIn first enabled IPv6 on production servers, <strong>Path MTU Discovery
+issues</strong> required lowering TCP MSS via Apache configuration until paths were
+validated --- a reminder that IPv6 MTU assumptions differ from internal IPv4
+MTU 1500 end-to-end paths. Mobile operators (for example, T-Mobile USA and
+Reliance Jio in India) run <strong>IPv6-only</strong> access networks successfully at scale;
+problems on enterprise fixed networks often come from <strong>middleboxes and
+policy</strong>, not from IPv6 itself.<a href="#section-7.2-1" class="pilcrow">¶</a></p>
+<p id="section-7.2-2">Hard PMTUD failures also interact with <strong>DNS over large responses</strong> when
+fragmentation is mishandled. If fragmented UDP is dropped, DNS appears
+"flaky" only for some records.<a href="#section-7.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="vpns-and-nat64">
+<section id="section-7.3">
+        <h3 id="name-vpns-and-nat64">
+<a href="#section-7.3" class="section-number selfRef">7.3. </a><a href="#name-vpns-and-nat64" class="section-name selfRef">VPNs and NAT64</a>
+        </h3>
+<p id="section-7.3-1">Some VPN products treat translated packets as attacks. <strong>NAT64</strong> <span>[<a href="#RFC6146" class="cite xref">RFC6146</a>]</span>
+changes headers; a VPN that validates packet integrity on IPv4 paths may <strong>drop
+NAT64 flows</strong>. Prefer <strong>edge gateways</strong> for translation as described in
+<a href="#internet-egress" class="auto internal xref">Section 4.4</a> and <a href="#ipv4-only-wrappers" class="auto internal xref">Section 4.5</a> rather than sprouting translators on
+every host. Long-term, <strong>VPN endpoints should be native IPv6</strong> on the data
+center side. Until then, document which access paths require IPv4 literal
+connectivity vs IPv6.<a href="#section-7.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="client-load-balancing">
+<section id="section-8">
+      <h2 id="name-client-side-load-balancing">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-client-side-load-balancing" class="section-name selfRef">Client-Side Load Balancing</a>
+      </h2>
+<p id="section-8-1">As described in <a href="#address-selection" class="auto internal xref">Section 3.4</a>, <strong>RFC 6724 Rule 9</strong> reorders addresses
+returned from DNS. In data centers that rely on multiple AAAA records for
+spread, connection counts can skew badly --- one backend receives most IPv6
+connections while others appear idle. This section assumes the application has
+already obtained the <strong>full address list</strong> using the patterns in
+<a href="#name-resolution" class="auto internal xref">Section 3</a>.<a href="#section-8-1" class="pilcrow">¶</a></p>
+<p id="section-8-2"><strong>Recommended pattern:</strong><a href="#section-8-2" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="compact type-1" id="section-8-3">
+<li id="section-8-3.1">Resolve the service name to all addresses.<a href="#section-8-3.1" class="pilcrow">¶</a>
+</li>
+        <li id="section-8-3.2">Partition addresses by address family.<a href="#section-8-3.2" class="pilcrow">¶</a>
+</li>
+        <li id="section-8-3.3">Apply family preference policy (operator choice: IPv6-first, happy eyeballs,
+or parallel).<a href="#section-8-3.3" class="pilcrow">¶</a>
+</li>
+        <li id="section-8-3.4">
+          <strong>Randomize or round-robin within each family</strong> rather than trusting DNS
+order after <code>getaddrinfo()</code>.<a href="#section-8-3.4" class="pilcrow">¶</a>
+</li>
+        <li id="section-8-3.5">Optionally implement retries across the full set on failure.<a href="#section-8-3.5" class="pilcrow">¶</a>
+</li>
+      </ol>
+<p id="section-8-4">Implement load balancing in <strong>shared client libraries</strong> so every service does
+not rediscover the same RFC 6724 interaction.<a href="#section-8-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="observability">
+<section id="section-9">
+      <h2 id="name-observability-and-metrics">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-observability-and-metrics" class="section-name selfRef">Observability and Metrics</a>
+      </h2>
+<p id="section-9-1">IPv6 migration needs <strong>inventory plus measurement</strong>: a service list with IPv6
+readiness labels, automated discovery of what is missing from that list, and
+time-series metrics that show progress toward dual-stack or IPv6-only targets.<a href="#section-9-1" class="pilcrow">¶</a></p>
+<div id="service-inventory-and-discovery">
+<section id="section-9.1">
+        <h3 id="name-service-inventory-and-disco">
+<a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-service-inventory-and-disco" class="section-name selfRef">Service Inventory and Discovery</a>
+        </h3>
+<p id="section-9.1-1">The inventory in <a href="#application-readiness" class="auto internal xref">Section 5</a> <span class="bcp14">MUST</span> list every application and
+platform component with a readiness state (for example: IPv6-only ready,
+dual-stack, IPv4-only, unknown). Inventory alone is not enough --- operators
+<span class="bcp14">SHOULD</span> run periodic <strong>discovery</strong> that compares running processes, container
+images, load balancer pools, and DNS names against the catalog and <strong>flags
+unregistered services</strong>. Shadow deployments and shared hosts routinely run
+software that no team has classified.<a href="#section-9.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="progress-metrics">
+<section id="section-9.2">
+        <h3 id="name-progress-metrics">
+<a href="#section-9.2" class="section-number selfRef">9.2. </a><a href="#name-progress-metrics" class="section-name selfRef">Progress Metrics</a>
+        </h3>
+<p id="section-9.2-1">Dashboards <span class="bcp14">SHOULD</span> expose fleet-level indicators, for example:<a href="#section-9.2-1" class="pilcrow">¶</a></p>
+<ul class="compact">
+<li class="compact" id="section-9.2-2.1">Percentage of services <strong>IPv6-only</strong>, <strong>dual-stack</strong>, or <strong>IPv4-only</strong> (by
+count and by criticality tier)<a href="#section-9.2-2.1" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-9.2-2.2">Trend of <strong>AAAA vs A-only</strong> DNS names for production hostnames<a href="#section-9.2-2.2" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-9.2-2.3">Ratio of <strong>ingress bytes or connections</strong> over IPv6 vs IPv4 at load balancers<a href="#section-9.2-2.3" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-9.2-2.4">Count of hosts or pods <strong>without any IPv6 address</strong> in IPAM or configuration
+management<a href="#section-9.2-2.4" class="pilcrow">¶</a>
+</li>
+        </ul>
+<p id="section-9.2-3">Set explicit targets (for example, "90% of tier-1 APIs dual-stack by Q4") and
+review the same metrics in change advisory boards.<a href="#section-9.2-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="host-level-listen-socket-audit">
+<section id="section-9.3">
+        <h3 id="name-host-level-listen-socket-au">
+<a href="#section-9.3" class="section-number selfRef">9.3. </a><a href="#name-host-level-listen-socket-au" class="section-name selfRef">Host-Level Listen-Socket Audit</a>
+        </h3>
+<p id="section-9.3-1">On each host, collect which services <strong>listen on IPv4-only</strong>, <strong>IPv6-only</strong>, or
+<strong>dual-stack</strong>. On Linux, <code>ss -tulnp</code> (or <code>/proc/net/tcp</code> and <code>tcp6</code>) is the
+usual source, but classification is <strong>non-trivial</strong>:<a href="#section-9.3-1" class="pilcrow">¶</a></p>
+<ul class="compact">
+<li class="compact" id="section-9.3-2.1">Separate <code>tcp</code>/<code>udp</code> vs <code>tcp6</code>/<code>udp6</code> lines are often <strong>IPv4-only</strong> vs
+<strong>IPv6-only</strong> listeners.<a href="#section-9.3-2.1" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-9.3-2.2">A single IPv6 socket with <code>IPV6_V6ONLY=0</code> may accept IPv4-mapped traffic
+without a matching <code>tcp</code> line --- treat as <strong>dual-stack</strong> only after checking
+socket options or process documentation.<a href="#section-9.3-2.2" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-9.3-2.3">Match rows by <strong>PID, port, and inode</strong> when correlating multiple lines for one
+daemon; export a normalized label (<code>v4-only</code>, <code>v6-only</code>, <code>dual-stack</code>,
+<code>unknown</code>) for metrics.<a href="#section-9.3-2.3" class="pilcrow">¶</a>
+</li>
+        </ul>
+<p id="section-9.3-3">Run this audit on a schedule and on every deploy; alert when a tier-1 service
+regresses to IPv4-only.<a href="#section-9.3-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="host-agents">
+<section id="section-9.4">
+        <h3 id="name-host-agents-before-applicat">
+<a href="#section-9.4" class="section-number selfRef">9.4. </a><a href="#name-host-agents-before-applicat" class="section-name selfRef">Host Agents Before Application Provisioning</a>
+        </h3>
+<p id="section-9.4-1">Before any application software is installed, <strong>inventory every agent and
+daemon already running on the host</strong> --- configuration management, monitoring,
+log shippers, vulnerability scanners, <strong>EDR</strong>, host firewalls, and other
+platform packages the fleet image includes by default. These components often
+<strong>bind IPv4-only</strong>, ship IPv4-only policy from a central console, or break when
+the host loses IPv4 even if the workload you plan to deploy is IPv6-ready.<a href="#section-9.4-1" class="pilcrow">¶</a></p>
+<p id="section-9.4-2">Run this baseline check on <strong>golden images and freshly provisioned servers</strong>, not
+only on production services. A host cannot safely move to dual-stack or
+IPv6-only if an unknown agent still requires IPv4 loopback, RFC 1918 reachability,
+or IPv4-only reporting to its controller. Export agent name, version, listen
+sockets (see above), and <strong>IPv6 readiness</strong> into the same catalog as
+<a href="#application-readiness" class="auto internal xref">Section 5</a>. Re-run when the image or security baseline changes.<a href="#section-9.4-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="traffic-by-protocol-and-address-family">
+<section id="section-9.5">
+        <h3 id="name-traffic-by-protocol-and-add">
+<a href="#section-9.5" class="section-number selfRef">9.5. </a><a href="#name-traffic-by-protocol-and-add" class="section-name selfRef">Traffic by Protocol and Address Family</a>
+        </h3>
+<p id="section-9.5-1">Switches and routers expose <strong>IPv4 and IPv6 packet counters</strong> but often <strong>do
+not break out TCP and UDP by IP version</strong> (TCPv4 vs TCPv6, UDPv4 vs UDPv6).
+Where the platform allows, collect <strong><code>tcp4</code>/<code>udp4</code> vs <code>tcp6</code>/<code>udp6</code></strong> (or
+equivalent flow records) on hosts, hypervisors, and top-of-rack devices.
+Application SREs need <strong>L4 metrics split by address family</strong> to confirm traffic
+is migrating and to find stragglers still on IPv4-only or translated paths.<a href="#section-9.5-1" class="pilcrow">¶</a></p>
+<p id="section-9.5-2">Log pipelines <span class="bcp14">SHOULD</span> record address family explicitly (<code>AF_INET</code> vs
+<code>AF_INET6</code>) rather than inferring from string shape.<a href="#section-9.5-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="http-signaling-and-planned-ipv4-drills">
+<section id="section-9.6">
+        <h3 id="name-http-signaling-and-planned-">
+<a href="#section-9.6" class="section-number selfRef">9.6. </a><a href="#name-http-signaling-and-planned-" class="section-name selfRef">HTTP Signaling and Planned IPv4 Drills</a>
+        </h3>
+<p id="section-9.6-1">For HTTP services, implementing <a href="https://datatracker.ietf.org/doc/draft-martin-retry-over-ipv6/">HTTP Signaling of Planned IPv4
+Unavailability</a>
+(<code>566</code> responses, <code>Retry-Over-IPv6</code>, and related headers) gives <strong>measurable
+signals</strong> during planned IPv4 outages: count <code>566</code> responses, soft vs hard
+failures after IPv6 retry, and clients still hitting IPv4. That data belongs on
+the same dashboards as listen-socket and byte-ratio metrics when rolling out
+dual-stack or IPv6-only frontends.<a href="#section-9.6-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="live-traffic-and-service-call-trees">
+<section id="section-9.7">
+        <h3 id="name-live-traffic-and-service-ca">
+<a href="#section-9.7" class="section-number selfRef">9.7. </a><a href="#name-live-traffic-and-service-ca" class="section-name selfRef">Live Traffic and Service Call Trees</a>
+        </h3>
+<p id="section-9.7-1">Inventory and socket audits show <strong>what could</strong> run on IPv6; live traffic shows
+<strong>what does</strong>. Instrument outbound and inbound connections (service mesh,
+eBPF, proxy access logs, or APM) to tag each hop with <strong>address family</strong>.
+Roll those tags into a <strong>call tree or dependency graph per service</strong> so teams
+see, for example, "API gateway is dual-stack but 80% of backend calls still use
+IPv4" or "this batch job is IPv4-only despite an IPv6-ready binary."<a href="#section-9.7-1" class="pilcrow">¶</a></p>
+<p id="section-9.7-2">Use call-tree family breakdown to prioritize refactors: fix the highest-volume
+IPv4-only edges first. Reconcile call-tree findings with the inventory --- a
+service marked "IPv6 ready" with no IPv6 traffic is not done.<a href="#section-9.7-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="oob-management">
+<section id="section-10">
+      <h2 id="name-out-of-band-management-and-">
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-out-of-band-management-and-" class="section-name selfRef">Out-of-Band Management and Network Boot</a>
+      </h2>
+<p id="section-10-1">Software readiness is insufficient if servers cannot be <strong>installed, booted, or
+power-cycled</strong> over IPv6. This area <strong>SHOULD be tackled very early</strong> in an IPv6
+program --- before application tiers --- because <strong>hardware refresh cycles can
+take up to five years</strong>. A server bought today with an IPv4-only baseboard
+management controller (BMC) or provisioning stack may still block IPv6-only
+operation long after application code is ready.<a href="#section-10-1" class="pilcrow">¶</a></p>
+<div id="often-forgotten-infrastructure-devices">
+<section id="section-10.1">
+        <h3 id="name-often-forgotten-infrastruct">
+<a href="#section-10.1" class="section-number selfRef">10.1. </a><a href="#name-often-forgotten-infrastruct" class="section-name selfRef">Often-Forgotten Infrastructure Devices</a>
+        </h3>
+<p id="section-10.1-1">Out-of-band work is not limited to compute <strong>IPMI</strong>, <strong>Redfish</strong>, and <strong>PXE</strong>.
+Teams routinely overlook <strong>facility and operations gear</strong> that shares the same
+management VLANs and must be reachable during incidents:<a href="#section-10.1-1" class="pilcrow">¶</a></p>
+<ul class="compact">
+<li class="compact" id="section-10.1-2.1">
+            <strong>UPS</strong> and power distribution monitoring<a href="#section-10.1-2.1" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-10.1-2.2">
+            <strong>Climate control</strong> (CRAC, chillers, environmental sensors)<a href="#section-10.1-2.2" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-10.1-2.3">
+            <strong>NTP</strong> appliances or stratum servers on dedicated hardware<a href="#section-10.1-2.3" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-10.1-2.4">
+            <strong>Console servers</strong> and serial concentrators<a href="#section-10.1-2.4" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-10.1-2.5">
+            <strong>KVM switches</strong>, rack PDUs, and other <strong>data center infrastructure
+management</strong> devices<a href="#section-10.1-2.5" class="pilcrow">¶</a>
+</li>
+        </ul>
+<p id="section-10.1-3">These systems often ship with <strong>fixed IPv4-only interfaces</strong>, embedded web UIs
+bound to <code>192.168.x.x</code>, and long firmware cadences. Include them in the same
+IPv6 readiness inventory as production servers (see <a href="#application-readiness" class="auto internal xref">Section 5</a> and
+<a href="#observability" class="auto internal xref">Section 9</a>); they become blockers during IPv4 decommissioning even when
+every application pod is dual-stack.<a href="#section-10.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="firmware-and-pxe-uefi-boot">
+<section id="section-10.2">
+        <h3 id="name-firmware-and-pxe-uefi-boot">
+<a href="#section-10.2" class="section-number selfRef">10.2. </a><a href="#name-firmware-and-pxe-uefi-boot" class="section-name selfRef">Firmware and PXE/UEFI Boot</a>
+        </h3>
+<p id="section-10.2-1">Many <strong>BIOS</strong> implementations still lack usable IPv6. <strong>UEFI network boot</strong>
+over IPv6 exists but <strong>varies by server vendor</strong> in ways that affect
+automated provisioning. Network appliance <strong>EFI</strong> implementations are similarly
+inconsistent. An IPv6-only provisioning VLAN requires explicit qualification of
+every hardware generation in the fleet.<a href="#section-10.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="ipmi-and-redfish">
+<section id="section-10.3">
+        <h3 id="name-ipmi-and-redfish">
+<a href="#section-10.3" class="section-number selfRef">10.3. </a><a href="#name-ipmi-and-redfish" class="section-name selfRef">IPMI and Redfish</a>
+        </h3>
+<p id="section-10.3-1"><strong>IPMI</strong> and <strong>Redfish</strong> IPv6 support differs by vendor and firmware generation:
+some platforms support SLAAC, others DHCPv6, others require initial IPv4
+configuration before enabling IPv6. Linux <code>ipmitool</code> subcommands and output
+formats vary with firmware. Enterprises often <strong>defer firmware upgrades</strong> because
+failed BMC updates require physical data center visits --- plan IPv6 on management
+networks with spare in-rack capacity and conservative change windows.<a href="#section-10.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="transition">
+<section id="section-11">
+      <h2 id="name-transition-strategies">
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-transition-strategies" class="section-name selfRef">Transition Strategies</a>
+      </h2>
+<div id="provision-not-transform">
+<section id="section-11.1">
+        <h3 id="name-easier-to-provision-than-to">
+<a href="#section-11.1" class="section-number selfRef">11.1. </a><a href="#name-easier-to-provision-than-to" class="section-name selfRef">Easier to Provision Than to Transform</a>
+        </h3>
+<p id="section-11.1-1"><strong>It is easier to provision IPv6 correctly than to transform a running service.</strong>
+Enabling dual-stack or IPv6-only on a server, container, or service that was
+deployed IPv4-only means changing addresses, ACLs, DNS, health checks, and
+often application configuration --- then <strong>restarting in place</strong> and hoping
+nothing was missed. Provisioning time already runs those checks, supports
+canary or phased ramp-up, and catches failures before the service takes
+production traffic.<a href="#section-11.1-1" class="pilcrow">¶</a></p>
+<p id="section-11.1-2">Teams <span class="bcp14">SHOULD</span> treat every <strong>new service</strong>, <strong>new software version</strong>, and
+<strong>rewrite of an existing application</strong> as an opportunity to ship <strong>IPv6-only
+from the start</strong> (or dual-stack with IPv6 validated in the same pipeline), rather
+than cloning an IPv4-only template and scheduling conversion later. Brownfield
+conversion remains necessary for legacy estates, but the default for greenfield
+work <span class="bcp14">SHOULD NOT</span> be "IPv4 now, IPv6 someday."<a href="#section-11.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="ipv6-only-jump-hosts">
+<section id="section-11.2">
+        <h3 id="name-ipv6-only-jump-hosts">
+<a href="#section-11.2" class="section-number selfRef">11.2. </a><a href="#name-ipv6-only-jump-hosts" class="section-name selfRef">IPv6-Only Jump Hosts</a>
+        </h3>
+<p id="section-11.2-1">A practical staged transition puts <strong>administrative jump hosts on IPv6-only</strong>
+access while leaving application tiers dual-stack temporarily. Engineers run
+configuration management, monitoring CLI tools, and break-glass SSH from those
+hosts, forcing administrative tooling onto IPv6. Maintain at least one
+<strong>dual-stack backup jump host</strong> during migration and <strong>audit who connects and
+which commands run</strong> until parity is proven.<a href="#section-11.2-1" class="pilcrow">¶</a></p>
+<p id="section-11.2-2">Temporarily <strong>reducing IPv4 SSH session timeouts</strong> on jump hosts can accelerate
+detection of accidental IPv4 dependency without blocking emergency access.<a href="#section-11.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="security-considerations">
+<section id="section-12">
+      <h2 id="name-security-considerations">
+<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<p id="section-12-1">IPv6 restores global routability; <strong>absence of NAT is not absence of need for
+firewall policy</strong>. ULAs and link-local addresses still require filtering at
+boundaries. ICMPv6 filtering must preserve ND and PMTUD. Application-level
+ACLs and security products must parse IPv6 literals correctly (see
+<a href="#application-readiness" class="auto internal xref">Section 5</a>).<a href="#section-12-1" class="pilcrow">¶</a></p>
+<p id="section-12-2"><strong>Security appliances and host security software are notoriously weak on IPv6</strong>
+--- incomplete decode, IPv4-only dashboards, agents that drop or mislabel v6
+traffic, and policies that silently fail open or closed. Engage the <strong>security
+organization very early</strong> in the IPv6 program, in parallel with out-of-band and
+network design (see <a href="#oob-management" class="auto internal xref">Section 10</a>). In many enterprises, application SREs
+<strong>do not have full visibility</strong> into which tools the security team deploys;
+there is often deliberate <strong>operational secrecy</strong> around EDR, NDR, DLP, and
+forensics platforms. Assume unknown agents exist on every host until proven
+otherwise (see <a href="#host-agents" class="auto internal xref">Section 9.4</a>); establish a shared readiness process with
+security leadership rather than discovering blockers during the first IPv6-only
+pilot.<a href="#section-12-2" class="pilcrow">¶</a></p>
+<p id="section-12-3">Security monitoring systems <span class="bcp14">MUST</span> receive IPv6 traffic mirrors, tap coverage,
+and metadata <strong>on parity with IPv4</strong> before declaring IPv6 production-ready.
+Validate that incident response playbooks (pcap collection, IP blocking,
+geo blocking, threat intel feeds) work with <strong>128-bit addresses</strong> and canonical
+text forms <span>[<a href="#RFC5952" class="cite xref">RFC5952</a>]</span>. PR static analysis for IPv4-only patterns
+(see <a href="#static-analysis" class="auto internal xref">Section 5.6</a>) complements but does not replace security-tool
+qualification.<a href="#section-12-3" class="pilcrow">¶</a></p>
+<p id="section-12-4">Operator inventory practices in <a href="#application-readiness" class="auto internal xref">Section 5</a> also reduce supply-chain
+risk from undeclared IPv4-only dependencies in the control plane.<a href="#section-12-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="iana-considerations">
+<section id="section-13">
+      <h2 id="name-iana-considerations">
+<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<p id="section-13-1">This document has no IANA actions.<a href="#section-13-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<section id="section-14">
+      <h2 id="name-normative-references">
+<a href="#section-14" class="section-number selfRef">14. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+      </h2>
+<dl class="references">
+<dt id="RFC1918">[RFC1918]</dt>
+      <dd>
+<span class="refAuthor">Rekhter, Y.</span>, <span class="refAuthor">Moskowitz, B.</span>, <span class="refAuthor">Karrenberg, D.</span>, <span class="refAuthor">de Groot, G. J.</span>, and <span class="refAuthor">E. Lear</span>, <span class="refTitle">"Address Allocation for Private Internets"</span>, <span class="seriesInfo">BCP 5</span>, <span class="seriesInfo">RFC 1918</span>, <span class="seriesInfo">DOI 10.17487/RFC1918</span>, <time datetime="1996-02" class="refDate">February 1996</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc1918">https://www.rfc-editor.org/info/rfc1918</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2119">[RFC2119]</dt>
+      <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc2119">https://www.rfc-editor.org/info/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC3493">[RFC3493]</dt>
+      <dd>
+<span class="refAuthor">Gilligan, R.</span>, <span class="refAuthor">Thomson, S.</span>, <span class="refAuthor">Bound, J.</span>, <span class="refAuthor">McCann, J.</span>, and <span class="refAuthor">W. Stevens</span>, <span class="refTitle">"Basic Socket Interface Extensions for IPv6"</span>, <span class="seriesInfo">RFC 3493</span>, <span class="seriesInfo">DOI 10.17487/RFC3493</span>, <time datetime="2003-03" class="refDate">March 2003</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc3493">https://www.rfc-editor.org/info/rfc3493</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC3849">[RFC3849]</dt>
+      <dd>
+<span class="refAuthor">Huston, G.</span>, <span class="refAuthor">Lord, A.</span>, and <span class="refAuthor">P. Smith</span>, <span class="refTitle">"IPv6 Address Prefix Reserved for Documentation"</span>, <span class="seriesInfo">RFC 3849</span>, <span class="seriesInfo">DOI 10.17487/RFC3849</span>, <time datetime="2004-07" class="refDate">July 2004</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc3849">https://www.rfc-editor.org/info/rfc3849</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC4193">[RFC4193]</dt>
+      <dd>
+<span class="refAuthor">Hinden, R.</span> and <span class="refAuthor">B. Haberman</span>, <span class="refTitle">"Unique Local IPv6 Unicast Addresses"</span>, <span class="seriesInfo">RFC 4193</span>, <span class="seriesInfo">DOI 10.17487/RFC4193</span>, <time datetime="2005-10" class="refDate">October 2005</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc4193">https://www.rfc-editor.org/info/rfc4193</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC4291">[RFC4291]</dt>
+      <dd>
+<span class="refAuthor">Hinden, R.</span> and <span class="refAuthor">S. Deering</span>, <span class="refTitle">"IP Version 6 Addressing Architecture"</span>, <span class="seriesInfo">RFC 4291</span>, <span class="seriesInfo">DOI 10.17487/RFC4291</span>, <time datetime="2006-02" class="refDate">February 2006</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc4291">https://www.rfc-editor.org/info/rfc4291</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC4443">[RFC4443]</dt>
+      <dd>
+<span class="refAuthor">Conta, A.</span>, <span class="refAuthor">Deering, S.</span>, and <span class="refAuthor">M. Gupta, Ed.</span>, <span class="refTitle">"Internet Control Message Protocol (ICMPv6) for the Internet Protocol Version 6 (IPv6) Specification"</span>, <span class="seriesInfo">STD 89</span>, <span class="seriesInfo">RFC 4443</span>, <span class="seriesInfo">DOI 10.17487/RFC4443</span>, <time datetime="2006-03" class="refDate">March 2006</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc4443">https://www.rfc-editor.org/info/rfc4443</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC4704">[RFC4704]</dt>
+      <dd>
+<span class="refAuthor">Volz, B.</span>, <span class="refTitle">"The Dynamic Host Configuration Protocol for IPv6 (DHCPv6) Client Fully Qualified Domain Name (FQDN) Option"</span>, <span class="seriesInfo">RFC 4704</span>, <span class="seriesInfo">DOI 10.17487/RFC4704</span>, <time datetime="2006-10" class="refDate">October 2006</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc4704">https://www.rfc-editor.org/info/rfc4704</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC4861">[RFC4861]</dt>
+      <dd>
+<span class="refAuthor">Narten, T.</span>, <span class="refAuthor">Nordmark, E.</span>, <span class="refAuthor">Simpson, W.</span>, and <span class="refAuthor">H. Soliman</span>, <span class="refTitle">"Neighbor Discovery for IP version 6 (IPv6)"</span>, <span class="seriesInfo">RFC 4861</span>, <span class="seriesInfo">DOI 10.17487/RFC4861</span>, <time datetime="2007-09" class="refDate">September 2007</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc4861">https://www.rfc-editor.org/info/rfc4861</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC5737">[RFC5737]</dt>
+      <dd>
+<span class="refAuthor">Arkko, J.</span>, <span class="refAuthor">Cotton, M.</span>, and <span class="refAuthor">L. Vegoda</span>, <span class="refTitle">"IPv4 Address Blocks Reserved for Documentation"</span>, <span class="seriesInfo">RFC 5737</span>, <span class="seriesInfo">DOI 10.17487/RFC5737</span>, <time datetime="2010-01" class="refDate">January 2010</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc5737">https://www.rfc-editor.org/info/rfc5737</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC5952">[RFC5952]</dt>
+      <dd>
+<span class="refAuthor">Kawamura, S.</span> and <span class="refAuthor">M. Kawashima</span>, <span class="refTitle">"A Recommendation for IPv6 Address Text Representation"</span>, <span class="seriesInfo">RFC 5952</span>, <span class="seriesInfo">DOI 10.17487/RFC5952</span>, <time datetime="2010-08" class="refDate">August 2010</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc5952">https://www.rfc-editor.org/info/rfc5952</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6146">[RFC6146]</dt>
+      <dd>
+<span class="refAuthor">Bagnulo, M.</span>, <span class="refAuthor">Matthews, P.</span>, and <span class="refAuthor">I. van Beijnum</span>, <span class="refTitle">"Stateful NAT64: Network Address and Protocol Translation from IPv6 Clients to IPv4 Servers"</span>, <span class="seriesInfo">RFC 6146</span>, <span class="seriesInfo">DOI 10.17487/RFC6146</span>, <time datetime="2011-04" class="refDate">April 2011</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc6146">https://www.rfc-editor.org/info/rfc6146</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6724">[RFC6724]</dt>
+      <dd>
+<span class="refAuthor">Thaler, D., Ed.</span>, <span class="refAuthor">Draves, R.</span>, <span class="refAuthor">Matsumoto, A.</span>, and <span class="refAuthor">T. Chown</span>, <span class="refTitle">"Default Address Selection for Internet Protocol Version 6 (IPv6)"</span>, <span class="seriesInfo">RFC 6724</span>, <span class="seriesInfo">DOI 10.17487/RFC6724</span>, <time datetime="2012-09" class="refDate">September 2012</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc6724">https://www.rfc-editor.org/info/rfc6724</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6890">[RFC6890]</dt>
+      <dd>
+<span class="refAuthor">Cotton, M.</span>, <span class="refAuthor">Vegoda, L.</span>, <span class="refAuthor">Bonica, R., Ed.</span>, and <span class="refAuthor">B. Haberman</span>, <span class="refTitle">"Special-Purpose IP Address Registries"</span>, <span class="seriesInfo">BCP 153</span>, <span class="seriesInfo">RFC 6890</span>, <span class="seriesInfo">DOI 10.17487/RFC6890</span>, <time datetime="2013-04" class="refDate">April 2013</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc6890">https://www.rfc-editor.org/info/rfc6890</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+      <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc8174">https://www.rfc-editor.org/info/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8200">[RFC8200]</dt>
+      <dd>
+<span class="refAuthor">Deering, S.</span> and <span class="refAuthor">R. Hinden</span>, <span class="refTitle">"Internet Protocol, Version 6 (IPv6) Specification"</span>, <span class="seriesInfo">STD 86</span>, <span class="seriesInfo">RFC 8200</span>, <span class="seriesInfo">DOI 10.17487/RFC8200</span>, <time datetime="2017-07" class="refDate">July 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc8200">https://www.rfc-editor.org/info/rfc8200</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8201">[RFC8201]</dt>
+      <dd>
+<span class="refAuthor">McCann, J.</span>, <span class="refAuthor">Deering, S.</span>, <span class="refAuthor">Mogul, J.</span>, and <span class="refAuthor">R. Hinden, Ed.</span>, <span class="refTitle">"Path MTU Discovery for IP version 6"</span>, <span class="seriesInfo">STD 87</span>, <span class="seriesInfo">RFC 8201</span>, <span class="seriesInfo">DOI 10.17487/RFC8201</span>, <time datetime="2017-07" class="refDate">July 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc8201">https://www.rfc-editor.org/info/rfc8201</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8415">[RFC8415]</dt>
+    <dd>
+<span class="refAuthor">Mrugalski, T.</span>, <span class="refAuthor">Siodelski, M.</span>, <span class="refAuthor">Volz, B.</span>, <span class="refAuthor">Yourtchenko, A.</span>, <span class="refAuthor">Richardson, M.</span>, <span class="refAuthor">Jiang, S.</span>, <span class="refAuthor">Lemon, T.</span>, and <span class="refAuthor">T. Winters</span>, <span class="refTitle">"Dynamic Host Configuration Protocol for IPv6 (DHCPv6)"</span>, <span class="seriesInfo">RFC 8415</span>, <span class="seriesInfo">DOI 10.17487/RFC8415</span>, <time datetime="2018-11" class="refDate">November 2018</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc8415">https://www.rfc-editor.org/info/rfc8415</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+<section id="section-15">
+      <h2 id="name-informative-references">
+<a href="#section-15" class="section-number selfRef">15. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+      </h2>
+<dl class="references">
+<dt id="ARCEP-IPV6-GUIDE">[ARCEP-IPV6-GUIDE]</dt>
+      <dd>
+<span class="refAuthor">ARCEP</span>, <span class="refTitle">"How to Deploy IPv6 in Your Enterprise (Guide for Enterprises)"</span>, <time datetime="2022-03" class="refDate">March 2022</time>, <span>&lt;<a href="https://www.arcep.fr/fileadmin/cru-1648459125/reprise/observatoire/ipv6/guide-entreprises-how-to-deploy-IPv6-march-2022.pdf">https://www.arcep.fr/fileadmin/cru-1648459125/reprise/observatoire/ipv6/guide-entreprises-how-to-deploy-IPv6-march-2022.pdf</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="ARIN-APPS-V6">[ARIN-APPS-V6]</dt>
+      <dd>
+<span class="refAuthor">ARIN</span>, <span class="refTitle">"Preparing Applications for IPv6: A Software Developers Guide to Writing and Migrating Networked Applications for Use on IPv6 Networks"</span>, <span>&lt;<a href="https://www.arin.net/resources/guide/ipv6/preparing_apps_for_v6.pdf">https://www.arin.net/resources/guide/ipv6/preparing_apps_for_v6.pdf</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2606">[RFC2606]</dt>
+      <dd>
+<span class="refAuthor">Eastlake 3rd, D.</span> and <span class="refAuthor">A. Panitz</span>, <span class="refTitle">"Reserved Top Level DNS Names"</span>, <span class="seriesInfo">BCP 32</span>, <span class="seriesInfo">RFC 2606</span>, <span class="seriesInfo">DOI 10.17487/RFC2606</span>, <time datetime="1999-06" class="refDate">June 1999</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc2606">https://www.rfc-editor.org/info/rfc2606</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8305">[RFC8305]</dt>
+      <dd>
+<span class="refAuthor">Schinazi, D.</span> and <span class="refAuthor">T. Pauly</span>, <span class="refTitle">"Happy Eyeballs Version 2: Better Connectivity Using Concurrency"</span>, <span class="seriesInfo">RFC 8305</span>, <span class="seriesInfo">DOI 10.17487/RFC8305</span>, <time datetime="2017-12" class="refDate">December 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc8305">https://www.rfc-editor.org/info/rfc8305</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9637">[RFC9637]</dt>
+    <dd>
+<span class="refAuthor">Huston, G.</span> and <span class="refAuthor">N. Buraglio</span>, <span class="refTitle">"Expanding the IPv6 Documentation Space"</span>, <span class="seriesInfo">RFC 9637</span>, <span class="seriesInfo">DOI 10.17487/RFC9637</span>, <time datetime="2024-08" class="refDate">August 2024</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc9637">https://www.rfc-editor.org/info/rfc9637</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+<div id="authors-addresses">
+<section id="appendix-A">
+      <h2 id="name-authors-address">
+<a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Franck Martin</span></div>
+<div dir="auto" class="left"><span class="org">Peachymango.org</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:franck@peachymango.org" class="email">franck@peachymango.org</a>
+</div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
+</body>
+</html>
