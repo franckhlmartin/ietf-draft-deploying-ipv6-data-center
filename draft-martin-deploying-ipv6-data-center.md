@@ -29,10 +29,12 @@ addressing, restore end-to-end connectivity, and meet operator and
 government timelines. Much published IPv6 guidance targets network engineers;
 this document instead addresses **Site Reliability Engineers (SREs)** and
 **Software Engineers (SWEs)** who deploy, operate, and debug services in
-data centers. It explains IPv6 fundamentals that affect application code,
-observability, DNS, load balancing, and out-of-band management; documents
-common software and infrastructure gaps; and offers practical deployment
-patterns aligned with the IPv6 Operations (v6ops) working group charter.
+data centers. It is organized in two parts after IPv6 fundamentals: a
+**migration program** (transition strategy and observability) and a
+**technical stack** (hardware, provisioning, transport, applications, and
+diagnostics). It documents common software and infrastructure gaps and offers
+practical deployment patterns aligned with the IPv6 Operations (v6ops) working
+group charter.
 
 {mainmatter}
 
@@ -64,19 +66,34 @@ but cover broader enterprise and regional context.
 
 ## Document Structure
 
-(#ipv6-fundamentals) summarizes protocol and addressing differences that
-surprise application developers. (#name-resolution) explains how to resolve
-names to **full address lists** (not a single address). (#internet-addressing)
-covers prefix allocation, semantic internal prefixes, internal vs external
-IPv6-only scope, edge gateways for Internet egress, frontends for IPv4-only
-services, static addressing, and access-control propagation in data centers. (#application-readiness) catalogs software gaps --- hard-coded
-addresses, weak IP parsing, geo databases, security tools, static analysis
-in CI, developer test environments, and IPv6-first documentation conventions. Later sections
-cover DNS registration, name-to-address resolution APIs, ICMPv6 and path MTU,
-(#network-diagnostics) (reverse DNS and controlled ICMP echo inside the fabric),
-client-side load balancing, (#observability) for migration metrics,
-out-of-band management, and transition tactics --- (#provision-not-transform)
-and IPv6-only jump hosts.
+This document uses a **dual-track structure** after (#ipv6-fundamentals): **Part I**
+defines migration policy and measurement; **Part II** implements the stack from
+management hardware upward. Fundamentals establish shared vocabulary for SREs
+and software engineers; both parts are required for a complete IPv6-only data
+center. Overlapping themes (for example internal vs external scope in
+(#internal-external) and (#provision-not-transform)) appear where each audience
+needs them; sections cross-link rather than repeat editorially.
+
+**Part I --- Running the migration:** (#transition) covers operating model and
+scope (greenfield provisioning vs brownfield conversion, IPv6-only jump hosts).
+(#observability) defines inventory schema, dashboards, and success metrics ---
+fix what you measure before bulk technical change.
+
+**Part II --- Building the IPv6 data center** follows a bottom-up order: (#oob-management)
+(hardware and management plane), (#internet-addressing) and (#dns-registration)
+(provisioning), (#icmpv6-pmtud) (transport health), then application work ---
+(#application-readiness), (#name-resolution), (#client-load-balancing) --- and
+(#network-diagnostics) for production troubleshooting.
+
+**Reading paths by role:**
+
+* *Program lead / engineering manager:* Part I first, then Part II as overview.
+* *Network / DC infrastructure engineer:* (#ipv6-fundamentals), then Part II
+  sections on OOB through ICMPv6/PMTUD.
+* *Application / SRE engineer:* (#ipv6-fundamentals), Part I (#observability),
+  then Part II application and diagnostics sections.
+* *Full migration owner:* linear --- fundamentals, Part I, Part II, then
+  Security Considerations.
 
 ## Requirements Language
 
@@ -242,137 +259,219 @@ includes forward and reverse DNS for infrastructure, health checks keyed on
 names, and monitoring that labels series by hostname rather than by address
 literals.
 
-# Resolving Hostnames to Addresses {#name-resolution}
+# Part I: Running the Migration
 
-Turning a hostname into addresses is a separate step from choosing which
-address to connect to. Application code **MUST** use an API that returns **all**
-candidate addresses, then apply local policy (retries, Happy Eyeballs
-[@?RFC8305], load spreading --- see (#address-selection) and
-(#client-load-balancing)). When implementing Happy Eyeballs, **delay the IPv4
-connection attempt** so IPv6 has more time to succeed first --- a late start for
-IPv4 is consistent with [@?RFC8305] and reduces accidental IPv4-first behavior
-on dual-stack paths.
+# Transition Strategies {#transition}
 
-## Use getaddrinfo(), Not Legacy One-Address APIs
+## Easier to Provision Than to Transform {#provision-not-transform}
 
-On POSIX systems the correct resolver entry point is **`getaddrinfo()`**
-[@!RFC3493]. It takes a hostname (or numeric address string), service/port hints,
-and an `addrinfo` hints structure, and returns a **linked list of `addrinfo`
-structures** --- one node per address. The caller **MUST iterate the entire
-list** (the `ai_next` chain), copy each `sockaddr` into binary form (see
-(#address-representation)), and **MUST** release the list with `freeaddrinfo()`.
+**It is easier to provision IPv6 correctly than to transform a running service.**
+Enabling dual-stack or IPv6-only on a server, container, or service that was
+deployed IPv4-only means changing addresses, ACLs, DNS, health checks, and
+often application configuration --- then **restarting in place** and hoping
+nothing was missed. Provisioning time already runs those checks, supports
+canary or phased ramp-up, and catches failures before the service takes
+production traffic.
 
-Please note: **`getaddrinfo()`** is the name-to-address API for retrieving a
-full list; it is not the same as:
+Teams **SHOULD** treat every **new service**, **new software version**, and
+**rewrite of an existing application** as an opportunity to ship **IPv6-only on
+internal interfaces** from the start (see (#internal-external)), with **dual-stack
+only where external reachability requires it**, rather than cloning an IPv4-only
+template and scheduling conversion later. Brownfield conversion remains necessary
+for legacy estates, but the default for greenfield work **SHOULD NOT** be
+"IPv4 now, IPv6 someday."
 
-* **`gethostbyname()`** and **`gethostbyname2()`** --- deprecated, not
-  thread-safe, and still present in old tutorials. Many call sites use only the
-  first address even when multiple are available.
-* **`inet_addr()`**, **`inet_aton()`**, and **`inet_pton()`** --- parse a
-  **literal** address string into binary; they perform **no DNS lookup** and
-  return a single address only.
-* Higher-level HTTP or RPC helpers that resolve a name internally and connect to
-  **one** chosen address without exposing the full set --- fine for quick
-  clients, unsuitable when the service relies on multiple A/AAAA records.
+## IPv6-Only Jump Hosts
 
-To request both IPv4 and IPv6 results, set `hints.ai_family` to `AF_UNSPEC`
-(unless a deliberate single-family policy applies). Inspect `ai_family`,
-`ai_addrlen`, and `ai_addr` on **each** list element; do not assume every node
-has the same address family.
+Moving to IPv6 is not only a routing change --- it requires a **cultural shift**
+for SREs and SWEs who have spent years assuming IPv4 literals, RFC 1918 mental
+models, and IPv4-first tooling. **Make that shift visible before emergencies:**
+IPv6-only jump hosts, IPv6-first runbooks, and labeled lab networks teach the
+new defaults while change windows are calm. Engineers under incident pressure
+**do not have time to learn IPv6 idioms**; if the first time they need `dig -x`
+on an `ip6.arpa` name or SSH over a global v6 management address is during a
+sev-1, the organization has already failed the migration program.
 
-Language runtimes expose the same idea under different names:
+A practical staged transition puts **administrative jump hosts on IPv6-only**
+access while leaving application tiers dual-stack temporarily. Engineers run
+configuration management, monitoring CLI tools, and break-glass SSH from those
+hosts, forcing administrative tooling onto IPv6. Maintain at least one
+**dual-stack backup jump host** during migration and **audit who connects and
+which commands run** until parity is proven.
 
-* **Python:** `socket.getaddrinfo()` returns a list of tuples --- iterate all
-  entries; avoid `socket.gethostbyname()`, which returns one IPv4 address.
-* **Go:** `net.DefaultResolver.LookupIPAddr()` or `LookupIP()`; avoid code paths
-  that stop after the first returned address.
-* **Java:** `InetAddress.getAllByName()` returns an array; **`getByName()`**
-  returns only the first address and is a common source of "works in the lab"
-  failures under round-robin DNS.
-* **Node.js:** `dns.promises.resolve()` or `dns.lookup()` with `{ all: true }`;
-  the default `lookup()` without `all: true` returns a single address.
+Temporarily **reducing IPv4 SSH session timeouts** on jump hosts can accelerate
+detection of accidental IPv4 dependency without blocking emergency access.
 
-Pay special attention when connecting to a **hostname** (as opposed to a numeric
-literal): resolution can return both IPv4 and IPv6 addresses, and often more than
-one of each. A failed `connect()` to **one** of those addresses does **not**
-mean the host is unreachable. Application code **MUST NOT** report the
-destination as down after trying only the first AAAA or A record and never
-the other family, or after IPv4 fails while unused IPv6 candidates remain (and
-vice versa). Try other addresses from the resolved list --- or use Happy Eyeballs
-[@?RFC8305] --- before concluding that the service cannot be reached.
+# Observability and Metrics {#observability}
 
-## Why the Full List Matters
+IPv6 migration needs **inventory plus measurement**: a service list with IPv6
+readiness labels, automated discovery of what is missing from that list, and
+time-series metrics that show progress toward dual-stack or IPv6-only targets.
 
-DNS often publishes **multiple A and AAAA records** for availability and load
-distribution. Connecting to `result->ai_addr` and ignoring `ai_next` defeats
-that design. After collecting the list, the application (or a shared library)
-chooses order: IPv6-first, Happy Eyeballs, random shuffle within a family, or
-explicit retry on failure. **`getaddrinfo()` supplies candidates; it does not
-replace client-side load balancing.**
+## Service Inventory and Discovery
 
-Note that libc implementations may **reorder** the list per [@!RFC6724] before
-returning it (see (#address-selection)). You still need every element --- reorder
-yourself if policy requires --- but you cannot skip resolution and hope DNS
-order survives unchanged.
+The inventory in (#application-readiness) **MUST** list every application and
+platform component with a readiness state (for example: IPv6-only ready,
+dual-stack, IPv4-only, unknown). Inventory alone is not enough --- operators
+**SHOULD** run periodic **discovery** that compares running processes, container
+images, load balancer pools, and DNS names against the catalog and **flags
+unregistered services**. Shadow deployments and shared hosts routinely run
+software that no team has classified.
 
-## Numeric Input at the Edge
+## Progress Metrics
 
-When configuration or user input contains an address **literal** rather than a
-hostname, **`inet_pton()`** (or the language equivalent) converts it to binary
-for storage. When input might be either a name or a literal, **`getaddrinfo()`**
-accepts both; alternatively, try literal parse first, then fall back to DNS.
-Either way, convert once to binary and use binary forms internally.
+Dashboards **SHOULD** expose fleet-level indicators, for example:
 
-## Address Selection, gai.conf, and DNS Round Robin {#address-selection}
+* Percentage of services **IPv6-only**, **dual-stack**, or **IPv4-only** (by
+  count and by criticality tier)
+* Trend of **AAAA vs A-only** DNS names for production hostnames
+* Ratio of **ingress bytes or connections** over IPv6 vs IPv4 at load balancers
+* Count of hosts or pods **without any IPv6 address** in IPAM or configuration
+  management
 
-The Linux file `/etc/gai.conf` and the algorithms in [@!RFC6724] control
-**address selection order** for dual-stack hosts --- which address family and
-which destination address are tried first. This is invisible in application
-source but visible in production load distribution.
+Set explicit targets (for example, "90% of tier-1 APIs dual-stack by Q4") and
+review the same metrics in change advisory boards.
 
-**RFC 6724 destination address selection Rule 9** ("Use longest matching
-prefix") compares each candidate destination with its likely source address
-and **sorts addresses deterministically** [@!RFC6724]. Resolver libraries such
-as **glibc** implement this sorting inside `getaddrinfo()`. The effect:
-**DNS round-robin is not a load-balancing strategy on IPv6** (and is weakened
-on IPv4 in many cases). A round-robin AAAA record can collapse to "always try
-the same address first" once Rule 9 runs, concentrating connections on one
-backend. The problem is subtle on IPv4 but **often severe on IPv6**.
+## Dual-Stack Regression and Hard Failures on IPv6
 
-Rule 9 is reasonable on the global Internet but **often wrong inside a data
-center**, where many servers are functionally declared equidistant and
-operators expect DNS or
-anycast to spread load. Mitigations include:
+Dual-stack is a valuable migration step, but **without monitoring it invites
+regression**. A service that passed dual-stack testing can **stop working on IPv6**
+after an unrelated code push --- for example, a new dependency, a changed bind
+address, or a refactored HTTP client that silently prefers IPv4. Unmonitored
+dual-stack fleets often **mask** such regressions because IPv4 still succeeds.
 
-* Perform **client-side load balancing** in the application or library.
-* Fetch all addresses (for example, via `getaddrinfo()` without premature
-  sorting, or via a resolver that preserves DNS order), then choose randomly
-  **within the same address family** --- do not shuffle v4 and v6 together in
-  ways that accidentally defeat IPv6 preference policy.
-* Use service meshes, anycast, or explicit endpoint lists rather than naive
-  round-robin alone.
+**Treat IPv6 failures as hard failures as soon as policy allows** --- alert on
+IPv6-only health checks, IPv6 listen-socket regressions, and rising IPv4-only
+connection share for tier-1 services. Where production remains dual-stack,
+synthetic probes **SHOULD** exercise **IPv6 explicitly** (AAAA-only paths,
+IPv6 literal targets, or IPv6-only test clients), not only dual-stack clients
+that can hide breakage. The sooner IPv6 errors page on-call the same way IPv4
+errors do, the less likely a team discovers IPv6 rot months later during an
+IPv4 decommissioning drill.
 
-Changing `/etc/gai.conf` adjusts precedence tables but **does not fully
-disable Rule 9** in all implementations. Treat load balancing as a **software
-concern**, not something DNS alone provides.
+## Host-Level Listen-Socket Audit
 
-## Runtime-Specific Resolution (Not Always glibc) {#runtime-resolution}
+On each host, collect which services **listen on IPv4-only**, **IPv6-only**, or
+**dual-stack**. On Linux, `ss -tulnp` (or `/proc/net/tcp` and `tcp6`) is the
+usual source, but classification is **non-trivial**:
 
-Examples above assume POSIX **`getaddrinfo()`** via **glibc** (or an equivalent
-libc). Not every language or runtime uses libc for name resolution. **Java**
-maintains its own resolver stack and system properties such as
-**`java.net.preferIPv4Stack`** and **`java.net.preferIPv6Addresses`** that
-override address-family preference independently of `/etc/gai.conf`. A JVM
-configured to prefer IPv4 can appear "IPv6 broken" even when the OS resolver
-returns AAAA records. Test Java services with explicit property settings and
-with **`InetAddress.getAllByName()`**, not **`getByName()`**.
+* Separate `tcp`/`udp` vs `tcp6`/`udp6` lines are often **IPv4-only** vs
+  **IPv6-only** listeners.
+* A single IPv6 socket with `IPV6_V6ONLY=0` may accept IPv4-mapped traffic
+  without a matching `tcp` line --- treat as **dual-stack** only after checking
+  socket options or process documentation.
+* Match rows by **PID, port, and inode** when correlating multiple lines for one
+  daemon; export a normalized label (`v4-only`, `v6-only`, `dual-stack`,
+  `unknown`) for metrics.
 
-In extreme cases, an **`/etc/resolv.conf`** that lists **only IPv6 nameserver
-addresses** can interact badly with runtimes that bootstrap DNS over IPv4 first
-or assume a v4-reachable resolver path. Symptoms include slow resolution,
-timeouts, or unexpected family ordering. Qualify resolver configuration on
-dual-stack and IPv6-only hosts for each runtime in the fleet, not only for C
-callers of `getaddrinfo()`.
+Run this audit on a schedule and on every deploy; alert when a tier-1 service
+regresses to IPv4-only.
+
+## Host Agents Before Application Provisioning {#host-agents}
+
+Before any application software is installed, **inventory every agent and
+daemon already running on the host** --- configuration management, monitoring,
+log shippers, vulnerability scanners, **EDR**, host firewalls, and other
+platform packages the fleet image includes by default. These components often
+**bind IPv4-only**, ship IPv4-only policy from a central console, or break when
+the host loses IPv4 even if the workload you plan to deploy is IPv6-ready.
+
+Run this baseline check on **golden images and freshly provisioned servers**, not
+only on production services. A host cannot safely move to dual-stack or
+IPv6-only if an unknown agent still requires IPv4 loopback, RFC 1918 reachability,
+or IPv4-only reporting to its controller. Export agent name, version, listen
+sockets (see above), and **IPv6 readiness** into the same catalog as
+(#application-readiness). Re-run when the image or security baseline changes.
+
+## Traffic by Protocol and Address Family
+
+Switches and routers expose **IPv4 and IPv6 packet counters** but often **do
+not break out TCP and UDP by IP version** (TCPv4 vs TCPv6, UDPv4 vs UDPv6).
+Where the platform allows, collect **`tcp4`/`udp4` vs `tcp6`/`udp6`** (or
+equivalent flow records) on hosts, hypervisors, and top-of-rack devices.
+Application SREs need **L4 metrics split by address family** to confirm traffic
+is migrating and to find stragglers still on IPv4-only or translated paths.
+
+Log pipelines **SHOULD** record address family explicitly (`AF_INET` vs
+`AF_INET6`) rather than inferring from string shape.
+
+## HTTP Signaling and Planned IPv4 Drills
+
+For HTTP services, implementing [HTTP Signaling of Planned IPv4
+Unavailability](https://datatracker.ietf.org/doc/draft-martin-retry-over-ipv6/)
+(`566` responses, `Retry-Over-IPv6`, and related headers) gives **measurable
+signals** during planned IPv4 outages: count `566` responses, soft vs hard
+failures after IPv6 retry, and clients still hitting IPv4. That data belongs on
+the same dashboards as listen-socket and byte-ratio metrics when rolling out
+dual-stack or IPv6-only frontends.
+
+## Live Traffic and Service Call Trees
+
+Inventory and socket audits show **what could** run on IPv6; live traffic shows
+**what does**. Instrument outbound and inbound connections (service mesh,
+eBPF, proxy access logs, or APM) to tag each hop with **address family**.
+Roll those tags into a **call tree or dependency graph per service** so teams
+see, for example, "API gateway is dual-stack but 80% of backend calls still use
+IPv4" or "this batch job is IPv4-only despite an IPv6-ready binary."
+
+Use call-tree family breakdown to prioritize refactors: fix the highest-volume
+IPv4-only edges first. Reconcile call-tree findings with the inventory --- a
+service marked "IPv6 ready" with no IPv6 traffic is not done.
+
+# Part II: Building the IPv6 Data Center
+
+# Out-of-Band Management and Network Boot {#oob-management}
+
+Software readiness is insufficient if servers cannot be **installed, booted, or
+power-cycled** over IPv6. This area **SHOULD be tackled very early** in an IPv6
+program --- before application tiers --- because **hardware refresh cycles can
+take up to five years**. A server bought today with an IPv4-only baseboard
+management controller (BMC) or provisioning stack may still block IPv6-only
+operation long after application code is ready.
+
+## Often-Forgotten Infrastructure Devices
+
+Out-of-band work is not limited to compute **IPMI**, **Redfish**, and **PXE**.
+Teams routinely overlook **facility and operations gear** that shares the same
+management VLANs and must be reachable during incidents:
+
+* **UPS** and power distribution monitoring
+* **Climate control** (CRAC, chillers, environmental sensors)
+* **NTP** appliances or stratum servers on dedicated hardware
+* **Console servers** and serial concentrators
+* **KVM switches**, rack PDUs, and other **data center infrastructure
+  management** devices
+
+These systems often ship with **fixed IPv4-only interfaces**, embedded web UIs
+bound to `192.168.x.x`, and long firmware cadences. Include them in the same
+IPv6 readiness inventory as production servers (see (#application-readiness) and
+(#observability)); they become blockers during IPv4 decommissioning even when
+every application pod is dual-stack.
+
+## Firmware and PXE/UEFI Boot
+
+Many **BIOS** implementations still lack usable IPv6. **UEFI network boot**
+over IPv6 exists but **varies by server vendor** in ways that affect
+automated provisioning. Network appliance **EFI** implementations are similarly
+inconsistent. An IPv6-only provisioning VLAN requires explicit qualification of
+every hardware generation in the fleet.
+
+## IPMI and Redfish
+
+**IPMI over IPv6** is **essential** for **remote power cycle and reboot** when
+management networks move to IPv6-only. Without a working BMC address on v6,
+automation cannot recover a hung host without a physical visit. The same
+requirement applies to the **provisioning and reboot toolchain** --- imaging,
+PXE/UEFI orchestration, configuration management kickstart, and out-of-band
+serial concentrators **SHOULD** be **dual-stack or IPv6-only capable** before
+internal management VLANs drop IPv4.
+
+**IPMI** and **Redfish** IPv6 support differs by vendor and firmware generation:
+some platforms support SLAAC, others DHCPv6, others require initial IPv4
+configuration before enabling IPv6. Linux `ipmitool` subcommands and output
+formats vary with firmware. Enterprises often **defer firmware upgrades** because
+failed BMC updates require physical data center visits --- plan IPv6 on management
+networks with spare in-rack capacity and conservative change windows.
 
 # Internet and Data Center Addressing {#internet-addressing}
 
@@ -567,6 +666,70 @@ documented and stable; ad hoc embedding layouts defeat this approach.
 If ACL systems cannot accept hostnames and expand them through this logic,
 teams fall back to the lag problem described above --- IPv6 goes live while
 firewall tickets are still in flight.
+
+# DNS Registration and Dynamic Addressing {#dns-registration}
+
+IPv6's default autoconfiguration (SLAAC) generates addresses from interface
+identifiers. Without operational discipline, **DNS lags behind actual
+addresses**, and break-glass access by name fails.
+
+## SLAAC, Switches, and the DNS Gap
+
+Wi-Fi controllers often integrate with DNS to register client names; **access
+switches frequently do not**. To populate DNS for wired servers using SLAAC,
+operators need **MAC and address visibility** from switches (for example, via
+Neighbor Discovery logging or sFlow/IPFIX) correlated with inventory to derive
+hostnames. Ideally, selected **Neighbor Discovery events** would be exported to
+a registration service --- a gap in many switch implementations.
+
+## DHCPv6 and Hostname Registration
+
+Enterprises that distrust client self-registration prefer **DHCPv6** with
+central lease logging. Clients **SHOULD** send **DHCPv6 Option 39 (Client
+FQDN)** so the server can register forward and reverse DNS [@!RFC4704]
+[@!RFC8415]. Support for Option 39 has varied by OS; operators **SHOULD**
+verify current behavior on every deployed OS image (including macOS, Windows,
+Linux, and container base images) rather than assuming parity.
+
+Device-side **Dynamic DNS updates** remain possible but are often disabled in
+enterprise policy. For why reverse zones matter during incidents, see
+(#network-diagnostics).
+
+# ICMPv6, PMTUD, and Middleboxes {#icmpv6-pmtud}
+
+## Do Not Block ICMPv6
+
+Teams trained to block ICMPv4 "for security" sometimes apply the same policy
+to ICMPv6. **ND and PMTUD depend on ICMPv6** [@!RFC4443] [@!RFC8201]. Blocking
+ICMPv6 produces hung connections, mysterious TLS timeouts, and DNS failures
+that are misdiagnosed as application bugs. Filter **specific message types**
+judiciously; do not implement blanket deny rules. For **echo request/reply**
+used in reachability testing inside the data center, see (#network-diagnostics).
+
+## Path MTU Discovery
+
+When many organizations enabled IPv6 on their web sites during **World IPv6 Day**
+(2011) and **World IPv6 Launch** (2012), **Path MTU Discovery failures** forced
+operators to **lower TCP MSS** on servers and load balancers until paths were
+validated --- a reminder that IPv6 MTU assumptions differ from internal IPv4
+MTU 1500 end-to-end paths. Mobile operators (for example, T-Mobile USA and
+Reliance Jio in India) run **IPv6-only** access networks successfully at scale;
+problems on enterprise fixed networks often come from **middleboxes and
+policy**, not from IPv6 itself.
+
+Hard PMTUD failures also interact with **DNS over large responses** when
+fragmentation is mishandled. If fragmented UDP is dropped, DNS appears
+"flaky" only for some records.
+
+## VPNs and NAT64
+
+Some VPN products treat translated packets as attacks. **NAT64** [@!RFC6146]
+changes headers; a VPN that validates packet integrity on IPv4 paths may **drop
+NAT64 flows**. Prefer **edge gateways** for translation as described in
+(#internet-egress) and (#ipv4-only-wrappers) rather than sprouting translators on
+every host. Long-term, **VPN endpoints should be native IPv6** on the data
+center side. Until then, document which access paths require IPv4 literal
+connectivity vs IPv6.
 
 # Application and Software Readiness {#application-readiness}
 
@@ -773,69 +936,166 @@ or `192.168.x.x` examples teaches habits that conflict with IPv6-first data
 center operation. Prefer `2001:db8:...` and service names unless the document
 explicitly covers legacy IPv4 behavior.
 
-# DNS Registration and Dynamic Addressing {#dns-registration}
+# Resolving Hostnames to Addresses {#name-resolution}
 
-IPv6's default autoconfiguration (SLAAC) generates addresses from interface
-identifiers. Without operational discipline, **DNS lags behind actual
-addresses**, and break-glass access by name fails.
+This section covers name-to-address APIs and client resolution behavior --- the
+connection layer above application readiness gaps cataloged above.
 
-## SLAAC, Switches, and the DNS Gap
+Turning a hostname into addresses is a separate step from choosing which
+address to connect to. Application code **MUST** use an API that returns **all**
+candidate addresses, then apply local policy (retries, Happy Eyeballs
+[@?RFC8305], load spreading --- see (#address-selection) and
+(#client-load-balancing)). When implementing Happy Eyeballs, **delay the IPv4
+connection attempt** so IPv6 has more time to succeed first --- a late start for
+IPv4 is consistent with [@?RFC8305] and reduces accidental IPv4-first behavior
+on dual-stack paths.
 
-Wi-Fi controllers often integrate with DNS to register client names; **access
-switches frequently do not**. To populate DNS for wired servers using SLAAC,
-operators need **MAC and address visibility** from switches (for example, via
-Neighbor Discovery logging or sFlow/IPFIX) correlated with inventory to derive
-hostnames. Ideally, selected **Neighbor Discovery events** would be exported to
-a registration service --- a gap in many switch implementations.
+## Use getaddrinfo(), Not Legacy One-Address APIs
 
-## DHCPv6 and Hostname Registration
+On POSIX systems the correct resolver entry point is **`getaddrinfo()`**
+[@!RFC3493]. It takes a hostname (or numeric address string), service/port hints,
+and an `addrinfo` hints structure, and returns a **linked list of `addrinfo`
+structures** --- one node per address. The caller **MUST iterate the entire
+list** (the `ai_next` chain), copy each `sockaddr` into binary form (see
+(#address-representation)), and **MUST** release the list with `freeaddrinfo()`.
 
-Enterprises that distrust client self-registration prefer **DHCPv6** with
-central lease logging. Clients **SHOULD** send **DHCPv6 Option 39 (Client
-FQDN)** so the server can register forward and reverse DNS [@!RFC4704]
-[@!RFC8415]. Support for Option 39 has varied by OS; operators **SHOULD**
-verify current behavior on every deployed OS image (including macOS, Windows,
-Linux, and container base images) rather than assuming parity.
+Please note: **`getaddrinfo()`** is the name-to-address API for retrieving a
+full list; it is not the same as:
 
-Device-side **Dynamic DNS updates** remain possible but are often disabled in
-enterprise policy. For why reverse zones matter during incidents, see
-(#network-diagnostics).
+* **`gethostbyname()`** and **`gethostbyname2()`** --- deprecated, not
+  thread-safe, and still present in old tutorials. Many call sites use only the
+  first address even when multiple are available.
+* **`inet_addr()`**, **`inet_aton()`**, and **`inet_pton()`** --- parse a
+  **literal** address string into binary; they perform **no DNS lookup** and
+  return a single address only.
+* Higher-level HTTP or RPC helpers that resolve a name internally and connect to
+  **one** chosen address without exposing the full set --- fine for quick
+  clients, unsuitable when the service relies on multiple A/AAAA records.
 
-# ICMPv6, PMTUD, and Middleboxes {#icmpv6-pmtud}
+To request both IPv4 and IPv6 results, set `hints.ai_family` to `AF_UNSPEC`
+(unless a deliberate single-family policy applies). Inspect `ai_family`,
+`ai_addrlen`, and `ai_addr` on **each** list element; do not assume every node
+has the same address family.
 
-## Do Not Block ICMPv6
+Language runtimes expose the same idea under different names:
 
-Teams trained to block ICMPv4 "for security" sometimes apply the same policy
-to ICMPv6. **ND and PMTUD depend on ICMPv6** [@!RFC4443] [@!RFC8201]. Blocking
-ICMPv6 produces hung connections, mysterious TLS timeouts, and DNS failures
-that are misdiagnosed as application bugs. Filter **specific message types**
-judiciously; do not implement blanket deny rules. For **echo request/reply**
-used in reachability testing inside the data center, see (#network-diagnostics).
+* **Python:** `socket.getaddrinfo()` returns a list of tuples --- iterate all
+  entries; avoid `socket.gethostbyname()`, which returns one IPv4 address.
+* **Go:** `net.DefaultResolver.LookupIPAddr()` or `LookupIP()`; avoid code paths
+  that stop after the first returned address.
+* **Java:** `InetAddress.getAllByName()` returns an array; **`getByName()`**
+  returns only the first address and is a common source of "works in the lab"
+  failures under round-robin DNS.
+* **Node.js:** `dns.promises.resolve()` or `dns.lookup()` with `{ all: true }`;
+  the default `lookup()` without `all: true` returns a single address.
 
-## Path MTU Discovery
+Pay special attention when connecting to a **hostname** (as opposed to a numeric
+literal): resolution can return both IPv4 and IPv6 addresses, and often more than
+one of each. A failed `connect()` to **one** of those addresses does **not**
+mean the host is unreachable. Application code **MUST NOT** report the
+destination as down after trying only the first AAAA or A record and never
+the other family, or after IPv4 fails while unused IPv6 candidates remain (and
+vice versa). Try other addresses from the resolved list --- or use Happy Eyeballs
+[@?RFC8305] --- before concluding that the service cannot be reached.
 
-When many organizations enabled IPv6 on their web sites during **World IPv6 Day**
-(2011) and **World IPv6 Launch** (2012), **Path MTU Discovery failures** forced
-operators to **lower TCP MSS** on servers and load balancers until paths were
-validated --- a reminder that IPv6 MTU assumptions differ from internal IPv4
-MTU 1500 end-to-end paths. Mobile operators (for example, T-Mobile USA and
-Reliance Jio in India) run **IPv6-only** access networks successfully at scale;
-problems on enterprise fixed networks often come from **middleboxes and
-policy**, not from IPv6 itself.
+## Why the Full List Matters
 
-Hard PMTUD failures also interact with **DNS over large responses** when
-fragmentation is mishandled. If fragmented UDP is dropped, DNS appears
-"flaky" only for some records.
+DNS often publishes **multiple A and AAAA records** for availability and load
+distribution. Connecting to `result->ai_addr` and ignoring `ai_next` defeats
+that design. After collecting the list, the application (or a shared library)
+chooses order: IPv6-first, Happy Eyeballs, random shuffle within a family, or
+explicit retry on failure. **`getaddrinfo()` supplies candidates; it does not
+replace client-side load balancing.**
 
-## VPNs and NAT64
+Note that libc implementations may **reorder** the list per [@!RFC6724] before
+returning it (see (#address-selection)). You still need every element --- reorder
+yourself if policy requires --- but you cannot skip resolution and hope DNS
+order survives unchanged.
 
-Some VPN products treat translated packets as attacks. **NAT64** [@!RFC6146]
-changes headers; a VPN that validates packet integrity on IPv4 paths may **drop
-NAT64 flows**. Prefer **edge gateways** for translation as described in
-(#internet-egress) and (#ipv4-only-wrappers) rather than sprouting translators on
-every host. Long-term, **VPN endpoints should be native IPv6** on the data
-center side. Until then, document which access paths require IPv4 literal
-connectivity vs IPv6.
+## Numeric Input at the Edge
+
+When configuration or user input contains an address **literal** rather than a
+hostname, **`inet_pton()`** (or the language equivalent) converts it to binary
+for storage. When input might be either a name or a literal, **`getaddrinfo()`**
+accepts both; alternatively, try literal parse first, then fall back to DNS.
+Either way, convert once to binary and use binary forms internally.
+
+## Address Selection, gai.conf, and DNS Round Robin {#address-selection}
+
+The Linux file `/etc/gai.conf` and the algorithms in [@!RFC6724] control
+**address selection order** for dual-stack hosts --- which address family and
+which destination address are tried first. This is invisible in application
+source but visible in production load distribution.
+
+**RFC 6724 destination address selection Rule 9** ("Use longest matching
+prefix") compares each candidate destination with its likely source address
+and **sorts addresses deterministically** [@!RFC6724]. Resolver libraries such
+as **glibc** implement this sorting inside `getaddrinfo()`. The effect:
+**DNS round-robin is not a load-balancing strategy on IPv6** (and is weakened
+on IPv4 in many cases). A round-robin AAAA record can collapse to "always try
+the same address first" once Rule 9 runs, concentrating connections on one
+backend. The problem is subtle on IPv4 but **often severe on IPv6**.
+
+Rule 9 is reasonable on the global Internet but **often wrong inside a data
+center**, where many servers are functionally declared equidistant and
+operators expect DNS or
+anycast to spread load. Mitigations include:
+
+* Perform **client-side load balancing** in the application or library.
+* Fetch all addresses (for example, via `getaddrinfo()` without premature
+  sorting, or via a resolver that preserves DNS order), then choose randomly
+  **within the same address family** --- do not shuffle v4 and v6 together in
+  ways that accidentally defeat IPv6 preference policy.
+* Use service meshes, anycast, or explicit endpoint lists rather than naive
+  round-robin alone.
+
+Changing `/etc/gai.conf` adjusts precedence tables but **does not fully
+disable Rule 9** in all implementations. Treat load balancing as a **software
+concern**, not something DNS alone provides.
+
+## Runtime-Specific Resolution (Not Always glibc) {#runtime-resolution}
+
+Examples above assume POSIX **`getaddrinfo()`** via **glibc** (or an equivalent
+libc). Not every language or runtime uses libc for name resolution. **Java**
+maintains its own resolver stack and system properties such as
+**`java.net.preferIPv4Stack`** and **`java.net.preferIPv6Addresses`** that
+override address-family preference independently of `/etc/gai.conf`. A JVM
+configured to prefer IPv4 can appear "IPv6 broken" even when the OS resolver
+returns AAAA records. Test Java services with explicit property settings and
+with **`InetAddress.getAllByName()`**, not **`getByName()`**.
+
+In extreme cases, an **`/etc/resolv.conf`** that lists **only IPv6 nameserver
+addresses** can interact badly with runtimes that bootstrap DNS over IPv4 first
+or assume a v4-reachable resolver path. Symptoms include slow resolution,
+timeouts, or unexpected family ordering. Qualify resolver configuration on
+dual-stack and IPv6-only hosts for each runtime in the fleet, not only for C
+callers of `getaddrinfo()`.
+
+# Client-Side Load Balancing {#client-load-balancing}
+
+Client-side load balancing builds on the resolution patterns in (#name-resolution)
+when services publish multiple A/AAAA records.
+
+As described in (#address-selection), **RFC 6724 Rule 9** reorders addresses
+returned from DNS. In data centers that rely on multiple AAAA records for
+spread, connection counts can skew badly --- one backend receives most IPv6
+connections while others appear idle. This section assumes the application has
+already obtained the **full address list** using the patterns in
+(#name-resolution).
+
+**Recommended pattern:**
+
+1. Resolve the service name to all addresses.
+2. Partition addresses by address family.
+3. Apply family preference policy (operator choice: IPv6-first, happy eyeballs,
+   or parallel). For Happy Eyeballs, **start IPv4 attempts after a deliberate
+   delay** so IPv6 connections have priority time to complete.
+4. **Randomize or round-robin within each family** rather than trusting DNS
+   order after `getaddrinfo()`.
+5. Optionally implement retries across the full set on failure.
+
+Implement load balancing in **shared client libraries** so every service does
+not rediscover the same RFC 6724 interaction.
 
 # Network Diagnostics in the Data Center {#network-diagnostics}
 
@@ -874,239 +1134,6 @@ replace protocol-required ICMP with echo-only rules, nor block echo in ways that
 remove a basic reachability tool from on-call engineers. Apply the same
 philosophy to **ICMPv4 echo** inside the fabric: constrain abuse, but preserve
 a controlled way to test L3 connectivity during incidents.
-
-# Client-Side Load Balancing {#client-load-balancing}
-
-As described in (#address-selection), **RFC 6724 Rule 9** reorders addresses
-returned from DNS. In data centers that rely on multiple AAAA records for
-spread, connection counts can skew badly --- one backend receives most IPv6
-connections while others appear idle. This section assumes the application has
-already obtained the **full address list** using the patterns in
-(#name-resolution).
-
-**Recommended pattern:**
-
-1. Resolve the service name to all addresses.
-2. Partition addresses by address family.
-3. Apply family preference policy (operator choice: IPv6-first, happy eyeballs,
-   or parallel). For Happy Eyeballs, **start IPv4 attempts after a deliberate
-   delay** so IPv6 connections have priority time to complete.
-4. **Randomize or round-robin within each family** rather than trusting DNS
-   order after `getaddrinfo()`.
-5. Optionally implement retries across the full set on failure.
-
-Implement load balancing in **shared client libraries** so every service does
-not rediscover the same RFC 6724 interaction.
-
-# Observability and Metrics {#observability}
-
-IPv6 migration needs **inventory plus measurement**: a service list with IPv6
-readiness labels, automated discovery of what is missing from that list, and
-time-series metrics that show progress toward dual-stack or IPv6-only targets.
-
-## Service Inventory and Discovery
-
-The inventory in (#application-readiness) **MUST** list every application and
-platform component with a readiness state (for example: IPv6-only ready,
-dual-stack, IPv4-only, unknown). Inventory alone is not enough --- operators
-**SHOULD** run periodic **discovery** that compares running processes, container
-images, load balancer pools, and DNS names against the catalog and **flags
-unregistered services**. Shadow deployments and shared hosts routinely run
-software that no team has classified.
-
-## Progress Metrics
-
-Dashboards **SHOULD** expose fleet-level indicators, for example:
-
-* Percentage of services **IPv6-only**, **dual-stack**, or **IPv4-only** (by
-  count and by criticality tier)
-* Trend of **AAAA vs A-only** DNS names for production hostnames
-* Ratio of **ingress bytes or connections** over IPv6 vs IPv4 at load balancers
-* Count of hosts or pods **without any IPv6 address** in IPAM or configuration
-  management
-
-Set explicit targets (for example, "90% of tier-1 APIs dual-stack by Q4") and
-review the same metrics in change advisory boards.
-
-## Dual-Stack Regression and Hard Failures on IPv6
-
-Dual-stack is a valuable migration step, but **without monitoring it invites
-regression**. A service that passed dual-stack testing can **stop working on IPv6**
-after an unrelated code push --- for example, a new dependency, a changed bind
-address, or a refactored HTTP client that silently prefers IPv4. Unmonitored
-dual-stack fleets often **mask** such regressions because IPv4 still succeeds.
-
-**Treat IPv6 failures as hard failures as soon as policy allows** --- alert on
-IPv6-only health checks, IPv6 listen-socket regressions, and rising IPv4-only
-connection share for tier-1 services. Where production remains dual-stack,
-synthetic probes **SHOULD** exercise **IPv6 explicitly** (AAAA-only paths,
-IPv6 literal targets, or IPv6-only test clients), not only dual-stack clients
-that can hide breakage. The sooner IPv6 errors page on-call the same way IPv4
-errors do, the less likely a team discovers IPv6 rot months later during an
-IPv4 decommissioning drill.
-
-## Host-Level Listen-Socket Audit
-
-On each host, collect which services **listen on IPv4-only**, **IPv6-only**, or
-**dual-stack**. On Linux, `ss -tulnp` (or `/proc/net/tcp` and `tcp6`) is the
-usual source, but classification is **non-trivial**:
-
-* Separate `tcp`/`udp` vs `tcp6`/`udp6` lines are often **IPv4-only** vs
-  **IPv6-only** listeners.
-* A single IPv6 socket with `IPV6_V6ONLY=0` may accept IPv4-mapped traffic
-  without a matching `tcp` line --- treat as **dual-stack** only after checking
-  socket options or process documentation.
-* Match rows by **PID, port, and inode** when correlating multiple lines for one
-  daemon; export a normalized label (`v4-only`, `v6-only`, `dual-stack`,
-  `unknown`) for metrics.
-
-Run this audit on a schedule and on every deploy; alert when a tier-1 service
-regresses to IPv4-only.
-
-## Host Agents Before Application Provisioning {#host-agents}
-
-Before any application software is installed, **inventory every agent and
-daemon already running on the host** --- configuration management, monitoring,
-log shippers, vulnerability scanners, **EDR**, host firewalls, and other
-platform packages the fleet image includes by default. These components often
-**bind IPv4-only**, ship IPv4-only policy from a central console, or break when
-the host loses IPv4 even if the workload you plan to deploy is IPv6-ready.
-
-Run this baseline check on **golden images and freshly provisioned servers**, not
-only on production services. A host cannot safely move to dual-stack or
-IPv6-only if an unknown agent still requires IPv4 loopback, RFC 1918 reachability,
-or IPv4-only reporting to its controller. Export agent name, version, listen
-sockets (see above), and **IPv6 readiness** into the same catalog as
-(#application-readiness). Re-run when the image or security baseline changes.
-
-## Traffic by Protocol and Address Family
-
-Switches and routers expose **IPv4 and IPv6 packet counters** but often **do
-not break out TCP and UDP by IP version** (TCPv4 vs TCPv6, UDPv4 vs UDPv6).
-Where the platform allows, collect **`tcp4`/`udp4` vs `tcp6`/`udp6`** (or
-equivalent flow records) on hosts, hypervisors, and top-of-rack devices.
-Application SREs need **L4 metrics split by address family** to confirm traffic
-is migrating and to find stragglers still on IPv4-only or translated paths.
-
-Log pipelines **SHOULD** record address family explicitly (`AF_INET` vs
-`AF_INET6`) rather than inferring from string shape.
-
-## HTTP Signaling and Planned IPv4 Drills
-
-For HTTP services, implementing [HTTP Signaling of Planned IPv4
-Unavailability](https://datatracker.ietf.org/doc/draft-martin-retry-over-ipv6/)
-(`566` responses, `Retry-Over-IPv6`, and related headers) gives **measurable
-signals** during planned IPv4 outages: count `566` responses, soft vs hard
-failures after IPv6 retry, and clients still hitting IPv4. That data belongs on
-the same dashboards as listen-socket and byte-ratio metrics when rolling out
-dual-stack or IPv6-only frontends.
-
-## Live Traffic and Service Call Trees
-
-Inventory and socket audits show **what could** run on IPv6; live traffic shows
-**what does**. Instrument outbound and inbound connections (service mesh,
-eBPF, proxy access logs, or APM) to tag each hop with **address family**.
-Roll those tags into a **call tree or dependency graph per service** so teams
-see, for example, "API gateway is dual-stack but 80% of backend calls still use
-IPv4" or "this batch job is IPv4-only despite an IPv6-ready binary."
-
-Use call-tree family breakdown to prioritize refactors: fix the highest-volume
-IPv4-only edges first. Reconcile call-tree findings with the inventory --- a
-service marked "IPv6 ready" with no IPv6 traffic is not done.
-
-# Out-of-Band Management and Network Boot {#oob-management}
-
-Software readiness is insufficient if servers cannot be **installed, booted, or
-power-cycled** over IPv6. This area **SHOULD be tackled very early** in an IPv6
-program --- before application tiers --- because **hardware refresh cycles can
-take up to five years**. A server bought today with an IPv4-only baseboard
-management controller (BMC) or provisioning stack may still block IPv6-only
-operation long after application code is ready.
-
-## Often-Forgotten Infrastructure Devices
-
-Out-of-band work is not limited to compute **IPMI**, **Redfish**, and **PXE**.
-Teams routinely overlook **facility and operations gear** that shares the same
-management VLANs and must be reachable during incidents:
-
-* **UPS** and power distribution monitoring
-* **Climate control** (CRAC, chillers, environmental sensors)
-* **NTP** appliances or stratum servers on dedicated hardware
-* **Console servers** and serial concentrators
-* **KVM switches**, rack PDUs, and other **data center infrastructure
-  management** devices
-
-These systems often ship with **fixed IPv4-only interfaces**, embedded web UIs
-bound to `192.168.x.x`, and long firmware cadences. Include them in the same
-IPv6 readiness inventory as production servers (see (#application-readiness) and
-(#observability)); they become blockers during IPv4 decommissioning even when
-every application pod is dual-stack.
-
-## Firmware and PXE/UEFI Boot
-
-Many **BIOS** implementations still lack usable IPv6. **UEFI network boot**
-over IPv6 exists but **varies by server vendor** in ways that affect
-automated provisioning. Network appliance **EFI** implementations are similarly
-inconsistent. An IPv6-only provisioning VLAN requires explicit qualification of
-every hardware generation in the fleet.
-
-## IPMI and Redfish
-
-**IPMI over IPv6** is **essential** for **remote power cycle and reboot** when
-management networks move to IPv6-only. Without a working BMC address on v6,
-automation cannot recover a hung host without a physical visit. The same
-requirement applies to the **provisioning and reboot toolchain** --- imaging,
-PXE/UEFI orchestration, configuration management kickstart, and out-of-band
-serial concentrators **SHOULD** be **dual-stack or IPv6-only capable** before
-internal management VLANs drop IPv4.
-
-**IPMI** and **Redfish** IPv6 support differs by vendor and firmware generation:
-some platforms support SLAAC, others DHCPv6, others require initial IPv4
-configuration before enabling IPv6. Linux `ipmitool` subcommands and output
-formats vary with firmware. Enterprises often **defer firmware upgrades** because
-failed BMC updates require physical data center visits --- plan IPv6 on management
-networks with spare in-rack capacity and conservative change windows.
-
-# Transition Strategies {#transition}
-
-## Easier to Provision Than to Transform {#provision-not-transform}
-
-**It is easier to provision IPv6 correctly than to transform a running service.**
-Enabling dual-stack or IPv6-only on a server, container, or service that was
-deployed IPv4-only means changing addresses, ACLs, DNS, health checks, and
-often application configuration --- then **restarting in place** and hoping
-nothing was missed. Provisioning time already runs those checks, supports
-canary or phased ramp-up, and catches failures before the service takes
-production traffic.
-
-Teams **SHOULD** treat every **new service**, **new software version**, and
-**rewrite of an existing application** as an opportunity to ship **IPv6-only on
-internal interfaces** from the start (see (#internal-external)), with **dual-stack
-only where external reachability requires it**, rather than cloning an IPv4-only
-template and scheduling conversion later. Brownfield conversion remains necessary
-for legacy estates, but the default for greenfield work **SHOULD NOT** be
-"IPv4 now, IPv6 someday."
-
-## IPv6-Only Jump Hosts
-
-Moving to IPv6 is not only a routing change --- it requires a **cultural shift**
-for SREs and SWEs who have spent years assuming IPv4 literals, RFC 1918 mental
-models, and IPv4-first tooling. **Make that shift visible before emergencies:**
-IPv6-only jump hosts, IPv6-first runbooks, and labeled lab networks teach the
-new defaults while change windows are calm. Engineers under incident pressure
-**do not have time to learn IPv6 idioms**; if the first time they need `dig -x`
-on an `ip6.arpa` name or SSH over a global v6 management address is during a
-sev-1, the organization has already failed the migration program.
-
-A practical staged transition puts **administrative jump hosts on IPv6-only**
-access while leaving application tiers dual-stack temporarily. Engineers run
-configuration management, monitoring CLI tools, and break-glass SSH from those
-hosts, forcing administrative tooling onto IPv6. Maintain at least one
-**dual-stack backup jump host** during migration and **audit who connects and
-which commands run** until parity is proven.
-
-Temporarily **reducing IPv4 SSH session timeouts** on jump hosts can accelerate
-detection of accidental IPv4 dependency without blocking emergency access.
 
 # Security Considerations
 
