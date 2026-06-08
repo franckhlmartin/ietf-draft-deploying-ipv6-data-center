@@ -170,6 +170,13 @@ in [@!RFC6890]), **IPv6 unicast addresses are designed to be globally
 unique and routable**. Security boundaries are enforced by routing policy and
 firewall rules, not by assuming addresses are inherently non-routable.
 
+Unlike IPv4, nodes typically have multiple IPv6 addresses assigned to each
+of their interfaces.  The link-local addresses are necessary to participate
+in Neighbor Discovery and so serve a vital purpose even though they are not
+globally routable.  Additionally, because so many IPv6 addresses are
+available, some machines may use multiple global addresses simultaneously
+for purposes such as privacy or temporary use.
+
 ## Address Representation {#address-representation}
 
 IPv6 addresses have several equivalent textual forms [@!RFC4291]:
