@@ -412,7 +412,8 @@ flows, when NAT is involved. IPv6 routing reduces NAT use --- which also
 
 Enterprise data centers usually prefer **static addresses** from an IP Address
 Management (IPAM) system over SLAAC-derived random interface identifiers.
-Disable **Router Advertisements (RA)** on server-facing ports and on servers
+Disable the **Managed** and **Other** flags in **Router Advertisements (RA)**
+on server-facing ports, or disable **SLAAC** on servers
 themselves when static addressing is required, so hosts do not acquire
 unexpected addresses alongside provisioned ones.
 
