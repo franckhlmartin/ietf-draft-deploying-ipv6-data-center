@@ -6,7 +6,7 @@ area = "ops"
 workgroup = "IPv6 Operations"
 keyword = ["IPv6", "data center", "SRE", "software", "operations", "deployment"]
 
-date = 2026-06-05
+date = 2026-06-08
 
 [seriesInfo]
 name = "Internet-Draft"
@@ -1142,6 +1142,13 @@ risk from undeclared IPv4-only dependencies in the control plane.
 # IANA Considerations
 
 This document has no IANA actions.
+
+# Acknowledgments {#acknowledgments}
+
+The authors thank the following people who contributed suggestions and
+editorial improvements to this document:
+
+* **Jason Healy** (Suffield Academy)
 
 <reference anchor="ARCEP-IPV6-GUIDE" target="https://www.arcep.fr/fileadmin/cru-1648459125/reprise/observatoire/ipv6/guide-entreprises-how-to-deploy-IPv6-march-2022.pdf">
   <front>

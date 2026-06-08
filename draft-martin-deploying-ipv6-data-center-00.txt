@@ -4,8 +4,8 @@
 
 IPv6 Operations                                                F. Martin
 Internet-Draft                                           Peachymango.org
-Intended status: Informational                               5 June 2026
-Expires: 7 December 2026
+Intended status: Informational                               8 June 2026
+Expires: 10 December 2026
 
 
                      Deploying IPv6 in Data Centers
@@ -39,7 +39,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 7 December 2026.
+   This Internet-Draft will expire on 10 December 2026.
 
 Copyright Notice
 
@@ -53,7 +53,7 @@ Copyright Notice
 
 
 
-Martin                   Expires 7 December 2026                [Page 1]
+Martin                  Expires 10 December 2026                [Page 1]
 
 Internet-Draft         deploying-ipv6-data-center              June 2026
 
@@ -109,7 +109,7 @@ Table of Contents
 
 
 
-Martin                   Expires 7 December 2026                [Page 2]
+Martin                  Expires 10 December 2026                [Page 2]
 
 Internet-Draft         deploying-ipv6-data-center              June 2026
 
@@ -145,8 +145,9 @@ Internet-Draft         deploying-ipv6-data-center              June 2026
      12.2.  IPv6-Only Jump Hosts . . . . . . . . . . . . . . . . . .  28
    13. Security Considerations . . . . . . . . . . . . . . . . . . .  28
    14. IANA Considerations . . . . . . . . . . . . . . . . . . . . .  29
-   15. Normative References  . . . . . . . . . . . . . . . . . . . .  29
-   16. Informative References  . . . . . . . . . . . . . . . . . . .  31
+   15. Acknowledgments . . . . . . . . . . . . . . . . . . . . . . .  29
+   16. Normative References  . . . . . . . . . . . . . . . . . . . .  29
+   17. Informative References  . . . . . . . . . . . . . . . . . . .  31
    Author's Address  . . . . . . . . . . . . . . . . . . . . . . . .  32
 
 1.  Introduction
@@ -164,8 +165,7 @@ Internet-Draft         deploying-ipv6-data-center              June 2026
 
 
 
-
-Martin                   Expires 7 December 2026                [Page 3]
+Martin                  Expires 10 December 2026                [Page 3]
 
 Internet-Draft         deploying-ipv6-data-center              June 2026
 
@@ -221,7 +221,7 @@ Internet-Draft         deploying-ipv6-data-center              June 2026
 
 
 
-Martin                   Expires 7 December 2026                [Page 4]
+Martin                  Expires 10 December 2026                [Page 4]
 
 Internet-Draft         deploying-ipv6-data-center              June 2026
 
@@ -277,7 +277,7 @@ Internet-Draft         deploying-ipv6-data-center              June 2026
 
 
 
-Martin                   Expires 7 December 2026                [Page 5]
+Martin                  Expires 10 December 2026                [Page 5]
 
 Internet-Draft         deploying-ipv6-data-center              June 2026
 
@@ -333,7 +333,7 @@ Internet-Draft         deploying-ipv6-data-center              June 2026
 
 
 
-Martin                   Expires 7 December 2026                [Page 6]
+Martin                  Expires 10 December 2026                [Page 6]
 
 Internet-Draft         deploying-ipv6-data-center              June 2026
 
@@ -389,7 +389,7 @@ Internet-Draft         deploying-ipv6-data-center              June 2026
 
 
 
-Martin                   Expires 7 December 2026                [Page 7]
+Martin                  Expires 10 December 2026                [Page 7]
 
 Internet-Draft         deploying-ipv6-data-center              June 2026
 
@@ -445,7 +445,7 @@ Internet-Draft         deploying-ipv6-data-center              June 2026
 
 
 
-Martin                   Expires 7 December 2026                [Page 8]
+Martin                  Expires 10 December 2026                [Page 8]
 
 Internet-Draft         deploying-ipv6-data-center              June 2026
 
@@ -501,7 +501,7 @@ Internet-Draft         deploying-ipv6-data-center              June 2026
 
 
 
-Martin                   Expires 7 December 2026                [Page 9]
+Martin                  Expires 10 December 2026                [Page 9]
 
 Internet-Draft         deploying-ipv6-data-center              June 2026
 
@@ -557,7 +557,7 @@ Internet-Draft         deploying-ipv6-data-center              June 2026
 
 
 
-Martin                   Expires 7 December 2026               [Page 10]
+Martin                  Expires 10 December 2026               [Page 10]
 
 Internet-Draft         deploying-ipv6-data-center              June 2026
 
@@ -613,7 +613,7 @@ Internet-Draft         deploying-ipv6-data-center              June 2026
 
 
 
-Martin                   Expires 7 December 2026               [Page 11]
+Martin                  Expires 10 December 2026               [Page 11]
 
 Internet-Draft         deploying-ipv6-data-center              June 2026
 
@@ -669,7 +669,7 @@ Internet-Draft         deploying-ipv6-data-center              June 2026
 
 
 
-Martin                   Expires 7 December 2026               [Page 12]
+Martin                  Expires 10 December 2026               [Page 12]
 
 Internet-Draft         deploying-ipv6-data-center              June 2026
 
@@ -725,7 +725,7 @@ Internet-Draft         deploying-ipv6-data-center              June 2026
 
 
 
-Martin                   Expires 7 December 2026               [Page 13]
+Martin                  Expires 10 December 2026               [Page 13]
 
 Internet-Draft         deploying-ipv6-data-center              June 2026
 
@@ -781,7 +781,7 @@ Internet-Draft         deploying-ipv6-data-center              June 2026
 
 
 
-Martin                   Expires 7 December 2026               [Page 14]
+Martin                  Expires 10 December 2026               [Page 14]
 
 Internet-Draft         deploying-ipv6-data-center              June 2026
 
@@ -837,7 +837,7 @@ Internet-Draft         deploying-ipv6-data-center              June 2026
 
 
 
-Martin                   Expires 7 December 2026               [Page 15]
+Martin                  Expires 10 December 2026               [Page 15]
 
 Internet-Draft         deploying-ipv6-data-center              June 2026
 
@@ -893,7 +893,7 @@ Internet-Draft         deploying-ipv6-data-center              June 2026
 
 
 
-Martin                   Expires 7 December 2026               [Page 16]
+Martin                  Expires 10 December 2026               [Page 16]
 
 Internet-Draft         deploying-ipv6-data-center              June 2026
 
@@ -949,7 +949,7 @@ Internet-Draft         deploying-ipv6-data-center              June 2026
 
 
 
-Martin                   Expires 7 December 2026               [Page 17]
+Martin                  Expires 10 December 2026               [Page 17]
 
 Internet-Draft         deploying-ipv6-data-center              June 2026
 
@@ -1005,7 +1005,7 @@ Internet-Draft         deploying-ipv6-data-center              June 2026
 
 
 
-Martin                   Expires 7 December 2026               [Page 18]
+Martin                  Expires 10 December 2026               [Page 18]
 
 Internet-Draft         deploying-ipv6-data-center              June 2026
 
@@ -1061,7 +1061,7 @@ Internet-Draft         deploying-ipv6-data-center              June 2026
 
 
 
-Martin                   Expires 7 December 2026               [Page 19]
+Martin                  Expires 10 December 2026               [Page 19]
 
 Internet-Draft         deploying-ipv6-data-center              June 2026
 
@@ -1117,7 +1117,7 @@ Internet-Draft         deploying-ipv6-data-center              June 2026
 
 
 
-Martin                   Expires 7 December 2026               [Page 20]
+Martin                  Expires 10 December 2026               [Page 20]
 
 Internet-Draft         deploying-ipv6-data-center              June 2026
 
@@ -1173,7 +1173,7 @@ Internet-Draft         deploying-ipv6-data-center              June 2026
 
 
 
-Martin                   Expires 7 December 2026               [Page 21]
+Martin                  Expires 10 December 2026               [Page 21]
 
 Internet-Draft         deploying-ipv6-data-center              June 2026
 
@@ -1229,7 +1229,7 @@ Internet-Draft         deploying-ipv6-data-center              June 2026
 
 
 
-Martin                   Expires 7 December 2026               [Page 22]
+Martin                  Expires 10 December 2026               [Page 22]
 
 Internet-Draft         deploying-ipv6-data-center              June 2026
 
@@ -1285,7 +1285,7 @@ Internet-Draft         deploying-ipv6-data-center              June 2026
 
 
 
-Martin                   Expires 7 December 2026               [Page 23]
+Martin                  Expires 10 December 2026               [Page 23]
 
 Internet-Draft         deploying-ipv6-data-center              June 2026
 
@@ -1341,7 +1341,7 @@ Internet-Draft         deploying-ipv6-data-center              June 2026
 
 
 
-Martin                   Expires 7 December 2026               [Page 24]
+Martin                  Expires 10 December 2026               [Page 24]
 
 Internet-Draft         deploying-ipv6-data-center              June 2026
 
@@ -1397,7 +1397,7 @@ Internet-Draft         deploying-ipv6-data-center              June 2026
 
 
 
-Martin                   Expires 7 December 2026               [Page 25]
+Martin                  Expires 10 December 2026               [Page 25]
 
 Internet-Draft         deploying-ipv6-data-center              June 2026
 
@@ -1453,7 +1453,7 @@ Internet-Draft         deploying-ipv6-data-center              June 2026
 
 
 
-Martin                   Expires 7 December 2026               [Page 26]
+Martin                  Expires 10 December 2026               [Page 26]
 
 Internet-Draft         deploying-ipv6-data-center              June 2026
 
@@ -1509,7 +1509,7 @@ Internet-Draft         deploying-ipv6-data-center              June 2026
 
 
 
-Martin                   Expires 7 December 2026               [Page 27]
+Martin                  Expires 10 December 2026               [Page 27]
 
 Internet-Draft         deploying-ipv6-data-center              June 2026
 
@@ -1565,7 +1565,7 @@ Internet-Draft         deploying-ipv6-data-center              June 2026
 
 
 
-Martin                   Expires 7 December 2026               [Page 28]
+Martin                  Expires 10 December 2026               [Page 28]
 
 Internet-Draft         deploying-ipv6-data-center              June 2026
 
@@ -1592,7 +1592,14 @@ Internet-Draft         deploying-ipv6-data-center              June 2026
 
    This document has no IANA actions.
 
-15.  Normative References
+15.  Acknowledgments
+
+   The authors thank the following people who contributed suggestions
+   and editorial improvements to this document:
+
+   *  *Jason Healy* (Suffield Academy)
+
+16.  Normative References
 
    [RFC1918]  Rekhter, Y., Moskowitz, B., Karrenberg, D., de Groot, G.
               J., and E. Lear, "Address Allocation for Private
@@ -1609,6 +1616,16 @@ Internet-Draft         deploying-ipv6-data-center              June 2026
               RFC 3493, DOI 10.17487/RFC3493, March 2003,
               <https://www.rfc-editor.org/info/rfc3493>.
 
+
+
+
+
+
+Martin                  Expires 10 December 2026               [Page 29]
+
+Internet-Draft         deploying-ipv6-data-center              June 2026
+
+
    [RFC3596]  Thomson, S., Huitema, C., Ksinant, V., and M. Souissi,
               "DNS Extensions to Support IP Version 6", STD 88,
               RFC 3596, DOI 10.17487/RFC3596, October 2003,
@@ -1618,13 +1635,6 @@ Internet-Draft         deploying-ipv6-data-center              June 2026
               Reserved for Documentation", RFC 3849,
               DOI 10.17487/RFC3849, July 2004,
               <https://www.rfc-editor.org/info/rfc3849>.
-
-
-
-Martin                   Expires 7 December 2026               [Page 29]
-
-Internet-Draft         deploying-ipv6-data-center              June 2026
-
 
    [RFC4193]  Hinden, R. and B. Haberman, "Unique Local IPv6 Unicast
               Addresses", RFC 4193, DOI 10.17487/RFC4193, October 2005,
@@ -1665,6 +1675,13 @@ Internet-Draft         deploying-ipv6-data-center              June 2026
               DOI 10.17487/RFC5952, August 2010,
               <https://www.rfc-editor.org/info/rfc5952>.
 
+
+
+Martin                  Expires 10 December 2026               [Page 30]
+
+Internet-Draft         deploying-ipv6-data-center              June 2026
+
+
    [RFC6146]  Bagnulo, M., Matthews, P., and I. van Beijnum, "Stateful
               NAT64: Network Address and Protocol Translation from IPv6
               Clients to IPv4 Servers", RFC 6146, DOI 10.17487/RFC6146,
@@ -1674,13 +1691,6 @@ Internet-Draft         deploying-ipv6-data-center              June 2026
               "Default Address Selection for Internet Protocol Version 6
               (IPv6)", RFC 6724, DOI 10.17487/RFC6724, September 2012,
               <https://www.rfc-editor.org/info/rfc6724>.
-
-
-
-Martin                   Expires 7 December 2026               [Page 30]
-
-Internet-Draft         deploying-ipv6-data-center              June 2026
-
 
    [RFC6890]  Cotton, M., Vegoda, L., Bonica, R., Ed., and B. Haberman,
               "Special-Purpose IP Address Registries", BCP 153,
@@ -1707,7 +1717,7 @@ Internet-Draft         deploying-ipv6-data-center              June 2026
               RFC 8415, DOI 10.17487/RFC8415, November 2018,
               <https://www.rfc-editor.org/info/rfc8415>.
 
-16.  Informative References
+17.  Informative References
 
    [ARCEP-IPV6-GUIDE]
               ARCEP, "How to Deploy IPv6 in Your Enterprise (Guide for
@@ -1715,6 +1725,18 @@ Internet-Draft         deploying-ipv6-data-center              June 2026
               <https://www.arcep.fr/fileadmin/cru-
               1648459125/reprise/observatoire/ipv6/guide-entreprises-
               how-to-deploy-IPv6-march-2022.pdf>.
+
+
+
+
+
+
+
+
+Martin                  Expires 10 December 2026               [Page 31]
+
+Internet-Draft         deploying-ipv6-data-center              June 2026
+
 
    [ARIN-APPS-V6]
               ARIN, "Preparing Applications for IPv6: A Software
@@ -1726,17 +1748,6 @@ Internet-Draft         deploying-ipv6-data-center              June 2026
    [RFC2606]  Eastlake 3rd, D. and A. Panitz, "Reserved Top Level DNS
               Names", BCP 32, RFC 2606, DOI 10.17487/RFC2606, June 1999,
               <https://www.rfc-editor.org/info/rfc2606>.
-
-
-
-
-
-
-
-Martin                   Expires 7 December 2026               [Page 31]
-
-Internet-Draft         deploying-ipv6-data-center              June 2026
-
 
    [RFC4038]  Shin, M., Ed., Hong, Y., Hagino, J., Savola, P., and E. M.
               Castro, "Application Aspects of IPv6 Transition",
@@ -1778,15 +1789,4 @@ Author's Address
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-Martin                   Expires 7 December 2026               [Page 32]
+Martin                  Expires 10 December 2026               [Page 32]

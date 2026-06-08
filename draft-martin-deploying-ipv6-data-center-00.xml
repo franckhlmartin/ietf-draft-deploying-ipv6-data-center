@@ -6,7 +6,7 @@
 <title abbrev="deploying-ipv6-data-center">Deploying IPv6 in Data Centers</title><seriesInfo value="draft-martin-deploying-ipv6-data-center-00" status="informational" name="Internet-Draft"></seriesInfo>
 <author initials="F." surname="Martin" fullname="Franck Martin"><organization>Peachymango.org</organization><address><postal><street></street>
 </postal><email>franck@peachymango.org</email>
-</address></author><date year="2026" month="June" day="5"></date>
+</address></author><date year="2026" month="June" day="8"></date>
 <area>ops</area>
 <workgroup>IPv6 Operations</workgroup>
 <keyword>IPv6</keyword>
@@ -1106,6 +1106,15 @@ risk from undeclared IPv4-only dependencies in the control plane.</t>
 
 <section anchor="iana-considerations"><name>IANA Considerations</name>
 <t>This document has no IANA actions.</t>
+</section>
+
+<section anchor="acknowledgments"><name>Acknowledgments</name>
+<t>The authors thank the following people who contributed suggestions and
+editorial improvements to this document:</t>
+
+<ul spacing="compact">
+<li><strong>Jason Healy</strong> (Suffield Academy)</li>
+</ul>
 </section>
 
 </middle>

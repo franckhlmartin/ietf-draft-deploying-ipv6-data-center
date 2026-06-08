@@ -6,6 +6,7 @@ semantics.
 
 ## Unreleased
 
+- **Acknowledgments (§15, new):** List document contributors (Jason Healy).
 - **Introduction (§1):** Correct SRE expansion to Site Reliability Engineers.
 - **Static addressing (§4.2):** Disable RA on switch ports and SLAAC on hosts
   (two layers of protection).
