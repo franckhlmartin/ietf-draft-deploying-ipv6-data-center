@@ -156,19 +156,22 @@ aggregated global unicast space internally. Like IPv4 private address space,
 ULAs can create **renumbering work** when companies merge or networks are
 combined --- a data center network is never final.
 
-**Internal global unicast address**: A globally routable IPv6 address used
-**inside** the data center (for example, from the operator's GUA allocation).
-These addresses are reachable according to routing and security policy, not
-because they are "private."
-
-**External global unicast address**: A globally routable address presented to
-clients on the Internet, often via load balancers or anycast.
+**Global Unicast Address (GUA)**: A globally routable IPv6 address assigned
+from an organization's allocation of IPv6 addresses.
 
 Unlike IPv4, there is **no RFC 1918 equivalent that dominates data center
 design**. With rare exceptions (link-local, ULA, and special-purpose ranges
 in [@!RFC6890]), **IPv6 unicast addresses are designed to be globally
 unique and routable**. Security boundaries are enforced by routing policy and
-firewall rules, not by assuming addresses are inherently non-routable.
+firewall rules, not by assuming addresses are inherently non-routable.  We
+use two additional terms to distinguish addresses based on thes policies:
+
+**Internal global unicast address**: A globally routable IPv6 address used
+**inside** the data center.  These addresses are reachable according to
+routing and security policy, not because they are "private."
+
+**External global unicast address**: A globally routable address presented to
+clients on the Internet, often via load balancers or anycast.
 
 Unlike IPv4, nodes typically have multiple IPv6 addresses assigned to each
 of their interfaces.  The link-local addresses are necessary to participate
