@@ -3,6 +3,8 @@
 This repository contains the source for an IETF Internet-Draft on deploying
 IPv6 in data centers.
 
+**IETF Datatracker:** [draft-martin-deploying-ipv6-data-center](https://datatracker.ietf.org/doc/draft-martin-deploying-ipv6-data-center/)
+
 **Source of truth:** `draft-martin-deploying-ipv6-data-center.md` is the only
 authoritative source. After the first build, the repository may also include
 generated `draft-martin-deploying-ipv6-data-center-00.xml`, `.txt`, and `.html`
