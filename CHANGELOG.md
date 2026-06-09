@@ -37,6 +37,9 @@ semantics.
 - **Observability (§5):** Dual-stack regression monitoring; treat IPv6 failures
   as hard failures.
 - **Out-of-band (§7):** IPMI over IPv6 for remote reboot and provisioning.
+- **Hybrid cloud (§10, new):** On-premise plus AWS/Azure/GCP; gateway vs direct
+  connectivity models; provider IPv6 gap matrix; cloud as uncontrollable platform
+  software --- inventory and support cases early.
 - **Transition (§4):** Cultural shift and jump hosts before emergencies; dual-stack
   and IPv6-only employee Wi-Fi; optional IPv6-only guest Wi-Fi for vendor demos;
   IPv4-only exception process with remediation plans (security-style waivers).

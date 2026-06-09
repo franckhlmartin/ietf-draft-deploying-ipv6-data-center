@@ -75,7 +75,8 @@ scope (greenfield provisioning vs brownfield conversion, IPv6-only jump hosts).
 fix what you measure before bulk technical change.</t>
 <t><strong>Part II --- Building the IPv6 data center</strong> follows a bottom-up order: <xref target="oob-management"></xref>
 (hardware and management plane), <xref target="internet-addressing"></xref> and <xref target="dns-registration"></xref>
-(provisioning), <xref target="icmpv6-pmtud"></xref> (transport health), then application work ---
+(provisioning), <xref target="hybrid-cloud"></xref> (on-premise plus public cloud connectivity),
+<xref target="icmpv6-pmtud"></xref> (transport health), then application work ---
 <xref target="application-readiness"></xref>, <xref target="name-resolution"></xref>, <xref target="client-load-balancing"></xref> --- and
 <xref target="network-diagnostics"></xref> for production troubleshooting.</t>
 <t><strong>Reading paths by role:</strong></t>
@@ -83,7 +84,7 @@ fix what you measure before bulk technical change.</t>
 <ul spacing="compact">
 <li><em>Program lead / engineering manager:</em> Part I first, then Part II as overview.</li>
 <li><em>Network / DC infrastructure engineer:</em> <xref target="ipv6-fundamentals"></xref>, then Part II
-sections on OOB through ICMPv6/PMTUD.</li>
+sections on OOB through <xref target="hybrid-cloud"></xref> and ICMPv6/PMTUD.</li>
 <li><em>Application / SRE engineer:</em> <xref target="ipv6-fundamentals"></xref>, Part I <xref target="observability"></xref>,
 then Part II application and diagnostics sections.</li>
 <li><em>Full migration owner:</em> linear --- fundamentals, Part I, Part II, then
@@ -742,6 +743,72 @@ and planned hardware before relying on it for logging features.</t>
 </section>
 </section>
 
+<section anchor="hybrid-cloud"><name>Hybrid On-Premise and Cloud Environments</name>
+<t>Most enterprises are not pure on-premise: data centers connect to <strong>public
+cloud</strong> providers (AWS, Azure, GCP, and others) for burst capacity, managed
+services, disaster recovery, and SaaS integration. <strong>IPv6 support across cloud
+control planes and managed services is seldom complete</strong> --- capabilities differ
+by provider, region, SKU, and release. Hybrid gap analysis belongs in <strong>Part I
+inventory and early program planning</strong>, not a discovery phase after the
+on-premise fabric is already IPv6-only.</t>
+
+<section anchor="connectivity-models"><name>Connectivity Models</name>
+<t>Migration design <strong>depends on how on-premise reaches cloud</strong>:</t>
+
+<ul spacing="compact">
+<li><strong>Centralized gateway or cloud edge</strong> --- on-premise workloads reach cloud APIs
+and resources through a <strong>narrow path</strong>: site-to-site VPN, Direct Connect,
+ExpressRoute, Cloud Interconnect, transit gateway, or operator translation at
+the border (see <xref target="internet-egress"></xref>). IPv6 may terminate at that gateway; an
+internal v6-only host might reach cloud only via a dual-stack hub or
+translation. Prefix plans, ACLs, DNS views, and observability probes must
+anchor on that <strong>choke point</strong>.</li>
+<li><strong>Direct or flat hybrid routing</strong> --- on-premise and cloud workloads share
+<strong>routable reachability</strong> (extended L3, cloud CIDRs advertised into the DC,
+cross-site service mesh). <strong>Any host may connect to any cloud instance</strong> on
+the allowed paths; IPv4 and IPv6 <strong>must both be validated end-to-end</strong>, including
+cloud VPC/VNet IPv6 CIDRs, security groups, network ACLs, private endpoints,
+and on-premise firewall policy.</li>
+</ul>
+<t>Document which model each environment uses <strong>before</strong> declaring internal
+IPv6-only. A data center that is v6-only on the fabric but cloud-connected only
+through an <strong>IPv4-only VPN or private link</strong> still depends on translation or
+exceptions at the edge --- a common hidden blocker.</t>
+</section>
+
+<section anchor="cloud-provider-gap-analysis"><name>Cloud Provider Gap Analysis</name>
+<t>Cloud portfolios change frequently. Operators <bcp14>SHOULD</bcp14> maintain a
+<strong>provider-specific IPv6 matrix</strong> for every service in use --- compute, load
+balancing, databases, object storage, key management, logging, identity, managed
+Kubernetes control planes, firewalls, WAF, PrivateLink-style endpoints, and
+inter-region peering --- with <strong>supported / partial / unsupported / unknown</strong>
+labels and notes on <strong>region, tier, and verification date</strong>.</t>
+<t><strong>Identify blockers early:</strong> review architecture diagrams and infrastructure-as-code
+for implicit IPv4 assumptions (RFC 1918-only security groups, IPv4 health checks,
+managed endpoints without AAAA, IPv4-only egress appliances). Open <strong>provider
+support cases and feature requests</strong> as soon as a required service lacks IPv6 ---
+enterprise cutover dates cannot wait for roadmap surprises discovered in production.
+Where IPv6 exists only in select regions or SKUs, record that constraint in the
+inventory and use <xref target="ipv4-only-exceptions"></xref> when the business must stay on IPv4-only
+cloud paths temporarily.</t>
+</section>
+
+<section anchor="cloud-as-platform-software"><name>Cloud as Platform Software</name>
+<t>From the data center team's perspective, <strong>cloud is platform software the business
+cannot fully control</strong> --- APIs, quotas, and feature availability change on the
+provider's schedule. Apply the same discipline as <xref target="application-readiness"></xref>: list
+each cloud dependency in the fleet inventory, assign IPv6 readiness labels, and
+<strong>raise gaps before platform adoption</strong>, not after teams have built on IPv4-only
+managed services.</t>
+<t>Hybrid programs <bcp14>SHOULD</bcp14> include <strong>cloud account and landing-zone reviews</strong> in
+the same governance cadence as on-premise migration metrics (see <xref target="observability"></xref>).
+A service marked &quot;IPv6-ready on-premise&quot; that calls an <strong>IPv4-only cloud API</strong> or
+runs on an <strong>IPv4-only managed control plane</strong> is not ready for internal v6-only
+operation. Treat cloud like any other long-lead vendor: inventory, support
+tickets, and exception tracking <bcp14>SHOULD</bcp14> start at program kickoff.</t>
+</section>
+</section>
+
 <section anchor="icmpv6-pmtud"><name>ICMPv6, PMTUD, and Middleboxes</name>
 
 <section anchor="do-not-block-icmpv6"><name>Do Not Block ICMPv6</name>
@@ -790,7 +857,8 @@ APIs</strong>, <strong>Kubernetes</strong> dependencies (especially third-party 
 sidecars), <strong>cloud firewalls</strong> (for example, Azure Firewall and third-party
 NGFW images on cloud platforms where IPv6 support lagged vendor roadmaps), and
 <strong>security analytics</strong> pipelines that ingest NetFlow or packet metadata on
-IPv4 only.</t>
+IPv4 only. Hybrid and multi-cloud estates need the same inventory discipline
+for managed services and connectivity paths (see <xref target="hybrid-cloud"></xref>).</t>
 <t><strong>Action for SRE teams:</strong> maintain a <strong>living inventory</strong> of software in the
 deployment path (data plane, control plane, CI/CD, security, logging) with an
 explicit <strong>IPv6 supported / broken / untested</strong> classification. Monitoring

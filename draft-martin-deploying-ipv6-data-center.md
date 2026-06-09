@@ -81,7 +81,8 @@ fix what you measure before bulk technical change.
 
 **Part II --- Building the IPv6 data center** follows a bottom-up order: (#oob-management)
 (hardware and management plane), (#internet-addressing) and (#dns-registration)
-(provisioning), (#icmpv6-pmtud) (transport health), then application work ---
+(provisioning), (#hybrid-cloud) (on-premise plus public cloud connectivity),
+(#icmpv6-pmtud) (transport health), then application work ---
 (#application-readiness), (#name-resolution), (#client-load-balancing) --- and
 (#network-diagnostics) for production troubleshooting.
 
@@ -89,7 +90,7 @@ fix what you measure before bulk technical change.
 
 * *Program lead / engineering manager:* Part I first, then Part II as overview.
 * *Network / DC infrastructure engineer:* (#ipv6-fundamentals), then Part II
-  sections on OOB through ICMPv6/PMTUD.
+  sections on OOB through (#hybrid-cloud) and ICMPv6/PMTUD.
 * *Application / SRE engineer:* (#ipv6-fundamentals), Part I (#observability),
   then Part II application and diagnostics sections.
 * *Full migration owner:* linear --- fundamentals, Part I, Part II, then
@@ -769,6 +770,73 @@ use SLAAC), or some clients may not work at all (if SLAAC is disabled on
 the network).  Operators **SHOULD** verify DHCPv6 support for all existing
 and planned hardware before relying on it for logging features.
 
+# Hybrid On-Premise and Cloud Environments {#hybrid-cloud}
+
+Most enterprises are not pure on-premise: data centers connect to **public
+cloud** providers (AWS, Azure, GCP, and others) for burst capacity, managed
+services, disaster recovery, and SaaS integration. **IPv6 support across cloud
+control planes and managed services is seldom complete** --- capabilities differ
+by provider, region, SKU, and release. Hybrid gap analysis belongs in **Part I
+inventory and early program planning**, not a discovery phase after the
+on-premise fabric is already IPv6-only.
+
+## Connectivity Models
+
+Migration design **depends on how on-premise reaches cloud**:
+
+* **Centralized gateway or cloud edge** --- on-premise workloads reach cloud APIs
+  and resources through a **narrow path**: site-to-site VPN, Direct Connect,
+  ExpressRoute, Cloud Interconnect, transit gateway, or operator translation at
+  the border (see (#internet-egress)). IPv6 may terminate at that gateway; an
+  internal v6-only host might reach cloud only via a dual-stack hub or
+  translation. Prefix plans, ACLs, DNS views, and observability probes must
+  anchor on that **choke point**.
+* **Direct or flat hybrid routing** --- on-premise and cloud workloads share
+  **routable reachability** (extended L3, cloud CIDRs advertised into the DC,
+  cross-site service mesh). **Any host may connect to any cloud instance** on
+  the allowed paths; IPv4 and IPv6 **must both be validated end-to-end**, including
+  cloud VPC/VNet IPv6 CIDRs, security groups, network ACLs, private endpoints,
+  and on-premise firewall policy.
+
+Document which model each environment uses **before** declaring internal
+IPv6-only. A data center that is v6-only on the fabric but cloud-connected only
+through an **IPv4-only VPN or private link** still depends on translation or
+exceptions at the edge --- a common hidden blocker.
+
+## Cloud Provider Gap Analysis
+
+Cloud portfolios change frequently. Operators **SHOULD** maintain a
+**provider-specific IPv6 matrix** for every service in use --- compute, load
+balancing, databases, object storage, key management, logging, identity, managed
+Kubernetes control planes, firewalls, WAF, PrivateLink-style endpoints, and
+inter-region peering --- with **supported / partial / unsupported / unknown**
+labels and notes on **region, tier, and verification date**.
+
+**Identify blockers early:** review architecture diagrams and infrastructure-as-code
+for implicit IPv4 assumptions (RFC 1918-only security groups, IPv4 health checks,
+managed endpoints without AAAA, IPv4-only egress appliances). Open **provider
+support cases and feature requests** as soon as a required service lacks IPv6 ---
+enterprise cutover dates cannot wait for roadmap surprises discovered in production.
+Where IPv6 exists only in select regions or SKUs, record that constraint in the
+inventory and use (#ipv4-only-exceptions) when the business must stay on IPv4-only
+cloud paths temporarily.
+
+## Cloud as Platform Software
+
+From the data center team's perspective, **cloud is platform software the business
+cannot fully control** --- APIs, quotas, and feature availability change on the
+provider's schedule. Apply the same discipline as (#application-readiness): list
+each cloud dependency in the fleet inventory, assign IPv6 readiness labels, and
+**raise gaps before platform adoption**, not after teams have built on IPv4-only
+managed services.
+
+Hybrid programs **SHOULD** include **cloud account and landing-zone reviews** in
+the same governance cadence as on-premise migration metrics (see (#observability)).
+A service marked "IPv6-ready on-premise" that calls an **IPv4-only cloud API** or
+runs on an **IPv4-only managed control plane** is not ready for internal v6-only
+operation. Treat cloud like any other long-lead vendor: inventory, support
+tickets, and exception tracking **SHOULD** start at program kickoff.
+
 # ICMPv6, PMTUD, and Middleboxes {#icmpv6-pmtud}
 
 ## Do Not Block ICMPv6
@@ -819,7 +887,8 @@ APIs**, **Kubernetes** dependencies (especially third-party charts and
 sidecars), **cloud firewalls** (for example, Azure Firewall and third-party
 NGFW images on cloud platforms where IPv6 support lagged vendor roadmaps), and
 **security analytics** pipelines that ingest NetFlow or packet metadata on
-IPv4 only.
+IPv4 only. Hybrid and multi-cloud estates need the same inventory discipline
+for managed services and connectivity paths (see (#hybrid-cloud)).
 
 **Action for SRE teams:** maintain a **living inventory** of software in the
 deployment path (data plane, control plane, CI/CD, security, logging) with an
