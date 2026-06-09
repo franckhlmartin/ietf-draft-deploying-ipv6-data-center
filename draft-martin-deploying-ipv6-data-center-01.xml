@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- name="GENERATOR" content="github.com/mmarkdown/mmark Mmark Markdown Processor - mmark.miek.nl" -->
-<rfc version="3" ipr="trust200902" docName="draft-martin-deploying-ipv6-data-center-00" category="info" xml:lang="en" xmlns:xi="http://www.w3.org/2001/XInclude" indexInclude="true">
+<rfc version="3" ipr="trust200902" docName="draft-martin-deploying-ipv6-data-center-01" category="info" xml:lang="en" xmlns:xi="http://www.w3.org/2001/XInclude" indexInclude="true">
 
 <front>
-<title abbrev="deploying-ipv6-data-center">Deploying IPv6 in Data Centers</title><seriesInfo value="draft-martin-deploying-ipv6-data-center-00" status="informational" name="Internet-Draft"></seriesInfo>
+<title abbrev="deploying-ipv6-data-center">Deploying IPv6 in Data Centers</title><seriesInfo value="draft-martin-deploying-ipv6-data-center-01" status="informational" name="Internet-Draft"></seriesInfo>
 <author initials="F." surname="Martin" fullname="Franck Martin"><organization>Peachymango.org</organization><address><postal><street></street>
 </postal><email>franck@peachymango.org</email>
 </address></author><date year="2026" month="June" day="8"></date>

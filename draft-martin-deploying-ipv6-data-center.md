@@ -10,7 +10,7 @@ date = 2026-06-08
 
 [seriesInfo]
 name = "Internet-Draft"
-value = "draft-martin-deploying-ipv6-data-center-00"
+value = "draft-martin-deploying-ipv6-data-center-01"
 status = "informational"
 
 [[author]]

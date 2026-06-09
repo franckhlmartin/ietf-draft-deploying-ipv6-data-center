@@ -1,5 +1,5 @@
 SOURCE = draft-martin-deploying-ipv6-data-center.md
-VERSION = 00
+VERSION := $(shell grep -E '^value = "draft-martin-deploying-ipv6-data-center-' $(SOURCE) | sed -n 's/.*-\([0-9][0-9]\)".*/\1/p')
 DRAFT = draft-martin-deploying-ipv6-data-center-$(VERSION)
 
 GOPATH := $(shell go env GOPATH 2>/dev/null)

@@ -7,7 +7,7 @@ IPv6 in data centers.
 
 **Source of truth:** `draft-martin-deploying-ipv6-data-center.md` is the only
 authoritative source. After the first build, the repository may also include
-generated `draft-martin-deploying-ipv6-data-center-00.xml`, `.txt`, and `.html`
+generated `draft-martin-deploying-ipv6-data-center-01.xml`, `.txt`, and `.html`
 files so you can read the draft on GitHub without building locally. Those copies
 may be out of date if someone edits the Markdown without running `make` and
 committing the outputs; when in doubt, build from the `.md` file.
@@ -31,7 +31,7 @@ make clean-all # also remove the local .venv
 
 Before submitting, run `make` and commit the updated `.xml`, `.txt`, and `.html`
 if you want the GitHub copies to stay in sync. The submission file is
-`draft-martin-deploying-ipv6-data-center-00.xml`. Upload it to the
+`draft-martin-deploying-ipv6-data-center-01.xml`. Upload it to the
 [IETF Datatracker submission tool](https://datatracker.ietf.org/submit/).
 
 When editing the Markdown source, use [mmark](https://github.com/mmarkdown/mmark)

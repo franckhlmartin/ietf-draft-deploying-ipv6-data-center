@@ -35,6 +35,6 @@ jobs:
         with:
           name: draft-artifacts
           path: |
-            draft-martin-deploying-ipv6-data-center-00.xml
-            draft-martin-deploying-ipv6-data-center-00.txt
-            draft-martin-deploying-ipv6-data-center-00.html
+            draft-martin-deploying-ipv6-data-center-01.xml
+            draft-martin-deploying-ipv6-data-center-01.txt
+            draft-martin-deploying-ipv6-data-center-01.html
