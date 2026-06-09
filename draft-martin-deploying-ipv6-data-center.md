@@ -720,6 +720,22 @@ Device-side **Dynamic DNS updates** remain possible but are often disabled in
 enterprise policy. For why reverse zones matter during incidents, see
 (#network-diagnostics).
 
+## DHCPv6 Suitability Considerations
+
+DHCPv4 is extremely common in IPv4 deployments, as it is best mechanism
+to automatically provide network information (such as IP address, 
+router, netmask, recursive DNS resolvers) to nodes.  This, combined
+with a desire to have centralized logging of assigned addresses, leads
+to a desire for DHCPv6 in new IPv6 deployments.  However, IPv6 includes
+much of this functionality in the base protocol; a central server is not
+needed. Moreover, operating system support for DHCPv6 is not as
+universal as for DHCPv4, so it is not a full replacement for SLAAC.  This
+means that using DHCPv6 for centralized logging of addresses or DNS
+synchronization either means that some clients may be logged (as they will
+use SLAAC), or some clients may not work at all (if SLAAC is disabled on
+the network).  Operators **SHOULD** verify DHCPv6 support for all existing
+and planned hardware before relying on it for logging features.
+
 # ICMPv6, PMTUD, and Middleboxes {#icmpv6-pmtud}
 
 ## Do Not Block ICMPv6
