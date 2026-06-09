@@ -281,6 +281,35 @@ template and scheduling conversion later. Brownfield conversion remains necessar
 for legacy estates, but the default for greenfield work **SHOULD NOT** be
 "IPv4 now, IPv6 someday."
 
+## IPv4-Only Exceptions and Remediation Plans {#ipv4-only-exceptions}
+
+The business will sometimes **require an IPv4-only product, service, or
+technology** --- a vendor constraint, acquisition, regulated workload, or
+time-to-market trade-off. Business goals matter, but **IPv4-only dependency
+SHOULD NOT be discovered only after full production adoption**, when rollback is
+expensive and the migration program has already assumed dual-stack or IPv6-only
+readiness.
+
+**Default to hard failure on missing IPv6 early** in inventory, CI, dependency
+gates, and synthetic checks (see (#observability) and (#application-readiness))
+so non-compliant software surfaces before it reaches tier-1 paths. Where IPv4-only
+is genuinely required, use a **formal exception process** --- the same discipline
+security teams apply to policy waivers:
+
+* **Record the business reason** for IPv4-only adoption and who approved it.
+* **Require a remediation plan** --- path to dual-stack, IPv6 support, or
+  replacement --- with **milestones and a target date**.
+* **Track progress** in the same service catalog and dashboards used for migration
+  metrics; exceptions **SHOULD** expire or be renewed on review, not roll forever.
+* **Flag dependents** so downstream teams know they are building on a known
+  exception.
+
+An approved exception **MAY** permit production use of IPv4-only software for a
+bounded period; it **MUST NOT** be an informal verbal waiver. Review open
+exceptions in change advisory or migration governance the same way security
+reviews open risk acceptances --- stale plans become blockers again when dates
+slip without an updated timeline.
+
 ## IPv6-Only Jump Hosts
 
 Moving to IPv6 is not only a routing change --- it requires a **cultural shift**
@@ -362,6 +391,10 @@ IPv6 literal targets, or IPv6-only test clients), not only dual-stack clients
 that can hide breakage. The sooner IPv6 errors page on-call the same way IPv4
 errors do, the less likely a team discovers IPv6 rot months later during an
 IPv4 decommissioning drill.
+
+Approved **IPv4-only exceptions** (see (#ipv4-only-exceptions)) are the controlled
+counterpart to this policy: hard failure is the default; a documented waiver
+with remediation timeline is the escape hatch, not silent dual-stack masking.
 
 ## Host-Level Listen-Socket Audit
 

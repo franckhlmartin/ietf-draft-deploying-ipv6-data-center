@@ -270,6 +270,35 @@ for legacy estates, but the default for greenfield work <bcp14>SHOULD NOT</bcp14
 &quot;IPv4 now, IPv6 someday.&quot;</t>
 </section>
 
+<section anchor="ipv4-only-exceptions"><name>IPv4-Only Exceptions and Remediation Plans</name>
+<t>The business will sometimes <strong>require an IPv4-only product, service, or
+technology</strong> --- a vendor constraint, acquisition, regulated workload, or
+time-to-market trade-off. Business goals matter, but <strong>IPv4-only dependency
+SHOULD NOT be discovered only after full production adoption</strong>, when rollback is
+expensive and the migration program has already assumed dual-stack or IPv6-only
+readiness.</t>
+<t><strong>Default to hard failure on missing IPv6 early</strong> in inventory, CI, dependency
+gates, and synthetic checks (see <xref target="observability"></xref> and <xref target="application-readiness"></xref>)
+so non-compliant software surfaces before it reaches tier-1 paths. Where IPv4-only
+is genuinely required, use a <strong>formal exception process</strong> --- the same discipline
+security teams apply to policy waivers:</t>
+
+<ul spacing="compact">
+<li><strong>Record the business reason</strong> for IPv4-only adoption and who approved it.</li>
+<li><strong>Require a remediation plan</strong> --- path to dual-stack, IPv6 support, or
+replacement --- with <strong>milestones and a target date</strong>.</li>
+<li><strong>Track progress</strong> in the same service catalog and dashboards used for migration
+metrics; exceptions <bcp14>SHOULD</bcp14> expire or be renewed on review, not roll forever.</li>
+<li><strong>Flag dependents</strong> so downstream teams know they are building on a known
+exception.</li>
+</ul>
+<t>An approved exception <bcp14>MAY</bcp14> permit production use of IPv4-only software for a
+bounded period; it <bcp14>MUST NOT</bcp14> be an informal verbal waiver. Review open
+exceptions in change advisory or migration governance the same way security
+reviews open risk acceptances --- stale plans become blockers again when dates
+slip without an updated timeline.</t>
+</section>
+
 <section anchor="ipv6-only-jump-hosts"><name>IPv6-Only Jump Hosts</name>
 <t>Moving to IPv6 is not only a routing change --- it requires a <strong>cultural shift</strong>
 for SREs and SWEs who have spent years assuming IPv4 literals, RFC 1918 mental
@@ -346,6 +375,9 @@ IPv6 literal targets, or IPv6-only test clients), not only dual-stack clients
 that can hide breakage. The sooner IPv6 errors page on-call the same way IPv4
 errors do, the less likely a team discovers IPv6 rot months later during an
 IPv4 decommissioning drill.</t>
+<t>Approved <strong>IPv4-only exceptions</strong> (see <xref target="ipv4-only-exceptions"></xref>) are the controlled
+counterpart to this policy: hard failure is the default; a documented waiver
+with remediation timeline is the escape hatch, not silent dual-stack masking.</t>
 </section>
 
 <section anchor="host-level-listen-socket-audit"><name>Host-Level Listen-Socket Audit</name>
@@ -691,6 +723,22 @@ Linux, and container base images) rather than assuming parity.</t>
 <t>Device-side <strong>Dynamic DNS updates</strong> remain possible but are often disabled in
 enterprise policy. For why reverse zones matter during incidents, see
 <xref target="network-diagnostics"></xref>.</t>
+</section>
+
+<section anchor="dhcpv6-suitability-considerations"><name>DHCPv6 Suitability Considerations</name>
+<t>DHCPv4 is extremely common in IPv4 deployments, as it is best mechanism
+to automatically provide network information (such as IP address,
+router, netmask, recursive DNS resolvers) to nodes.  This, combined
+with a desire to have centralized logging of assigned addresses, leads
+to a desire for DHCPv6 in new IPv6 deployments.  However, IPv6 includes
+much of this functionality in the base protocol; a central server is not
+needed. Moreover, operating system support for DHCPv6 is not as
+universal as for DHCPv4, so it is not a full replacement for SLAAC.  This
+means that using DHCPv6 for centralized logging of addresses or DNS
+synchronization either means that some clients may be logged (as they will
+use SLAAC), or some clients may not work at all (if SLAAC is disabled on
+the network).  Operators <bcp14>SHOULD</bcp14> verify DHCPv6 support for all existing
+and planned hardware before relying on it for logging features.</t>
 </section>
 </section>
 

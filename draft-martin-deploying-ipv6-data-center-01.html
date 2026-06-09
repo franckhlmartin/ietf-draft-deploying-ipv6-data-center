@@ -1385,7 +1385,10 @@ group charter.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
                 <p id="section-toc.1-1.4.2.1.1"><a href="#section-4.1" class="auto internal xref">4.1</a>.  <a href="#name-easier-to-provision-than-to" class="internal xref">Easier to Provision Than to Transform</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.2">
-                <p id="section-toc.1-1.4.2.2.1"><a href="#section-4.2" class="auto internal xref">4.2</a>.  <a href="#name-ipv6-only-jump-hosts" class="internal xref">IPv6-Only Jump Hosts</a></p>
+                <p id="section-toc.1-1.4.2.2.1"><a href="#section-4.2" class="auto internal xref">4.2</a>.  <a href="#name-ipv4-only-exceptions-and-re" class="internal xref">IPv4-Only Exceptions and Remediation Plans</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.3">
+                <p id="section-toc.1-1.4.2.3.1"><a href="#section-4.3" class="auto internal xref">4.3</a>.  <a href="#name-ipv6-only-jump-hosts" class="internal xref">IPv6-Only Jump Hosts</a></p>
 </li>
             </ul>
 </li>
@@ -1474,6 +1477,9 @@ group charter.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.2">
                 <p id="section-toc.1-1.9.2.2.1"><a href="#section-9.2" class="auto internal xref">9.2</a>.  <a href="#name-dhcpv6-and-hostname-registr" class="internal xref">DHCPv6 and Hostname Registration</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.3">
+                <p id="section-toc.1-1.9.2.3.1"><a href="#section-9.3" class="auto internal xref">9.3</a>.  <a href="#name-dhcpv6-suitability-consider" class="internal xref">DHCPv6 Suitability Considerations</a></p>
 </li>
             </ul>
 </li>
@@ -1921,39 +1927,79 @@ for legacy estates, but the default for greenfield work <span class="bcp14">SHOU
 "IPv4 now, IPv6 someday."<a href="#section-4.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="ipv6-only-jump-hosts">
+<div id="ipv4-only-exceptions">
 <section id="section-4.2">
-        <h3 id="name-ipv6-only-jump-hosts">
-<a href="#section-4.2" class="section-number selfRef">4.2. </a><a href="#name-ipv6-only-jump-hosts" class="section-name selfRef">IPv6-Only Jump Hosts</a>
+        <h3 id="name-ipv4-only-exceptions-and-re">
+<a href="#section-4.2" class="section-number selfRef">4.2. </a><a href="#name-ipv4-only-exceptions-and-re" class="section-name selfRef">IPv4-Only Exceptions and Remediation Plans</a>
         </h3>
-<p id="section-4.2-1">Moving to IPv6 is not only a routing change --- it requires a <strong>cultural shift</strong>
+<p id="section-4.2-1">The business will sometimes <strong>require an IPv4-only product, service, or
+technology</strong> --- a vendor constraint, acquisition, regulated workload, or
+time-to-market trade-off. Business goals matter, but <strong>IPv4-only dependency
+SHOULD NOT be discovered only after full production adoption</strong>, when rollback is
+expensive and the migration program has already assumed dual-stack or IPv6-only
+readiness.<a href="#section-4.2-1" class="pilcrow">¶</a></p>
+<p id="section-4.2-2"><strong>Default to hard failure on missing IPv6 early</strong> in inventory, CI, dependency
+gates, and synthetic checks (see <a href="#observability" class="auto internal xref">Section 5</a> and <a href="#application-readiness" class="auto internal xref">Section 11</a>)
+so non-compliant software surfaces before it reaches tier-1 paths. Where IPv4-only
+is genuinely required, use a <strong>formal exception process</strong> --- the same discipline
+security teams apply to policy waivers:<a href="#section-4.2-2" class="pilcrow">¶</a></p>
+<ul class="compact">
+<li class="compact" id="section-4.2-3.1">
+            <strong>Record the business reason</strong> for IPv4-only adoption and who approved it.<a href="#section-4.2-3.1" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-4.2-3.2">
+            <strong>Require a remediation plan</strong> --- path to dual-stack, IPv6 support, or
+replacement --- with <strong>milestones and a target date</strong>.<a href="#section-4.2-3.2" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-4.2-3.3">
+            <strong>Track progress</strong> in the same service catalog and dashboards used for migration
+metrics; exceptions <span class="bcp14">SHOULD</span> expire or be renewed on review, not roll forever.<a href="#section-4.2-3.3" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-4.2-3.4">
+            <strong>Flag dependents</strong> so downstream teams know they are building on a known
+exception.<a href="#section-4.2-3.4" class="pilcrow">¶</a>
+</li>
+        </ul>
+<p id="section-4.2-4">An approved exception <span class="bcp14">MAY</span> permit production use of IPv4-only software for a
+bounded period; it <span class="bcp14">MUST NOT</span> be an informal verbal waiver. Review open
+exceptions in change advisory or migration governance the same way security
+reviews open risk acceptances --- stale plans become blockers again when dates
+slip without an updated timeline.<a href="#section-4.2-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="ipv6-only-jump-hosts">
+<section id="section-4.3">
+        <h3 id="name-ipv6-only-jump-hosts">
+<a href="#section-4.3" class="section-number selfRef">4.3. </a><a href="#name-ipv6-only-jump-hosts" class="section-name selfRef">IPv6-Only Jump Hosts</a>
+        </h3>
+<p id="section-4.3-1">Moving to IPv6 is not only a routing change --- it requires a <strong>cultural shift</strong>
 for SREs and SWEs who have spent years assuming IPv4 literals, RFC 1918 mental
 models, and IPv4-first tooling. <strong>Make that shift visible before emergencies:</strong>
 IPv6-only jump hosts, IPv6-first runbooks, and labeled lab networks teach the
 new defaults while change windows are calm. Engineers under incident pressure
 <strong>do not have time to learn IPv6 idioms</strong>; if the first time they need <code>dig -x</code>
 on an <code>ip6.arpa</code> name or SSH over a global v6 management address is during a
-sev-1, the organization has already failed the migration program.<a href="#section-4.2-1" class="pilcrow">¶</a></p>
-<p id="section-4.2-2">A practical staged transition puts <strong>administrative jump hosts on IPv6-only</strong>
+sev-1, the organization has already failed the migration program.<a href="#section-4.3-1" class="pilcrow">¶</a></p>
+<p id="section-4.3-2">A practical staged transition puts <strong>administrative jump hosts on IPv6-only</strong>
 access while leaving application tiers dual-stack temporarily. Engineers run
 configuration management, monitoring CLI tools, and break-glass SSH from those
 hosts, forcing administrative tooling onto IPv6. Maintain at least one
 <strong>dual-stack backup jump host</strong> during migration and <strong>audit who connects and
-which commands run</strong> until parity is proven.<a href="#section-4.2-2" class="pilcrow">¶</a></p>
-<p id="section-4.2-3">Temporarily <strong>reducing IPv4 SSH session timeouts</strong> on jump hosts can accelerate
-detection of accidental IPv4 dependency without blocking emergency access.<a href="#section-4.2-3" class="pilcrow">¶</a></p>
-<p id="section-4.2-4">Apply the same staged exposure to <strong>corporate wireless</strong>, not only SSH bastions.
+which commands run</strong> until parity is proven.<a href="#section-4.3-2" class="pilcrow">¶</a></p>
+<p id="section-4.3-3">Temporarily <strong>reducing IPv4 SSH session timeouts</strong> on jump hosts can accelerate
+detection of accidental IPv4 dependency without blocking emergency access.<a href="#section-4.3-3" class="pilcrow">¶</a></p>
+<p id="section-4.3-4">Apply the same staged exposure to <strong>corporate wireless</strong>, not only SSH bastions.
 Provide <strong>dual-stack Wi-Fi</strong> for everyday employee devices during migration, and
 at least one <strong>IPv6-only employee Wi-Fi</strong> SSID so laptops, phones, VPN clients,
 and captive-portal flows are exercised on AAAA-only paths before production
 depends on them. Label SSIDs explicitly (for example, <code>corp-dualstack</code> and
-<code>corp-v6-only</code>) so engineers know which network they joined.<a href="#section-4.2-4" class="pilcrow">¶</a></p>
-<p id="section-4.2-5">Some operators <span class="bcp14">MAY</span> additionally offer <strong>IPv6-only guest Wi-Fi</strong> --- for
+<code>corp-v6-only</code>) so engineers know which network they joined.<a href="#section-4.3-4" class="pilcrow">¶</a></p>
+<p id="section-4.3-5">Some operators <span class="bcp14">MAY</span> additionally offer <strong>IPv6-only guest Wi-Fi</strong> --- for
 example in lab, conference, or vendor demo areas --- so external teams can
 demonstrate that hardware and software work without IPv4 fallback during
 evaluations and acceptance testing. That network <span class="bcp14">SHOULD</span> be clearly marked,
 rate-limited, and isolated from internal management zones; it complements jump
-hosts but does not replace them for break-glass administration.<a href="#section-4.2-5" class="pilcrow">¶</a></p>
+hosts but does not replace them for break-glass administration.<a href="#section-4.3-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2020,6 +2066,9 @@ IPv6 literal targets, or IPv6-only test clients), not only dual-stack clients
 that can hide breakage. The sooner IPv6 errors page on-call the same way IPv4
 errors do, the less likely a team discovers IPv6 rot months later during an
 IPv4 decommissioning drill.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
+<p id="section-5.3-3">Approved <strong>IPv4-only exceptions</strong> (see <a href="#ipv4-only-exceptions" class="auto internal xref">Section 4.2</a>) are the controlled
+counterpart to this policy: hard failure is the default; a documented waiver
+with remediation timeline is the escape hatch, not silent dual-stack masking.<a href="#section-5.3-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="host-level-listen-socket-audit">
@@ -2477,6 +2526,26 @@ Linux, and container base images) rather than assuming parity.<a href="#section-
 <p id="section-9.2-2">Device-side <strong>Dynamic DNS updates</strong> remain possible but are often disabled in
 enterprise policy. For why reverse zones matter during incidents, see
 <a href="#network-diagnostics" class="auto internal xref">Section 14</a>.<a href="#section-9.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="dhcpv6-suitability-considerations">
+<section id="section-9.3">
+        <h3 id="name-dhcpv6-suitability-consider">
+<a href="#section-9.3" class="section-number selfRef">9.3. </a><a href="#name-dhcpv6-suitability-consider" class="section-name selfRef">DHCPv6 Suitability Considerations</a>
+        </h3>
+<p id="section-9.3-1">DHCPv4 is extremely common in IPv4 deployments, as it is best mechanism
+to automatically provide network information (such as IP address,
+router, netmask, recursive DNS resolvers) to nodes.  This, combined
+with a desire to have centralized logging of assigned addresses, leads
+to a desire for DHCPv6 in new IPv6 deployments.  However, IPv6 includes
+much of this functionality in the base protocol; a central server is not
+needed. Moreover, operating system support for DHCPv6 is not as
+universal as for DHCPv4, so it is not a full replacement for SLAAC.  This
+means that using DHCPv6 for centralized logging of addresses or DNS
+synchronization either means that some clients may be logged (as they will
+use SLAAC), or some clients may not work at all (if SLAAC is disabled on
+the network).  Operators <span class="bcp14">SHOULD</span> verify DHCPv6 support for all existing
+and planned hardware before relying on it for logging features.<a href="#section-9.3-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>

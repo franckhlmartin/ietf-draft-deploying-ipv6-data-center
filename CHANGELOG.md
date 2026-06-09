@@ -38,6 +38,7 @@ semantics.
   as hard failures.
 - **Out-of-band (§7):** IPMI over IPv6 for remote reboot and provisioning.
 - **Transition (§4):** Cultural shift and jump hosts before emergencies; dual-stack
-  and IPv6-only employee Wi-Fi; optional IPv6-only guest Wi-Fi for vendor demos.
+  and IPv6-only employee Wi-Fi; optional IPv6-only guest Wi-Fi for vendor demos;
+  IPv4-only exception process with remediation plans (security-style waivers).
 - **Internal vs external scope (§8.5):** IPv6-only on internal interfaces;
   dual-stack external edges; dual-homed edge servers for administration.
