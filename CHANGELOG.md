@@ -7,7 +7,8 @@ semantics.
 ## Unreleased
 
 - **Revision -01:** Bump Internet-Draft version for Datatracker submission; build
-  outputs renamed to match (makefile reads version from front matter). Reorganize after §2 into a dual-track layout —
+  outputs renamed to match (makefile reads version from front matter).
+- **Document structure (major):** Reorganize after §2 into a dual-track layout —
   **Part I** (§4 transition, §5 observability) and **Part II** (§7 OOB through
   §14 diagnostics, bottom-up). Rewrite §1.3 with rationale and role-based
   reading paths; update Abstract. No substantive content removed.
