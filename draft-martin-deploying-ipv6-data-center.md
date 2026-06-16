@@ -595,11 +595,13 @@ firewall objects, and monitoring use consistent names (`dc-internal`,
 `corp-employee`, `guest-wifi`).
 
 **Internal data center prefixes SHOULD NOT be announced or routed to the
-Internet.** Even when addresses are global unicast, **BGP and routing policy**
+Internet.** When addresses are global unicast, **routing policy**
 at the edge **SHOULD** filter site-internal aggregates so they remain reachable
-only inside the operator network. That routing boundary adds **defense in depth**
-on top of firewalls: a misconfigured ACL or leaked route is less likely to expose
-internal infrastructure to the public Internet.
+only inside the operator network. Operators **MAY** suppress these GUA prefixes
+from BGP advertisements if permitted by the relevant RIR and if such exclusion
+does not cause unnecessary prefix de-aggregation. That routing boundary adds
+**defense in depth** on top of firewalls: a misconfigured ACL or leaked route
+is less likely to expose internal infrastructure to the public Internet.
 
 Monitoring, security analytics, and log UIs **SHOULD** let operators **assign
 visible colors or tags to semantic prefix ranges** --- for example, external
