@@ -951,7 +951,7 @@ local IDEs, test harnesses, and AI coding agents to them.
 ## Hard-Coded Addresses and Localhost Pitfalls
 
 A recurring defect is binding services to **`127.0.0.1`** instead of
-**`localhost`** or `::1`. On dual-stack hosts, `127.0.0.1` listens **IPv4
+**`localhost`**. On dual-stack hosts, `127.0.0.1` listens **IPv4
 loopback only**; IPv6 clients cannot connect even when the service "runs
 locally." The fix is to use name-based bind targets (`localhost`) or explicit
 dual-stack sockets depending on platform API.
