@@ -663,6 +663,11 @@ only to the backend. Clients see a normal v6-capable service name; the
 IPv4-only binary stays on an internal path until it is rewritten or replaced
 (see (#provision-not-transform)).
 
+In dual-stack deployments where session persistence is required, SREs **MUST**
+verify that the gateway tier preserves session continuity across both IPv4 and
+IPv6. Implementations that maintain separate persistence state for each address
+family may experience session loss when clients alternate between IPv4 and IPv6.
+
 An alternative on the host is **NAT64 implemented with eBPF** (similar in spirit
 to Kubernetes node NAT). That can unblock a single service quickly but **often
 does not scale** as a fleet-wide strategy --- connection state, troubleshooting,
