@@ -595,11 +595,13 @@ firewall objects, and monitoring use consistent names (`dc-internal`,
 `corp-employee`, `guest-wifi`).
 
 **Internal data center prefixes SHOULD NOT be announced or routed to the
-Internet.** Even when addresses are global unicast, **BGP and routing policy**
+Internet.** When addresses are global unicast, **routing policy**
 at the edge **SHOULD** filter site-internal aggregates so they remain reachable
-only inside the operator network. That routing boundary adds **defense in depth**
-on top of firewalls: a misconfigured ACL or leaked route is less likely to expose
-internal infrastructure to the public Internet.
+only inside the operator network. Operators **MAY** suppress these GUA prefixes
+from BGP advertisements if permitted by the relevant RIR and if such exclusion
+does not cause unnecessary prefix de-aggregation. That routing boundary adds
+**defense in depth** on top of firewalls: a misconfigured ACL or leaked route
+is less likely to expose internal infrastructure to the public Internet.
 
 Monitoring, security analytics, and log UIs **SHOULD** let operators **assign
 visible colors or tags to semantic prefix ranges** --- for example, external
@@ -660,6 +662,11 @@ that accepts **IPv6 (and IPv4 if required)** on the front side and speaks IPv4
 only to the backend. Clients see a normal v6-capable service name; the
 IPv4-only binary stays on an internal path until it is rewritten or replaced
 (see (#provision-not-transform)).
+
+In dual-stack deployments where session persistence is required, SREs **MUST**
+verify that the gateway tier preserves session continuity across both IPv4 and
+IPv6. Implementations that maintain separate persistence state for each address
+family may experience session loss when clients alternate between IPv4 and IPv6.
 
 An alternative on the host is **NAT64 implemented with eBPF** (similar in spirit
 to Kubernetes node NAT). That can unblock a single service quickly but **often
@@ -944,7 +951,7 @@ local IDEs, test harnesses, and AI coding agents to them.
 ## Hard-Coded Addresses and Localhost Pitfalls
 
 A recurring defect is binding services to **`127.0.0.1`** instead of
-**`localhost`** or `::1`. On dual-stack hosts, `127.0.0.1` listens **IPv4
+**`localhost`**. On dual-stack hosts, `127.0.0.1` listens **IPv4
 loopback only**; IPv6 clients cannot connect even when the service "runs
 locally." The fix is to use name-based bind targets (`localhost`) or explicit
 dual-stack sockets depending on platform API.
