@@ -29,7 +29,7 @@ addressing, restore end-to-end connectivity, and meet operator and
 government timelines. Much published IPv6 guidance targets network engineers;
 this document instead addresses **Site Reliability Engineers (SREs)** and
 **Software Engineers (SWEs)** who deploy, operate, and debug services in
-data centers. It is organized in two parts after IPv6 fundamentals: a
+**operator-owned data centers**. It is organized in two parts after IPv6 fundamentals: a
 **migration program** (transition strategy and observability) and a
 **technical stack** (hardware, provisioning, transport, applications, and
 diagnostics). It documents common software and infrastructure gaps and offers
@@ -66,6 +66,18 @@ Network teams still own prefixes, routing, and firewalls, but IPv6
 deployment succeeds or fails in application code, configuration management,
 monitoring pipelines, and the long tail of enterprise software that assumes
 IPv4.
+
+**Scope:** The primary audience runs services on infrastructure the organization
+**owns or directly controls** --- operator-managed networks, prefixes, routing,
+firewalls, and bare-metal or virtualized hosts in **physical or private data
+centers**. This document does **not** prescribe how to deploy IPv6 **natively
+inside third-party Infrastructure-as-a-Service (IaaS)** platforms (public cloud
+VPCs, provider-managed Kubernetes, and similar). Each cloud provider imposes its
+own addressing models, quotas, APIs, and processes; the deployer is **constrained**
+by those platform choices in ways this draft cannot generalize. Operators with
+hybrid estates **SHOULD** still understand cloud IPv6 gaps and connectivity
+limits (see (#hybrid-cloud)) because those constraints often determine whether
+an on-premise IPv6-only program can succeed.
 
 ## Related Guides
 
@@ -845,6 +857,17 @@ the network).  Operators **SHOULD** verify DHCPv6 support for all existing
 and planned hardware before relying on it for logging features.
 
 # Hybrid On-Premise and Cloud Environments {#hybrid-cloud}
+
+This section is **in scope** for operator-owned data centers that **connect to**
+public cloud; it is **not** a guide to replacing the data center with IaaS or to
+running production workloads **inside** provider-controlled virtual networks.
+Native IPv6 deployment on AWS, Azure, GCP, or other platforms belongs in
+provider documentation or a separate document --- prefix sizes, subnet models,
+managed services, and control-plane IPv6 support differ by vendor, region, and
+SKU in ways no single recommendation can capture. The material below **does**
+matter for on-premise migration: cloud dependencies, private connectivity, and
+provider IPv6 gaps routinely block or reshape IPv6-only programs on
+operator-managed fabric even when compute stays in the physical data center.
 
 Most enterprises are not pure on-premise: data centers connect to **public
 cloud** providers (AWS, Azure, GCP, and others) for burst capacity, managed

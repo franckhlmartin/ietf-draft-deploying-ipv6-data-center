@@ -6,6 +6,9 @@ semantics.
 
 ## Unreleased
 
+- **Introduction (§1.1) and hybrid cloud (§10):** Clarify scope --- operator-owned
+  data centers, not native IaaS deployment; cloud constraints still matter for
+  hybrid on-premise programs.
 - **Front matter:** Add removable "About This Document" note (GitHub source,
   Datatracker status, v6ops mailing list).
 - **Internal vs external (§8.5):** Dual-homed edge hosts during internal IPv6
