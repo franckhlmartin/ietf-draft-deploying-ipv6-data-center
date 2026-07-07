@@ -6,7 +6,7 @@
 <title abbrev="deploying-ipv6-data-center">Deploying IPv6 in Data Centers</title><seriesInfo value="draft-martin-deploying-ipv6-data-center-01" status="informational" name="Internet-Draft"></seriesInfo>
 <author initials="F." surname="Martin" fullname="Franck Martin"><organization>Peachymango.org</organization><address><postal><street></street>
 </postal><email>franck@peachymango.org</email>
-</address></author><date year="2026" month="June" day="8"></date>
+</address></author><date year="2026" month="July" day="7"></date>
 <area>ops</area>
 <workgroup>IPv6 Operations</workgroup>
 <keyword>IPv6</keyword>
@@ -29,6 +29,20 @@ diagnostics). It documents common software and infrastructure gaps and offers
 practical deployment patterns aligned with the IPv6 Operations (v6ops) working
 group charter.</t>
 </abstract>
+
+<note><name>About This Document</name>
+<t>This note is to be removed before publishing as an RFC.</t>
+<t>The latest revision of this draft can be found at
+<eref target="https://github.com/franckhlmartin/ietf-draft-deploying-ipv6-data-center/">https://github.com/franckhlmartin/ietf-draft-deploying-ipv6-data-center/</eref>.
+Status information for this document may be found at
+<eref target="https://datatracker.ietf.org/doc/draft-martin-deploying-ipv6-data-center/">https://datatracker.ietf.org/doc/draft-martin-deploying-ipv6-data-center/</eref>.</t>
+<t>Discussion of this document takes place on the v6ops Working Group
+mailing list (<eref target="mailto:v6ops@ietf.org">mailto:v6ops@ietf.org</eref>), which is archived at
+<eref target="https://mailarchive.ietf.org/arch/browse/v6ops/">https://mailarchive.ietf.org/arch/browse/v6ops/</eref>. Subscribe at
+<eref target="https://www.ietf.org/mailman/listinfo/v6ops/">https://www.ietf.org/mailman/listinfo/v6ops/</eref>.</t>
+<t>Source for this draft and an issue tracker can be found at
+<eref target="https://github.com/franckhlmartin/ietf-draft-deploying-ipv6-data-center">https://github.com/franckhlmartin/ietf-draft-deploying-ipv6-data-center</eref>.</t>
+</note>
 
 </front>
 
@@ -573,11 +587,13 @@ the same place as <xref target="prefix-allocation"></xref> and <xref target="acl
 firewall objects, and monitoring use consistent names (<tt>dc-internal</tt>,
 <tt>corp-employee</tt>, <tt>guest-wifi</tt>).</t>
 <t><strong>Internal data center prefixes SHOULD NOT be announced or routed to the
-Internet.</strong> Even when addresses are global unicast, <strong>BGP and routing policy</strong>
+Internet.</strong> When addresses are global unicast, <strong>routing policy</strong>
 at the edge <bcp14>SHOULD</bcp14> filter site-internal aggregates so they remain reachable
-only inside the operator network. That routing boundary adds <strong>defense in depth</strong>
-on top of firewalls: a misconfigured ACL or leaked route is less likely to expose
-internal infrastructure to the public Internet.</t>
+only inside the operator network. Operators <bcp14>MAY</bcp14> suppress these GUA prefixes
+from BGP advertisements if permitted by the relevant RIR and if such exclusion
+does not cause unnecessary prefix de-aggregation. That routing boundary adds
+<strong>defense in depth</strong> on top of firewalls: a misconfigured ACL or leaked route
+is less likely to expose internal infrastructure to the public Internet.</t>
 <t>Monitoring, security analytics, and log UIs <bcp14>SHOULD</bcp14> let operators <strong>assign
 visible colors or tags to semantic prefix ranges</strong> --- for example, external
 (Internet-facing) addresses in one color, data center internal prefixes in
@@ -625,7 +641,55 @@ IPv6-primary) and one <strong>external</strong> interface (dual-stack) --- simpl
 management paths on the internal v6 network while the service still serves
 dual-stack Internet clients. Document which interface is which in IPAM and
 host naming; do not collapse &quot;internal v6-only&quot; and &quot;external dual-stack&quot; into
-a single ambiguous address on production boxes.</t>
+a single ambiguous address on production boxes. During migration, the internal
+interface may remain <strong>IPv4-only</strong> for a time; see
+<xref target="dual-homed-transitional-routing"></xref> for routing and DNS pitfalls on those hosts.</t>
+
+<section anchor="dual-homed-transitional-routing"><name>Dual-Homed Hosts During Internal IPv6 Rollout</name>
+<t>Edge servers often have <strong>two interfaces</strong>: an <strong>external</strong> interface toward the
+Internet (dual-stack, <strong>default route</strong>) and an <strong>internal</strong> interface toward the
+data center (today <strong>IPv4-only</strong>, with <strong>more-specific routes</strong> for internal
+prefixes). That layout is common during brownfield migration before the internal
+VLAN gains IPv6 on every host.</t>
+<t>When internal services begin publishing <strong>AAAA</strong> records, a dual-homed host that
+still has <strong>no IPv6 on the internal interface</strong> may resolve both A and AAAA for
+an internal name but send IPv6 connection attempts out the <strong>default route</strong> on
+the external interface. Those packets never reach the internal service. Symptoms
+include <strong>long timeouts</strong> on dual-stack clients, flaky automation, and &quot;internal
+DNS works from other hosts but not from the edge box.&quot;</t>
+<t>Operators <bcp14>SHOULD</bcp14> align <strong>routing policy with DNS</strong>, not assume AAAA implies
+a working IPv6 path from every interface:</t>
+
+<ul spacing="compact">
+<li><strong>Preferred long-term:</strong> enable IPv6 on the internal interface and install
+<strong>scoped routes</strong> (or policy routing) so internal GUA prefixes egress the
+internal interface (see <xref target="semantic-prefixes"></xref>).</li>
+<li><strong>Transitional mitigation:</strong> while the internal NIC remains IPv4-only, install
+an <strong><tt>unreachable</tt></strong> route for the site <strong>internal IPv6 aggregate</strong> on the host
+(for example, the <tt>dc-internal</tt> prefix from <xref target="semantic-prefixes"></xref>). The kernel
+then rejects connection attempts to internal AAAA addresses <strong>immediately</strong>
+with a local &quot;no route to host&quot; error instead of forwarding them via the
+Internet default route. Clients that iterate all resolved addresses --- or use
+Happy Eyeballs <xref target="RFC8305"></xref> --- can fall back to the <strong>A</strong> record over the
+internal IPv4 path (see <xref target="name-resolution"></xref>). Do <strong>not</strong> use a <strong><tt>blackhole</tt></strong>
+route for this purpose: blackhole <strong>silently discards</strong> packets and recreates
+the same <strong>timeout</strong> behavior the operator is trying to avoid.</li>
+<li><strong>Alternative:</strong> <strong>split-horizon DNS</strong> so resolvers used on edge hosts do not
+return AAAA for names that are reachable only on the internal IPv4 path until
+routing is fixed.</li>
+</ul>
+<t>This pattern is <strong>not</strong> a substitute for enabling IPv6 on internal interfaces;
+it prevents <strong>misrouted IPv6</strong> during rollout. Application code that stops after
+the first address (<tt>gethostbyname()</tt>, <tt>InetAddress.getByName()</tt>, and similar)
+<strong>will not benefit</strong> --- fix routing <strong>and</strong> resolution behavior together.</t>
+<t>Example (Linux, illustrative prefix):</t>
+
+<artwork><![CDATA[ip -6 route add unreachable 2001:db8:dc::/48
+]]></artwork>
+<t>Express the same policy in configuration management on every dual-homed edge
+role during the transition; remove the unreachable route when the internal
+interface is dual-stack and correct scoped routes are in place.</t>
+</section>
 </section>
 
 <section anchor="ipv4-only-wrappers"><name>Frontends for IPv4-Only Services</name>
@@ -636,6 +700,10 @@ that accepts <strong>IPv6 (and IPv4 if required)</strong> on the front side and 
 only to the backend. Clients see a normal v6-capable service name; the
 IPv4-only binary stays on an internal path until it is rewritten or replaced
 (see <xref target="provision-not-transform"></xref>).</t>
+<t>In dual-stack deployments where session persistence is required, SREs <bcp14>MUST</bcp14>
+verify that the gateway tier preserves session continuity across both IPv4 and
+IPv6. Implementations that maintain separate persistence state for each address
+family may experience session loss when clients alternate between IPv4 and IPv6.</t>
 <t>An alternative on the host is <strong>NAT64 implemented with eBPF</strong> (similar in spirit
 to Kubernetes node NAT). That can unblock a single service quickly but <strong>often
 does not scale</strong> as a fleet-wide strategy --- connection state, troubleshooting,
@@ -909,7 +977,7 @@ local IDEs, test harnesses, and AI coding agents to them.</t>
 
 <section anchor="hard-coded-addresses-and-localhost-pitfalls"><name>Hard-Coded Addresses and Localhost Pitfalls</name>
 <t>A recurring defect is binding services to <strong><tt>127.0.0.1</tt></strong> instead of
-<strong><tt>localhost</tt></strong> or <tt>::1</tt>. On dual-stack hosts, <tt>127.0.0.1</tt> listens <strong>IPv4
+<strong><tt>localhost</tt></strong>. On dual-stack hosts, <tt>127.0.0.1</tt> listens <strong>IPv4
 loopback only</strong>; IPv6 clients cannot connect even when the service &quot;runs
 locally.&quot; The fix is to use name-based bind targets (<tt>localhost</tt>) or explicit
 dual-stack sockets depending on platform API.</t>
@@ -1079,6 +1147,10 @@ candidate addresses, then apply local policy (retries, Happy Eyeballs
 connection attempt</strong> so IPv6 has more time to succeed first --- a late start for
 IPv4 is consistent with <xref target="RFC8305"></xref> and reduces accidental IPv4-first behavior
 on dual-stack paths.</t>
+<t>Even with correct client retry logic, <strong>missing or wrong IPv6 routes</strong> can send
+internal AAAA targets out an Internet default route. Edge hosts in transitional
+layouts <bcp14>SHOULD</bcp14> install <strong><tt>unreachable</tt></strong> routes for internal aggregates so
+address-family fallback can succeed (see <xref target="dual-homed-transitional-routing"></xref>).</t>
 
 <section anchor="use-getaddrinfo-not-legacy-one-address-apis"><name>Use getaddrinfo(), Not Legacy One-Address APIs</name>
 <t>On POSIX systems the correct resolver entry point is <strong><tt>getaddrinfo()</tt></strong>

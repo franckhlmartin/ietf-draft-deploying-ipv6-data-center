@@ -6,7 +6,7 @@ area = "ops"
 workgroup = "IPv6 Operations"
 keyword = ["IPv6", "data center", "SRE", "software", "operations", "deployment"]
 
-date = 2026-06-08
+date = 2026-07-07
 
 [seriesInfo]
 name = "Internet-Draft"
@@ -35,6 +35,23 @@ data centers. It is organized in two parts after IPv6 fundamentals: a
 diagnostics). It documents common software and infrastructure gaps and offers
 practical deployment patterns aligned with the IPv6 Operations (v6ops) working
 group charter.
+
+.# About This Document
+
+This note is to be removed before publishing as an RFC.
+
+The latest revision of this draft can be found at
+https://github.com/franckhlmartin/ietf-draft-deploying-ipv6-data-center/.
+Status information for this document may be found at
+https://datatracker.ietf.org/doc/draft-martin-deploying-ipv6-data-center/.
+
+Discussion of this document takes place on the v6ops Working Group
+mailing list (mailto:v6ops@ietf.org), which is archived at
+https://mailarchive.ietf.org/arch/browse/v6ops/. Subscribe at
+https://www.ietf.org/mailman/listinfo/v6ops/.
+
+Source for this draft and an issue tracker can be found at
+https://github.com/franckhlmartin/ietf-draft-deploying-ipv6-data-center.
 
 {mainmatter}
 
@@ -651,7 +668,57 @@ IPv6-primary) and one **external** interface (dual-stack) --- simplify
 management paths on the internal v6 network while the service still serves
 dual-stack Internet clients. Document which interface is which in IPAM and
 host naming; do not collapse "internal v6-only" and "external dual-stack" into
-a single ambiguous address on production boxes.
+a single ambiguous address on production boxes. During migration, the internal
+interface may remain **IPv4-only** for a time; see
+(#dual-homed-transitional-routing) for routing and DNS pitfalls on those hosts.
+
+### Dual-Homed Hosts During Internal IPv6 Rollout {#dual-homed-transitional-routing}
+
+Edge servers often have **two interfaces**: an **external** interface toward the
+Internet (dual-stack, **default route**) and an **internal** interface toward the
+data center (today **IPv4-only**, with **more-specific routes** for internal
+prefixes). That layout is common during brownfield migration before the internal
+VLAN gains IPv6 on every host.
+
+When internal services begin publishing **AAAA** records, a dual-homed host that
+still has **no IPv6 on the internal interface** may resolve both A and AAAA for
+an internal name but send IPv6 connection attempts out the **default route** on
+the external interface. Those packets never reach the internal service. Symptoms
+include **long timeouts** on dual-stack clients, flaky automation, and "internal
+DNS works from other hosts but not from the edge box."
+
+Operators **SHOULD** align **routing policy with DNS**, not assume AAAA implies
+a working IPv6 path from every interface:
+
+* **Preferred long-term:** enable IPv6 on the internal interface and install
+  **scoped routes** (or policy routing) so internal GUA prefixes egress the
+  internal interface (see (#semantic-prefixes)).
+* **Transitional mitigation:** while the internal NIC remains IPv4-only, install
+  an **`unreachable`** route for the site **internal IPv6 aggregate** on the host
+  (for example, the `dc-internal` prefix from (#semantic-prefixes)). The kernel
+  then rejects connection attempts to internal AAAA addresses **immediately**
+  with a local "no route to host" error instead of forwarding them via the
+  Internet default route. Clients that iterate all resolved addresses --- or use
+  Happy Eyeballs [@?RFC8305] --- can fall back to the **A** record over the
+  internal IPv4 path (see (#name-resolution)). Do **not** use a **`blackhole`**
+  route for this purpose: blackhole **silently discards** packets and recreates
+  the same **timeout** behavior the operator is trying to avoid.
+* **Alternative:** **split-horizon DNS** so resolvers used on edge hosts do not
+  return AAAA for names that are reachable only on the internal IPv4 path until
+  routing is fixed.
+
+This pattern is **not** a substitute for enabling IPv6 on internal interfaces;
+it prevents **misrouted IPv6** during rollout. Application code that stops after
+the first address (`gethostbyname()`, `InetAddress.getByName()`, and similar)
+**will not benefit** --- fix routing **and** resolution behavior together.
+
+Example (Linux, illustrative prefix):
+
+    ip -6 route add unreachable 2001:db8:dc::/48
+
+Express the same policy in configuration management on every dual-homed edge
+role during the transition; remove the unreachable route when the internal
+interface is dual-stack and correct scoped routes are in place.
 
 ## Frontends for IPv4-Only Services {#ipv4-only-wrappers}
 
@@ -1121,6 +1188,11 @@ candidate addresses, then apply local policy (retries, Happy Eyeballs
 connection attempt** so IPv6 has more time to succeed first --- a late start for
 IPv4 is consistent with [@?RFC8305] and reduces accidental IPv4-first behavior
 on dual-stack paths.
+
+Even with correct client retry logic, **missing or wrong IPv6 routes** can send
+internal AAAA targets out an Internet default route. Edge hosts in transitional
+layouts **SHOULD** install **`unreachable`** routes for internal aggregates so
+address-family fallback can succeed (see (#dual-homed-transitional-routing)).
 
 ## Use getaddrinfo(), Not Legacy One-Address APIs
 

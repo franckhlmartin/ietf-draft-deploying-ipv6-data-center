@@ -6,6 +6,11 @@ semantics.
 
 ## Unreleased
 
+- **Front matter:** Add removable "About This Document" note (GitHub source,
+  Datatracker status, v6ops mailing list).
+- **Internal vs external (§8.5):** Dual-homed edge hosts during internal IPv6
+  rollout --- unreachable (not blackhole) routes when internal NIC is still
+  IPv4-only; cross-link from name resolution (§12).
 - **Revision -01:** Bump Internet-Draft version for Datatracker submission; build
   outputs renamed to match (makefile reads version from front matter).
 - **Document structure (major):** Reorganize after §2 into a dual-track layout —
