@@ -2921,8 +2921,8 @@ on platform API.<a href="#section-12.4-2" class="pilcrow">¶</a></p>
 Local agents, scripts, and libraries that dial <code>127.0.0.1</code> continue to work on
 hosts where IPv4 loopback remains on <code>lo</code> --- which is the normal state even on
 systems that are IPv6-only on application interfaces and, on Linux, cannot
-disable IPv4 in the kernel entirely. Migration programs <strong>MAY NOT</strong> spend
-effort replacing every client connect to <code>127.0.0.1</code> when loopback IPv4 is left
+disable IPv4 in the kernel entirely. Migration programs are not required to
+spend effort replacing every client connect to <code>127.0.0.1</code> when loopback IPv4 is left
 in place; prioritize <strong>listen</strong> misconfigurations that block IPv6-only local
 clients.<a href="#section-12.4-3" class="pilcrow">¶</a></p>
 <p id="section-12.4-4">Similar <strong>listen-side</strong> bugs appear with <strong><code>0.0.0.0</code></strong> vs <strong><code>::</code></strong> semantics,

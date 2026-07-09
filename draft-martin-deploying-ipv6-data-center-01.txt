@@ -1572,9 +1572,10 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
 
    is the normal state even on systems that are IPv6-only on application
    interfaces and, on Linux, cannot disable IPv4 in the kernel entirely.
-   Migration programs *MAY NOT* spend effort replacing every client
-   connect to 127.0.0.1 when loopback IPv4 is left in place; prioritize
-   *listen* misconfigurations that block IPv6-only local clients.
+   Migration programs are not required to spend effort replacing every
+   client connect to 127.0.0.1 when loopback IPv4 is left in place;
+   prioritize *listen* misconfigurations that block IPv6-only local
+   clients.
 
    Similar *listen-side* bugs appear with *0.0.0.0* vs *::* semantics,
    health probes that curl IPv4 literals against services bound
@@ -1617,7 +1618,6 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
    ingress to the service and egress from the service --- under
    IPv6-only client paths.  The same teams can extend PR checks with
    static analysis rules (see Section 12.8).
-
 
 
 
