@@ -6,6 +6,15 @@ semantics.
 
 ## Unreleased
 
+- **Localhost pitfalls (§11.4):** Distinguish **listen/bind** (must cover `::1` or
+  `localhost`) from **client connect** to `127.0.0.1` (acceptable when loopback
+  IPv4 remains on `lo`); note Linux cannot disable kernel IPv4 entirely.
+- **Naming services (§2.9), host agents (§5.5), static analysis (§11.8):**
+  Cross-link localhost guidance; narrow CI rules to listen/bind patterns, not
+  every `127.0.0.1` literal.
+- **Prefix allocation (§8.1):** Hybrid environments **MAY** adopt cloud-aligned
+  numbering on bare metal when provider constraints simplify cross-site IPAM;
+  reaffirm operator-controlled fabric scope.
 - **Introduction (§1.1) and hybrid cloud (§10):** Clarify scope --- operator-owned
   data centers, not native IaaS deployment; cloud constraints still matter for
   hybrid on-premise programs.

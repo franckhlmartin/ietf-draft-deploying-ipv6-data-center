@@ -264,8 +264,10 @@ expected interface.</t>
 
 <section anchor="naming-services"><name>Naming Services</name>
 <t><tt>::1</tt> is <tt>localhost</tt>; <tt>127.0.0.1</tt> is <tt>localhost</tt>. <strong>Do not embed IP addresses
-in application code</strong> when a name will do. Use hostnames and service discovery;
-resolve names at connection time.</t>
+in application code</strong> when a name will do --- especially for <strong>listen/bind</strong>
+targets. Use hostnames and service discovery; resolve names at connection time.
+Clients that connect to <tt>127.0.0.1</tt> remain acceptable where IPv4 loopback stays
+on <tt>lo</tt> (see <xref target="localhost-pitfalls"></xref>).</t>
 <t>DNS (or an equivalent naming and service registry) becomes <strong>essential</strong> in
 IPv6 because humans cannot memorize 128-bit addresses. Operational maturity
 includes forward and reverse DNS for infrastructure, health checks keyed on
@@ -434,8 +436,13 @@ platform packages the fleet image includes by default. These components often
 the host loses IPv4 even if the workload you plan to deploy is IPv6-ready.</t>
 <t>Run this baseline check on <strong>golden images and freshly provisioned servers</strong>, not
 only on production services. A host cannot safely move to dual-stack or
-IPv6-only if an unknown agent still requires IPv4 loopback, RFC 1918 reachability,
-or IPv4-only reporting to its controller. Export agent name, version, listen
+IPv6-only if an unknown agent still requires <strong>IPv4 loopback for listening</strong>
+(that is, it binds only on <tt>127.0.0.1</tt> while IPv6-only local clients must
+connect), RFC 1918 reachability, or IPv4-only reporting to its controller.
+<strong>IPv4 loopback on <tt>lo</tt> itself</strong> --- including clients that dial <tt>127.0.0.1</tt> ---
+is expected to remain on many platforms (for example Linux, where IPv4 cannot be
+disabled in the kernel) and is not the same as routable IPv4 on application
+interfaces. Export agent name, version, listen
 sockets (see above), and <strong>IPv6 readiness</strong> into the same catalog as
 <xref target="application-readiness"></xref>. Re-run when the image or security baseline changes.</t>
 </section>
@@ -539,7 +546,7 @@ reduce outages during rollout.</t>
 <t>A common data center pattern assigns a <strong><tt>/56</tt> to each physical host</strong> (or
 rack entity), providing <strong>256 <tt>/64</tt> subnets</strong> --- one <tt>/64</tt> for the host itself
 and up to <strong>255 <tt>/64</tt> prefixes</strong> for containers, virtual machines, or
-Kubernetes pods. Each container <bcp14>SHOULD</bcp14> receive a full <strong><tt>/64</tt></strong>, not a
+Kubernetes pods. Each container <bcp14>MAY</bcp14> receive a full <strong><tt>/64</tt></strong>, not a
 longer prefix carved out of a single host <tt>/64</tt>. Routing between <tt>/64</tt> islands
 replaces NAT for east-west traffic and avoids CGNAT-style visibility loss in
 flow logs. Assigning only a <strong><tt>/64</tt> per host</strong> (or per rack entity without
@@ -554,6 +561,18 @@ agreement and tested CNI or orchestrator support.</t>
 <t>The exact mapping depends on orchestrator and CNI design; the important software
 lesson is that <strong>each tier needs an explicit prefix plan</strong> rather than assuming
 &quot;one address per host&quot; as in legacy IPv4 NAT designs.</t>
+<t>These patterns assume an <strong>operator-controlled</strong> data center fabric where the
+network team can delegate prefixes freely. In <strong>hybrid</strong> environments that
+connect on-premise fabric to public cloud (see <xref target="hybrid-cloud"></xref>), operators
+<bcp14>MAY</bcp14> choose different prefix plans so numbering stays consistent across
+sites. Cloud providers impose subnet sizes, delegation limits, and aggregation
+rules that cannot be changed from the data center alone; mirroring (or mapping
+cleanly to) those conventions on bare metal <bcp14>MAY</bcp14> simplify IPAM, ACLs, and
+runbooks even when a strict <tt>/56</tt>-per-host layout would otherwise be preferred
+locally. The right trade-off depends on connectivity model, orchestrator, and
+how much of the estate shares addressing with cloud virtual networks. This
+document does not enumerate cloud or IaaS offerings; it focuses on networks
+the operator controls directly.</t>
 <t>Kubernetes clusters often use eBPF-based service NAT on the node. Traditional
 Linux tools (<tt>ss</tt>, <tt>/proc/net/tcp</tt>) may show node-level sockets, not pod-level
 flows, when NAT is involved. IPv6 routing reduces NAT use --- which also
@@ -996,15 +1015,26 @@ lab, IPv6-only sandbox, simulated edge with NAT64) and document how to attach
 local IDEs, test harnesses, and AI coding agents to them.</t>
 </section>
 
-<section anchor="hard-coded-addresses-and-localhost-pitfalls"><name>Hard-Coded Addresses and Localhost Pitfalls</name>
-<t>A recurring defect is binding services to <strong><tt>127.0.0.1</tt></strong> instead of
-<strong><tt>localhost</tt></strong>. On dual-stack hosts, <tt>127.0.0.1</tt> listens <strong>IPv4
-loopback only</strong>; IPv6 clients cannot connect even when the service &quot;runs
-locally.&quot; The fix is to use name-based bind targets (<tt>localhost</tt>) or explicit
-dual-stack sockets depending on platform API.</t>
-<t>Similar bugs appear with <strong><tt>0.0.0.0</tt></strong> vs <strong><tt>::</tt></strong> listen semantics, health
-probes that curl IPv4 literals, and container images that ship <tt>/etc/hosts</tt>
-without IPv6 entries.</t>
+<section anchor="localhost-pitfalls"><name>Hard-Coded Addresses and Localhost Pitfalls</name>
+<t><strong>Listening</strong> and <strong>connecting</strong> to loopback are different problems.</t>
+<t>A recurring <strong>server-side</strong> defect is binding services to <strong><tt>127.0.0.1</tt></strong>
+instead of <strong><tt>localhost</tt></strong> (or an explicit dual-stack listen). On dual-stack
+hosts, <tt>127.0.0.1</tt> listens <strong>IPv4 loopback only</strong>; IPv6 clients that resolve
+<tt>localhost</tt> to <tt>::1</tt> cannot connect even when the service &quot;runs locally.&quot; The
+fix is to use name-based bind targets (<tt>localhost</tt>), listen on <strong>both</strong> loopback
+families (<tt>127.0.0.1</tt> and <tt>::1</tt>), or use explicit dual-stack sockets depending
+on platform API.</t>
+<t><strong>Client-side</strong> use of <strong><tt>127.0.0.1</tt> as a connect target</strong> is a different case.
+Local agents, scripts, and libraries that dial <tt>127.0.0.1</tt> continue to work on
+hosts where IPv4 loopback remains on <tt>lo</tt> --- which is the normal state even on
+systems that are IPv6-only on application interfaces and, on Linux, cannot
+disable IPv4 in the kernel entirely. Migration programs are not required to
+spend effort replacing every client connect to <tt>127.0.0.1</tt> when loopback IPv4 is left
+in place; prioritize <strong>listen</strong> misconfigurations that block IPv6-only local
+clients.</t>
+<t>Similar <strong>listen-side</strong> bugs appear with <strong><tt>0.0.0.0</tt></strong> vs <strong><tt>::</tt></strong> semantics,
+health probes that curl IPv4 literals against services bound IPv6-only, and
+container images that ship <tt>/etc/hosts</tt> without IPv6 entries.</t>
 </section>
 
 <section anchor="ip-address-storage-in-application-data"><name>IP Address Storage in Application Data</name>
@@ -1079,7 +1109,9 @@ piggybacking on existing gates rather than relying on a separate audit cycle.</t
 patterns, for example:</t>
 
 <ul spacing="compact">
-<li>Literal <tt>127.0.0.1</tt>, <tt>0.0.0.0</tt>, or dotted-decimal regexes used as addresses</li>
+<li>Literal <tt>127.0.0.1</tt> or <tt>0.0.0.0</tt> in <strong>listen/bind</strong> configuration (not every
+client connect to <tt>127.0.0.1</tt>; see <xref target="localhost-pitfalls"></xref>), or dotted-decimal
+regexes used as addresses</li>
 <li>Calls to deprecated Python socket helpers (see <xref target="language-runtimes"></xref>)</li>
 <li><tt>AF_INET</tt> sockets where dual-stack or <tt>AF_INET6</tt> is required</li>
 <li>Database columns or structs sized for IPv4-only (<tt>CHAR(15)</tt>, 32-bit integers)</li>
