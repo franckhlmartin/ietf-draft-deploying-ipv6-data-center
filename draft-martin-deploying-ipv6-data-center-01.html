@@ -29,7 +29,7 @@ group charter.
 <meta content="draft-martin-deploying-ipv6-data-center-01" name="ietf.draft">
 <!-- Generator version information:
   xml2rfc 3.34.0
-    Python 3.14.5
+    Python 3.12.13
     ConfigArgParse 1.7.5
     google-i18n-address 3.1.1
     intervaltree 3.2.1
@@ -40,7 +40,7 @@ group charter.
     pycountry 26.2.16
     PyYAML 6.0.3
     requests 2.34.2
-    wcwidth 0.7.0
+    wcwidth 0.8.2
 -->
 <link href="draft-martin-deploying-ipv6-data-center-01.xml" rel="alternate" type="application/rfc+xml">
 <link href="#copyright" rel="license">
@@ -1930,8 +1930,10 @@ expected interface.<a href="#section-2.8-1" class="pilcrow">¶</a></p>
 <a href="#section-2.9" class="section-number selfRef">2.9. </a><a href="#name-naming-services" class="section-name selfRef">Naming Services</a>
         </h3>
 <p id="section-2.9-1"><code>::1</code> is <code>localhost</code>; <code>127.0.0.1</code> is <code>localhost</code>. <strong>Do not embed IP addresses
-in application code</strong> when a name will do. Use hostnames and service discovery;
-resolve names at connection time.<a href="#section-2.9-1" class="pilcrow">¶</a></p>
+in application code</strong> when a name will do --- especially for <strong>listen/bind</strong>
+targets. Use hostnames and service discovery; resolve names at connection time.
+Clients that connect to <code>127.0.0.1</code> remain acceptable where IPv4 loopback stays
+on <code>lo</code> (see <a href="#localhost-pitfalls" class="auto internal xref">Section 12.4</a>).<a href="#section-2.9-1" class="pilcrow">¶</a></p>
 <p id="section-2.9-2">DNS (or an equivalent naming and service registry) becomes <strong>essential</strong> in
 IPv6 because humans cannot memorize 128-bit addresses. Operational maturity
 includes forward and reverse DNS for infrastructure, health checks keyed on
@@ -2156,8 +2158,13 @@ platform packages the fleet image includes by default. These components often
 the host loses IPv4 even if the workload you plan to deploy is IPv6-ready.<a href="#section-5.5-1" class="pilcrow">¶</a></p>
 <p id="section-5.5-2">Run this baseline check on <strong>golden images and freshly provisioned servers</strong>, not
 only on production services. A host cannot safely move to dual-stack or
-IPv6-only if an unknown agent still requires IPv4 loopback, RFC 1918 reachability,
-or IPv4-only reporting to its controller. Export agent name, version, listen
+IPv6-only if an unknown agent still requires <strong>IPv4 loopback for listening</strong>
+(that is, it binds only on <code>127.0.0.1</code> while IPv6-only local clients must
+connect), RFC 1918 reachability, or IPv4-only reporting to its controller.
+<strong>IPv4 loopback on <code>lo</code> itself</strong> --- including clients that dial <code>127.0.0.1</code> ---
+is expected to remain on many platforms (for example Linux, where IPv4 cannot be
+disabled in the kernel) and is not the same as routable IPv4 on application
+interfaces. Export agent name, version, listen
 sockets (see above), and <strong>IPv6 readiness</strong> into the same catalog as
 <a href="#application-readiness" class="auto internal xref">Section 12</a>. Re-run when the image or security baseline changes.<a href="#section-5.5-2" class="pilcrow">¶</a></p>
 </section>
@@ -2310,7 +2317,7 @@ reduce outages during rollout.<a href="#section-8-1" class="pilcrow">¶</a></p>
 <p id="section-8.1-1">A common data center pattern assigns a <strong><code>/56</code> to each physical host</strong> (or
 rack entity), providing <strong>256 <code>/64</code> subnets</strong> --- one <code>/64</code> for the host itself
 and up to <strong>255 <code>/64</code> prefixes</strong> for containers, virtual machines, or
-Kubernetes pods. Each container <span class="bcp14">SHOULD</span> receive a full <strong><code>/64</code></strong>, not a
+Kubernetes pods. Each container <span class="bcp14">MAY</span> receive a full <strong><code>/64</code></strong>, not a
 longer prefix carved out of a single host <code>/64</code>. Routing between <code>/64</code> islands
 replaces NAT for east-west traffic and avoids CGNAT-style visibility loss in
 flow logs. Assigning only a <strong><code>/64</code> per host</strong> (or per rack entity without
@@ -2325,11 +2332,23 @@ agreement and tested CNI or orchestrator support.<a href="#section-8.1-1" class=
 <p id="section-8.1-2">The exact mapping depends on orchestrator and CNI design; the important software
 lesson is that <strong>each tier needs an explicit prefix plan</strong> rather than assuming
 "one address per host" as in legacy IPv4 NAT designs.<a href="#section-8.1-2" class="pilcrow">¶</a></p>
-<p id="section-8.1-3">Kubernetes clusters often use eBPF-based service NAT on the node. Traditional
+<p id="section-8.1-3">These patterns assume an <strong>operator-controlled</strong> data center fabric where the
+network team can delegate prefixes freely. In <strong>hybrid</strong> environments that
+connect on-premise fabric to public cloud (see <a href="#hybrid-cloud" class="auto internal xref">Section 10</a>), operators
+<span class="bcp14">MAY</span> choose different prefix plans so numbering stays consistent across
+sites. Cloud providers impose subnet sizes, delegation limits, and aggregation
+rules that cannot be changed from the data center alone; mirroring (or mapping
+cleanly to) those conventions on bare metal <span class="bcp14">MAY</span> simplify IPAM, ACLs, and
+runbooks even when a strict <code>/56</code>-per-host layout would otherwise be preferred
+locally. The right trade-off depends on connectivity model, orchestrator, and
+how much of the estate shares addressing with cloud virtual networks. This
+document does not enumerate cloud or IaaS offerings; it focuses on networks
+the operator controls directly.<a href="#section-8.1-3" class="pilcrow">¶</a></p>
+<p id="section-8.1-4">Kubernetes clusters often use eBPF-based service NAT on the node. Traditional
 Linux tools (<code>ss</code>, <code>/proc/net/tcp</code>) may show node-level sockets, not pod-level
 flows, when NAT is involved. IPv6 routing reduces NAT use --- which also
 <strong>reduces the complexity inherent in NAT when tracing connections</strong> --- but
-<strong>does not remove the need for observability hooks</strong> at the CNI layer.<a href="#section-8.1-3" class="pilcrow">¶</a></p>
+<strong>does not remove the need for observability hooks</strong> at the CNI layer.<a href="#section-8.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="static-addressing-router-advertisements-and-ipam">
@@ -2885,19 +2904,30 @@ lab, IPv6-only sandbox, simulated edge with NAT64) and document how to attach
 local IDEs, test harnesses, and AI coding agents to them.<a href="#section-12.3-3" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="hard-coded-addresses-and-localhost-pitfalls">
+<div id="localhost-pitfalls">
 <section id="section-12.4">
         <h3 id="name-hard-coded-addresses-and-lo">
 <a href="#section-12.4" class="section-number selfRef">12.4. </a><a href="#name-hard-coded-addresses-and-lo" class="section-name selfRef">Hard-Coded Addresses and Localhost Pitfalls</a>
         </h3>
-<p id="section-12.4-1">A recurring defect is binding services to <strong><code>127.0.0.1</code></strong> instead of
-<strong><code>localhost</code></strong>. On dual-stack hosts, <code>127.0.0.1</code> listens <strong>IPv4
-loopback only</strong>; IPv6 clients cannot connect even when the service "runs
-locally." The fix is to use name-based bind targets (<code>localhost</code>) or explicit
-dual-stack sockets depending on platform API.<a href="#section-12.4-1" class="pilcrow">¶</a></p>
-<p id="section-12.4-2">Similar bugs appear with <strong><code>0.0.0.0</code></strong> vs <strong><code>::</code></strong> listen semantics, health
-probes that curl IPv4 literals, and container images that ship <code>/etc/hosts</code>
-without IPv6 entries.<a href="#section-12.4-2" class="pilcrow">¶</a></p>
+<p id="section-12.4-1"><strong>Listening</strong> and <strong>connecting</strong> to loopback are different problems.<a href="#section-12.4-1" class="pilcrow">¶</a></p>
+<p id="section-12.4-2">A recurring <strong>server-side</strong> defect is binding services to <strong><code>127.0.0.1</code></strong>
+instead of <strong><code>localhost</code></strong> (or an explicit dual-stack listen). On dual-stack
+hosts, <code>127.0.0.1</code> listens <strong>IPv4 loopback only</strong>; IPv6 clients that resolve
+<code>localhost</code> to <code>::1</code> cannot connect even when the service "runs locally." The
+fix is to use name-based bind targets (<code>localhost</code>), listen on <strong>both</strong> loopback
+families (<code>127.0.0.1</code> and <code>::1</code>), or use explicit dual-stack sockets depending
+on platform API.<a href="#section-12.4-2" class="pilcrow">¶</a></p>
+<p id="section-12.4-3"><strong>Client-side</strong> use of <strong><code>127.0.0.1</code> as a connect target</strong> is a different case.
+Local agents, scripts, and libraries that dial <code>127.0.0.1</code> continue to work on
+hosts where IPv4 loopback remains on <code>lo</code> --- which is the normal state even on
+systems that are IPv6-only on application interfaces and, on Linux, cannot
+disable IPv4 in the kernel entirely. Migration programs are not required to
+spend effort replacing every client connect to <code>127.0.0.1</code> when loopback IPv4 is left
+in place; prioritize <strong>listen</strong> misconfigurations that block IPv6-only local
+clients.<a href="#section-12.4-3" class="pilcrow">¶</a></p>
+<p id="section-12.4-4">Similar <strong>listen-side</strong> bugs appear with <strong><code>0.0.0.0</code></strong> vs <strong><code>::</code></strong> semantics,
+health probes that curl IPv4 literals against services bound IPv6-only, and
+container images that ship <code>/etc/hosts</code> without IPv6 entries.<a href="#section-12.4-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="ip-address-storage-in-application-data">
@@ -3002,7 +3032,9 @@ piggybacking on existing gates rather than relying on a separate audit cycle.<a 
 <p id="section-12.8.1-1">Ship <strong>Semgrep</strong>, <strong>CodeQL</strong>, or equivalent rules that flag likely IPv4-only
 patterns, for example:<a href="#section-12.8.1-1" class="pilcrow">¶</a></p>
 <ul class="compact">
-<li class="compact" id="section-12.8.1-2.1">Literal <code>127.0.0.1</code>, <code>0.0.0.0</code>, or dotted-decimal regexes used as addresses<a href="#section-12.8.1-2.1" class="pilcrow">¶</a>
+<li class="compact" id="section-12.8.1-2.1">Literal <code>127.0.0.1</code> or <code>0.0.0.0</code> in <strong>listen/bind</strong> configuration (not every
+client connect to <code>127.0.0.1</code>; see <a href="#localhost-pitfalls" class="auto internal xref">Section 12.4</a>), or dotted-decimal
+regexes used as addresses<a href="#section-12.8.1-2.1" class="pilcrow">¶</a>
 </li>
             <li class="compact" id="section-12.8.1-2.2">Calls to deprecated Python socket helpers (see <a href="#language-runtimes" class="auto internal xref">Section 12.7</a>)<a href="#section-12.8.1-2.2" class="pilcrow">¶</a>
 </li>

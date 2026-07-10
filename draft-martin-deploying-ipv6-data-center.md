@@ -280,8 +280,10 @@ expected interface.
 ## Naming Services {#naming-services}
 
 `::1` is `localhost`; `127.0.0.1` is `localhost`. **Do not embed IP addresses
-in application code** when a name will do. Use hostnames and service discovery;
-resolve names at connection time.
+in application code** when a name will do --- especially for **listen/bind**
+targets. Use hostnames and service discovery; resolve names at connection time.
+Clients that connect to `127.0.0.1` remain acceptable where IPv4 loopback stays
+on `lo` (see (#localhost-pitfalls)).
 
 DNS (or an equivalent naming and service registry) becomes **essential** in
 IPv6 because humans cannot memorize 128-bit addresses. Operational maturity
@@ -455,8 +457,13 @@ the host loses IPv4 even if the workload you plan to deploy is IPv6-ready.
 
 Run this baseline check on **golden images and freshly provisioned servers**, not
 only on production services. A host cannot safely move to dual-stack or
-IPv6-only if an unknown agent still requires IPv4 loopback, RFC 1918 reachability,
-or IPv4-only reporting to its controller. Export agent name, version, listen
+IPv6-only if an unknown agent still requires **IPv4 loopback for listening**
+(that is, it binds only on `127.0.0.1` while IPv6-only local clients must
+connect), RFC 1918 reachability, or IPv4-only reporting to its controller.
+**IPv4 loopback on `lo` itself** --- including clients that dial `127.0.0.1` ---
+is expected to remain on many platforms (for example Linux, where IPv4 cannot be
+disabled in the kernel) and is not the same as routable IPv4 on application
+interfaces. Export agent name, version, listen
 sockets (see above), and **IPv6 readiness** into the same catalog as
 (#application-readiness). Re-run when the image or security baseline changes.
 
@@ -561,7 +568,7 @@ reduce outages during rollout.
 A common data center pattern assigns a **`/56` to each physical host** (or
 rack entity), providing **256 `/64` subnets** --- one `/64` for the host itself
 and up to **255 `/64` prefixes** for containers, virtual machines, or
-Kubernetes pods. Each container **SHOULD** receive a full **`/64`**, not a
+Kubernetes pods. Each container **MAY** receive a full **`/64`**, not a
 longer prefix carved out of a single host `/64`. Routing between `/64` islands
 replaces NAT for east-west traffic and avoids CGNAT-style visibility loss in
 flow logs. Assigning only a **`/64` per host** (or per rack entity without
@@ -577,6 +584,19 @@ agreement and tested CNI or orchestrator support.
 The exact mapping depends on orchestrator and CNI design; the important software
 lesson is that **each tier needs an explicit prefix plan** rather than assuming
 "one address per host" as in legacy IPv4 NAT designs.
+
+These patterns assume an **operator-controlled** data center fabric where the
+network team can delegate prefixes freely. In **hybrid** environments that
+connect on-premise fabric to public cloud (see (#hybrid-cloud)), operators
+**MAY** choose different prefix plans so numbering stays consistent across
+sites. Cloud providers impose subnet sizes, delegation limits, and aggregation
+rules that cannot be changed from the data center alone; mirroring (or mapping
+cleanly to) those conventions on bare metal **MAY** simplify IPAM, ACLs, and
+runbooks even when a strict `/56`-per-host layout would otherwise be preferred
+locally. The right trade-off depends on connectivity model, orchestrator, and
+how much of the estate shares addressing with cloud virtual networks. This
+document does not enumerate cloud or IaaS offerings; it focuses on networks
+the operator controls directly.
 
 Kubernetes clusters often use eBPF-based service NAT on the node. Traditional
 Linux tools (`ss`, `/proc/net/tcp`) may show node-level sockets, not pod-level
@@ -1038,17 +1058,30 @@ Platform teams **SHOULD** publish standard developer network profiles (dual-stac
 lab, IPv6-only sandbox, simulated edge with NAT64) and document how to attach
 local IDEs, test harnesses, and AI coding agents to them.
 
-## Hard-Coded Addresses and Localhost Pitfalls
+## Hard-Coded Addresses and Localhost Pitfalls {#localhost-pitfalls}
 
-A recurring defect is binding services to **`127.0.0.1`** instead of
-**`localhost`**. On dual-stack hosts, `127.0.0.1` listens **IPv4
-loopback only**; IPv6 clients cannot connect even when the service "runs
-locally." The fix is to use name-based bind targets (`localhost`) or explicit
-dual-stack sockets depending on platform API.
+**Listening** and **connecting** to loopback are different problems.
 
-Similar bugs appear with **`0.0.0.0`** vs **`::`** listen semantics, health
-probes that curl IPv4 literals, and container images that ship `/etc/hosts`
-without IPv6 entries.
+A recurring **server-side** defect is binding services to **`127.0.0.1`**
+instead of **`localhost`** (or an explicit dual-stack listen). On dual-stack
+hosts, `127.0.0.1` listens **IPv4 loopback only**; IPv6 clients that resolve
+`localhost` to `::1` cannot connect even when the service "runs locally." The
+fix is to use name-based bind targets (`localhost`), listen on **both** loopback
+families (`127.0.0.1` and `::1`), or use explicit dual-stack sockets depending
+on platform API.
+
+**Client-side** use of **`127.0.0.1` as a connect target** is a different case.
+Local agents, scripts, and libraries that dial `127.0.0.1` continue to work on
+hosts where IPv4 loopback remains on `lo` --- which is the normal state even on
+systems that are IPv6-only on application interfaces and, on Linux, cannot
+disable IPv4 in the kernel entirely. Migration programs are not required to
+spend effort replacing every client connect to `127.0.0.1` when loopback IPv4 is left
+in place; prioritize **listen** misconfigurations that block IPv6-only local
+clients.
+
+Similar **listen-side** bugs appear with **`0.0.0.0`** vs **`::`** semantics,
+health probes that curl IPv4 literals against services bound IPv6-only, and
+container images that ship `/etc/hosts` without IPv6 entries.
 
 ## IP Address Storage in Application Data
 
@@ -1122,7 +1155,9 @@ piggybacking on existing gates rather than relying on a separate audit cycle.
 Ship **Semgrep**, **CodeQL**, or equivalent rules that flag likely IPv4-only
 patterns, for example:
 
-* Literal `127.0.0.1`, `0.0.0.0`, or dotted-decimal regexes used as addresses
+* Literal `127.0.0.1` or `0.0.0.0` in **listen/bind** configuration (not every
+  client connect to `127.0.0.1`; see (#localhost-pitfalls)), or dotted-decimal
+  regexes used as addresses
 * Calls to deprecated Python socket helpers (see (#language-runtimes))
 * `AF_INET` sockets where dual-stack or `AF_INET6` is required
 * Database columns or structs sized for IPv4-only (`CHAR(15)`, 32-bit integers)
