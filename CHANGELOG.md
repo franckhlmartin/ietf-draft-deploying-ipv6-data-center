@@ -6,6 +6,8 @@ semantics.
 
 ## Unreleased
 
+- **Revision -02:** Bump Internet-Draft version and date for Datatracker
+  submission; build outputs renamed to match.
 - **Related Guides (§1.2) and IPv6 testing cross-references:** Add informative
   references to `draft-ietf-v6ops-ipv6-app-testing` (the application IPv6-testing
   companion) and `draft-ietf-v6ops-ipv6-only` (IPv6-only/IPv6-Mostly terminology).
@@ -14,8 +16,6 @@ semantics.
   ACL propagation (§8.7), connectivity-scenario coverage in CI (§12.3), testing
   without IPv4 loopback (§12.4), and address-selection/filtering failure modes
   (§13.5); align connectivity-scenario terminology in §8.5.
-- **Revision -02:** Bump Internet-Draft version and date for Datatracker
-  submission; build outputs renamed to match.
 - **Localhost pitfalls (§11.4):** Distinguish **listen/bind** (must cover `::1` or
   `localhost`) from **client connect** to `127.0.0.1` (acceptable when loopback
   IPv4 remains on `lo`); note Linux cannot disable kernel IPv4 entirely.
