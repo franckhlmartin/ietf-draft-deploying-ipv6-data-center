@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- name="GENERATOR" content="github.com/mmarkdown/mmark Mmark Markdown Processor - mmark.miek.nl" -->
-<rfc version="3" ipr="trust200902" docName="draft-martin-deploying-ipv6-data-center-01" category="info" xml:lang="en" xmlns:xi="http://www.w3.org/2001/XInclude" indexInclude="true">
+<rfc version="3" ipr="trust200902" docName="draft-martin-deploying-ipv6-data-center-02" category="info" xml:lang="en" xmlns:xi="http://www.w3.org/2001/XInclude" indexInclude="true">
 
 <front>
-<title abbrev="deploying-ipv6-data-center">Deploying IPv6 in Data Centers</title><seriesInfo value="draft-martin-deploying-ipv6-data-center-01" status="informational" name="Internet-Draft"></seriesInfo>
+<title abbrev="deploying-ipv6-data-center">Deploying IPv6 in Data Centers</title><seriesInfo value="draft-martin-deploying-ipv6-data-center-02" status="informational" name="Internet-Draft"></seriesInfo>
 <author initials="F." surname="Martin" fullname="Franck Martin"><organization>Peachymango.org</organization><address><postal><street></street>
 </postal><email>franck@peachymango.org</email>
-</address></author><date year="2026" month="July" day="7"></date>
+</address></author><date year="2026" month="July" day="18"></date>
 <area>ops</area>
 <workgroup>IPv6 Operations</workgroup>
 <keyword>IPv6</keyword>
@@ -79,6 +79,10 @@ alongside this draft:</t>
 <ul spacing="compact">
 <li><xref target="RFC7381"></xref> --- enterprise IPv6 deployment framework (v6ops)</li>
 <li><xref target="RFC4038"></xref> --- application aspects of IPv6 transition</li>
+<li><xref target="I-D.ietf-v6ops-ipv6-app-testing"></xref> --- testing applications' IPv6 support across
+IPv4-only, dual-stack, IPv6-only with NAT64, and IPv6-only-strict scenarios (v6ops);
+the testing companion to the deployment guidance in this document</li>
+<li><xref target="I-D.ietf-v6ops-ipv6-only"></xref> --- IPv6-only and IPv6-Mostly terminology definitions (v6ops)</li>
 <li><xref target="ARCEP-IPV6-GUIDE"></xref> --- enterprise IPv6 rollout guidance from ARCEP (France)</li>
 <li><xref target="ARIN-APPS-V6"></xref> --- application and software developer guidance from ARIN</li>
 </ul>
@@ -237,7 +241,10 @@ store addresses as strings</strong> in databases, logs-as-data, caches, or messa
 payloads. Provide helper functions to convert between the binary form and a
 human-readable representation for display and configuration I/O, and use those
 helpers at boundaries --- <strong>never parse or compare address strings ad hoc</strong> in
-application logic.</t>
+application logic. When addresses are handled as data (logging, ACLs,
+management output), test that code accepts all valid representations <xref target="RFC4291"></xref>
+and renders canonical text <xref target="RFC5952"></xref>; <xref target="I-D.ietf-v6ops-ipv6-app-testing"></xref>
+covers this &quot;addresses as data&quot; testing.</t>
 <t>Applications <bcp14>SHOULD</bcp14> treat names, not literal addresses, as the stable
 interface (see <xref target="naming-services"></xref>). To turn a name into addresses, use the
 APIs described in <xref target="name-resolution"></xref> --- not legacy one-address helpers and
@@ -400,7 +407,9 @@ IPv6-only health checks, IPv6 listen-socket regressions, and rising IPv4-only
 connection share for tier-1 services. Where production remains dual-stack,
 synthetic probes <bcp14>SHOULD</bcp14> exercise <strong>IPv6 explicitly</strong> (AAAA-only paths,
 IPv6 literal targets, or IPv6-only test clients), not only dual-stack clients
-that can hide breakage. The sooner IPv6 errors page on-call the same way IPv4
+that can hide breakage. <xref target="I-D.ietf-v6ops-ipv6-app-testing"></xref> describes
+client-, server-, and network-based tracing strategies that distinguish
+genuine IPv6-only-strict behavior from dual-stack masking. The sooner IPv6 errors page on-call the same way IPv4
 errors do, the less likely a team discovers IPv6 rot months later during an
 IPv4 decommissioning drill.</t>
 <t>Approved <strong>IPv4-only exceptions</strong> (see <xref target="ipv4-only-exceptions"></xref>) are the controlled
@@ -477,7 +486,9 @@ see, for example, &quot;API gateway is dual-stack but 80% of backend calls still
 IPv4&quot; or &quot;this batch job is IPv4-only despite an IPv6-ready binary.&quot;</t>
 <t>Use call-tree family breakdown to prioritize refactors: fix the highest-volume
 IPv4-only edges first. Reconcile call-tree findings with the inventory --- a
-service marked &quot;IPv6 ready&quot; with no IPv6 traffic is not done.</t>
+service marked &quot;IPv6 ready&quot; with no IPv6 traffic is not done.
+<xref target="I-D.ietf-v6ops-ipv6-app-testing"></xref> describes decomposing complex, multi-service
+cloud applications into per-flow test cases, matching this per-hop view.</t>
 </section>
 </section>
 
@@ -654,6 +665,13 @@ world. The <strong>Internet is not yet ready for an IPv6-only-only edge</strong>
 transit, partners, and operator tooling still expect <strong>dual-stack</strong> (or IPv4
 fallback) on <strong>external</strong> interfaces --- load balancers, border routers, VPN
 concentrators, and customer-facing anycast fronts.</t>
+<t>This document uses &quot;IPv6-only,&quot; &quot;dual-stack,&quot; and related terms informally for
+deployment context. For precise, testable definitions of the connectivity
+scenarios --- <strong>IPv4-only</strong>, <strong>dual-stack</strong>, <strong>IPv6-only with NAT64</strong>, and
+<strong>IPv6-only-strict</strong> (no IPv4 connectivity, encapsulated or translated) ---
+see <xref target="I-D.ietf-v6ops-ipv6-app-testing"></xref> and the terminology in
+<xref target="I-D.ietf-v6ops-ipv6-only"></xref>. Aligning verification with those scenarios keeps
+this deployment guidance consistent with application-side IPv6 testing.</t>
 <t>Plan accordingly:</t>
 
 <ul spacing="compact">
@@ -749,7 +767,10 @@ automation may lag by minutes</strong>. During that window the service can appea
 <strong>healthy on IPv4 but broken on IPv6</strong>, or reachable in one direction only.
 SRE runbooks <bcp14>SHOULD</bcp14> treat &quot;IPv6 enabled on the host&quot; and &quot;IPv6 permitted
 end-to-end&quot; as separate checklist items. Do not announce IPv6 on a load
-balancer until policy propagation completes.</t>
+balancer until policy propagation completes. Application-level IP allow and
+deny lists are a related deployment risk: enabling IPv6 can shift clients onto
+addresses missing from the list, causing service disruption;
+<xref target="I-D.ietf-v6ops-ipv6-app-testing"></xref> discusses testing for this before rollout.</t>
 <t>Software teams <bcp14>SHOULD NOT</bcp14> create entirely new ACL models per address family
 when the same role-based policy can express both; parallel rule sets double
 drift risk. Where separate rules are unavoidable, generate them from the same
@@ -1009,7 +1030,10 @@ production topology before release. Those evaluation environments <bcp14>MUST</b
 include <strong>dual-stack</strong> and <strong>IPv6-only</strong> variants alongside legacy IPv4-only
 images where brownfield support is still required. CI pipelines <bcp14>SHOULD</bcp14> run
 integration tests against both address-family modes so a code push cannot
-silently regress IPv6 without failing the build.</t>
+silently regress IPv6 without failing the build.
+<xref target="I-D.ietf-v6ops-ipv6-app-testing"></xref> defines the connectivity-scenario
+combinations and testing strategies these pipelines <bcp14>SHOULD</bcp14> cover, including
+IPv6-only-strict and IPv6-only with NAT64.</t>
 <t>Platform teams <bcp14>SHOULD</bcp14> publish standard developer network profiles (dual-stack
 lab, IPv6-only sandbox, simulated edge with NAT64) and document how to attach
 local IDEs, test harnesses, and AI coding agents to them.</t>
@@ -1031,7 +1055,9 @@ systems that are IPv6-only on application interfaces and, on Linux, cannot
 disable IPv4 in the kernel entirely. Migration programs are not required to
 spend effort replacing every client connect to <tt>127.0.0.1</tt> when loopback IPv4 is left
 in place; prioritize <strong>listen</strong> misconfigurations that block IPv6-only local
-clients.</t>
+clients. To surface applications that wrongly assume IPv4 loopback is present,
+<xref target="I-D.ietf-v6ops-ipv6-app-testing"></xref> recommends testing in an environment
+without IPv4 on the loopback interface.</t>
 <t>Similar <strong>listen-side</strong> bugs appear with <strong><tt>0.0.0.0</tt></strong> vs <strong><tt>::</tt></strong> semantics,
 health probes that curl IPv4 literals against services bound IPv6-only, and
 container images that ship <tt>/etc/hosts</tt> without IPv6 entries.</t>
@@ -1314,7 +1340,11 @@ maintains its own resolver stack and system properties such as
 override address-family preference independently of <tt>/etc/gai.conf</tt>. A JVM
 configured to prefer IPv4 can appear &quot;IPv6 broken&quot; even when the OS resolver
 returns AAAA records. Test Java services with explicit property settings and
-with <strong><tt>InetAddress.getAllByName()</tt></strong>, not <strong><tt>getByName()</tt></strong>.</t>
+with <strong><tt>InetAddress.getAllByName()</tt></strong>, not <strong><tt>getByName()</tt></strong>.
+<xref target="I-D.ietf-v6ops-ipv6-app-testing"></xref> catalogs these destination-address-selection
+and address-filtering deviations (including Java preferring IPv4 and resolvers
+such as NGINX that ignore address-family availability) as common IPv6 failure
+sources.</t>
 <t>In extreme cases, an <strong><tt>/etc/resolv.conf</tt></strong> that lists <strong>only IPv6 nameserver
 addresses</strong> can interact badly with runtimes that bootstrap DNS over IPv4 first
 or assume a v4-reachable resolver path. Symptoms include slow resolution,
@@ -1470,6 +1500,8 @@ editorial improvements to this document:</t>
     </author>
   </front>
 </reference>
+<xi:include href="https://bib.ietf.org/public/rfc/bibxml3/reference.I-D.ietf-v6ops-ipv6-app-testing.xml"/>
+<xi:include href="https://bib.ietf.org/public/rfc/bibxml3/reference.I-D.ietf-v6ops-ipv6-only.xml"/>
 <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.2606.xml"/>
 <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.4038.xml"/>
 <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7381.xml"/>

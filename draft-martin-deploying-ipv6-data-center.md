@@ -6,11 +6,11 @@ area = "ops"
 workgroup = "IPv6 Operations"
 keyword = ["IPv6", "data center", "SRE", "software", "operations", "deployment"]
 
-date = 2026-07-07
+date = 2026-07-18
 
 [seriesInfo]
 name = "Internet-Draft"
-value = "draft-martin-deploying-ipv6-data-center-01"
+value = "draft-martin-deploying-ipv6-data-center-02"
 status = "informational"
 
 [[author]]
@@ -87,6 +87,10 @@ alongside this draft:
 
 * [@?RFC7381] --- enterprise IPv6 deployment framework (v6ops)
 * [@?RFC4038] --- application aspects of IPv6 transition
+* [@?I-D.ietf-v6ops-ipv6-app-testing] --- testing applications' IPv6 support across
+  IPv4-only, dual-stack, IPv6-only with NAT64, and IPv6-only-strict scenarios (v6ops);
+  the testing companion to the deployment guidance in this document
+* [@?I-D.ietf-v6ops-ipv6-only] --- IPv6-only and IPv6-Mostly terminology definitions (v6ops)
 * [@?ARCEP-IPV6-GUIDE] --- enterprise IPv6 rollout guidance from ARCEP (France)
 * [@?ARIN-APPS-V6] --- application and software developer guidance from ARIN
 
@@ -252,7 +256,10 @@ store addresses as strings** in databases, logs-as-data, caches, or message
 payloads. Provide helper functions to convert between the binary form and a
 human-readable representation for display and configuration I/O, and use those
 helpers at boundaries --- **never parse or compare address strings ad hoc** in
-application logic.
+application logic. When addresses are handled as data (logging, ACLs,
+management output), test that code accepts all valid representations [@!RFC4291]
+and renders canonical text [@!RFC5952]; [@?I-D.ietf-v6ops-ipv6-app-testing]
+covers this "addresses as data" testing.
 
 Applications **SHOULD** treat names, not literal addresses, as the stable
 interface (see (#naming-services)). To turn a name into addresses, use the
@@ -420,7 +427,9 @@ IPv6-only health checks, IPv6 listen-socket regressions, and rising IPv4-only
 connection share for tier-1 services. Where production remains dual-stack,
 synthetic probes **SHOULD** exercise **IPv6 explicitly** (AAAA-only paths,
 IPv6 literal targets, or IPv6-only test clients), not only dual-stack clients
-that can hide breakage. The sooner IPv6 errors page on-call the same way IPv4
+that can hide breakage. [@?I-D.ietf-v6ops-ipv6-app-testing] describes
+client-, server-, and network-based tracing strategies that distinguish
+genuine IPv6-only-strict behavior from dual-stack masking. The sooner IPv6 errors page on-call the same way IPv4
 errors do, the less likely a team discovers IPv6 rot months later during an
 IPv4 decommissioning drill.
 
@@ -501,6 +510,8 @@ IPv4" or "this batch job is IPv4-only despite an IPv6-ready binary."
 Use call-tree family breakdown to prioritize refactors: fix the highest-volume
 IPv4-only edges first. Reconcile call-tree findings with the inventory --- a
 service marked "IPv6 ready" with no IPv6 traffic is not done.
+[@?I-D.ietf-v6ops-ipv6-app-testing] describes decomposing complex, multi-service
+cloud applications into per-flow test cases, matching this per-hop view.
 
 # Part II: Building the IPv6 Data Center
 
@@ -684,6 +695,14 @@ transit, partners, and operator tooling still expect **dual-stack** (or IPv4
 fallback) on **external** interfaces --- load balancers, border routers, VPN
 concentrators, and customer-facing anycast fronts.
 
+This document uses "IPv6-only," "dual-stack," and related terms informally for
+deployment context. For precise, testable definitions of the connectivity
+scenarios --- **IPv4-only**, **dual-stack**, **IPv6-only with NAT64**, and
+**IPv6-only-strict** (no IPv4 connectivity, encapsulated or translated) ---
+see [@?I-D.ietf-v6ops-ipv6-app-testing] and the terminology in
+[@?I-D.ietf-v6ops-ipv6-only]. Aligning verification with those scenarios keeps
+this deployment guidance consistent with application-side IPv6 testing.
+
 Plan accordingly:
 
 * **Inside the data center:** servers, containers, and service-to-service traffic
@@ -782,7 +801,10 @@ automation may lag by minutes**. During that window the service can appear
 **healthy on IPv4 but broken on IPv6**, or reachable in one direction only.
 SRE runbooks **SHOULD** treat "IPv6 enabled on the host" and "IPv6 permitted
 end-to-end" as separate checklist items. Do not announce IPv6 on a load
-balancer until policy propagation completes.
+balancer until policy propagation completes. Application-level IP allow and
+deny lists are a related deployment risk: enabling IPv6 can shift clients onto
+addresses missing from the list, causing service disruption;
+[@?I-D.ietf-v6ops-ipv6-app-testing] discusses testing for this before rollout.
 
 Software teams **SHOULD NOT** create entirely new ACL models per address family
 when the same role-based policy can express both; parallel rule sets double
@@ -1053,6 +1075,9 @@ include **dual-stack** and **IPv6-only** variants alongside legacy IPv4-only
 images where brownfield support is still required. CI pipelines **SHOULD** run
 integration tests against both address-family modes so a code push cannot
 silently regress IPv6 without failing the build.
+[@?I-D.ietf-v6ops-ipv6-app-testing] defines the connectivity-scenario
+combinations and testing strategies these pipelines **SHOULD** cover, including
+IPv6-only-strict and IPv6-only with NAT64.
 
 Platform teams **SHOULD** publish standard developer network profiles (dual-stack
 lab, IPv6-only sandbox, simulated edge with NAT64) and document how to attach
@@ -1077,7 +1102,9 @@ systems that are IPv6-only on application interfaces and, on Linux, cannot
 disable IPv4 in the kernel entirely. Migration programs are not required to
 spend effort replacing every client connect to `127.0.0.1` when loopback IPv4 is left
 in place; prioritize **listen** misconfigurations that block IPv6-only local
-clients.
+clients. To surface applications that wrongly assume IPv4 loopback is present,
+[@?I-D.ietf-v6ops-ipv6-app-testing] recommends testing in an environment
+without IPv4 on the loopback interface.
 
 Similar **listen-side** bugs appear with **`0.0.0.0`** vs **`::`** semantics,
 health probes that curl IPv4 literals against services bound IPv6-only, and
@@ -1365,6 +1392,10 @@ override address-family preference independently of `/etc/gai.conf`. A JVM
 configured to prefer IPv4 can appear "IPv6 broken" even when the OS resolver
 returns AAAA records. Test Java services with explicit property settings and
 with **`InetAddress.getAllByName()`**, not **`getByName()`**.
+[@?I-D.ietf-v6ops-ipv6-app-testing] catalogs these destination-address-selection
+and address-filtering deviations (including Java preferring IPv4 and resolvers
+such as NGINX that ignore address-family availability) as common IPv6 failure
+sources.
 
 In extreme cases, an **`/etc/resolv.conf`** that lists **only IPv6 nameserver
 addresses** can interact badly with runtimes that bootstrap DNS over IPv4 first

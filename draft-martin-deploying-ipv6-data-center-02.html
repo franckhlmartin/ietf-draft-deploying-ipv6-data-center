@@ -26,10 +26,10 @@ group charter.
 <meta content="software" name="keyword">
 <meta content="operations" name="keyword">
 <meta content="deployment" name="keyword">
-<meta content="draft-martin-deploying-ipv6-data-center-01" name="ietf.draft">
+<meta content="draft-martin-deploying-ipv6-data-center-02" name="ietf.draft">
 <!-- Generator version information:
   xml2rfc 3.34.0
-    Python 3.12.13
+    Python 3.14.5
     ConfigArgParse 1.7.5
     google-i18n-address 3.1.1
     intervaltree 3.2.1
@@ -40,9 +40,9 @@ group charter.
     pycountry 26.2.16
     PyYAML 6.0.3
     requests 2.34.2
-    wcwidth 0.8.2
+    wcwidth 0.7.0
 -->
-<link href="draft-martin-deploying-ipv6-data-center-01.xml" rel="alternate" type="application/rfc+xml">
+<link href="draft-martin-deploying-ipv6-data-center-02.xml" rel="alternate" type="application/rfc+xml">
 <link href="#copyright" rel="license">
 <style type="text/css">/*
 
@@ -1235,7 +1235,7 @@ li > p:last-of-type:only-child {
 </tr></thead>
 <tfoot><tr>
 <td class="left">Martin</td>
-<td class="center">Expires 8 January 2027</td>
+<td class="center">Expires 19 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1245,15 +1245,15 @@ li > p:last-of-type:only-child {
 <dt class="label-workgroup">Workgroup:</dt>
 <dd class="workgroup">IPv6 Operations</dd>
 <dt class="label-internet-draft">Internet-Draft:</dt>
-<dd class="internet-draft">draft-martin-deploying-ipv6-data-center-01</dd>
+<dd class="internet-draft">draft-martin-deploying-ipv6-data-center-02</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-07" class="published">7 July 2026</time>
+<time datetime="2026-07-18" class="published">18 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-08">8 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-19">19 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1313,7 +1313,7 @@ mailing list (<a href="mailto:v6ops@ietf.org">mailto:v6ops@ietf.org</a>), which 
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 8 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 19 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1680,10 +1680,18 @@ alongside this draft:<a href="#section-1.2-1" class="pilcrow">¶</a></p>
             <span>[<a href="#RFC4038" class="cite xref">RFC4038</a>]</span> --- application aspects of IPv6 transition<a href="#section-1.2-2.2" class="pilcrow">¶</a>
 </li>
           <li class="compact" id="section-1.2-2.3">
-            <span>[<a href="#ARCEP-IPV6-GUIDE" class="cite xref">ARCEP-IPV6-GUIDE</a>]</span> --- enterprise IPv6 rollout guidance from ARCEP (France)<a href="#section-1.2-2.3" class="pilcrow">¶</a>
+            <span>[<a href="#I-D.ietf-v6ops-ipv6-app-testing" class="cite xref">I-D.ietf-v6ops-ipv6-app-testing</a>]</span> --- testing applications' IPv6 support across
+IPv4-only, dual-stack, IPv6-only with NAT64, and IPv6-only-strict scenarios (v6ops);
+the testing companion to the deployment guidance in this document<a href="#section-1.2-2.3" class="pilcrow">¶</a>
 </li>
           <li class="compact" id="section-1.2-2.4">
-            <span>[<a href="#ARIN-APPS-V6" class="cite xref">ARIN-APPS-V6</a>]</span> --- application and software developer guidance from ARIN<a href="#section-1.2-2.4" class="pilcrow">¶</a>
+            <span>[<a href="#I-D.ietf-v6ops-ipv6-only" class="cite xref">I-D.ietf-v6ops-ipv6-only</a>]</span> --- IPv6-only and IPv6-Mostly terminology definitions (v6ops)<a href="#section-1.2-2.4" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-1.2-2.5">
+            <span>[<a href="#ARCEP-IPV6-GUIDE" class="cite xref">ARCEP-IPV6-GUIDE</a>]</span> --- enterprise IPv6 rollout guidance from ARCEP (France)<a href="#section-1.2-2.5" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-1.2-2.6">
+            <span>[<a href="#ARIN-APPS-V6" class="cite xref">ARIN-APPS-V6</a>]</span> --- application and software developer guidance from ARIN<a href="#section-1.2-2.6" class="pilcrow">¶</a>
 </li>
         </ul>
 <p id="section-1.2-3">They overlap partially with sections here (applications, addressing, operations)
@@ -1891,7 +1899,10 @@ store addresses as strings</strong> in databases, logs-as-data, caches, or messa
 payloads. Provide helper functions to convert between the binary form and a
 human-readable representation for display and configuration I/O, and use those
 helpers at boundaries --- <strong>never parse or compare address strings ad hoc</strong> in
-application logic.<a href="#section-2.6-5" class="pilcrow">¶</a></p>
+application logic. When addresses are handled as data (logging, ACLs,
+management output), test that code accepts all valid representations <span>[<a href="#RFC4291" class="cite xref">RFC4291</a>]</span>
+and renders canonical text <span>[<a href="#RFC5952" class="cite xref">RFC5952</a>]</span>; <span>[<a href="#I-D.ietf-v6ops-ipv6-app-testing" class="cite xref">I-D.ietf-v6ops-ipv6-app-testing</a>]</span>
+covers this "addresses as data" testing.<a href="#section-2.6-5" class="pilcrow">¶</a></p>
 <p id="section-2.6-6">Applications <span class="bcp14">SHOULD</span> treat names, not literal addresses, as the stable
 interface (see <a href="#naming-services" class="auto internal xref">Section 2.9</a>). To turn a name into addresses, use the
 APIs described in <a href="#name-resolution" class="auto internal xref">Section 13</a> --- not legacy one-address helpers and
@@ -2112,7 +2123,9 @@ IPv6-only health checks, IPv6 listen-socket regressions, and rising IPv4-only
 connection share for tier-1 services. Where production remains dual-stack,
 synthetic probes <span class="bcp14">SHOULD</span> exercise <strong>IPv6 explicitly</strong> (AAAA-only paths,
 IPv6 literal targets, or IPv6-only test clients), not only dual-stack clients
-that can hide breakage. The sooner IPv6 errors page on-call the same way IPv4
+that can hide breakage. <span>[<a href="#I-D.ietf-v6ops-ipv6-app-testing" class="cite xref">I-D.ietf-v6ops-ipv6-app-testing</a>]</span> describes
+client-, server-, and network-based tracing strategies that distinguish
+genuine IPv6-only-strict behavior from dual-stack masking. The sooner IPv6 errors page on-call the same way IPv4
 errors do, the less likely a team discovers IPv6 rot months later during an
 IPv4 decommissioning drill.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
 <p id="section-5.3-3">Approved <strong>IPv4-only exceptions</strong> (see <a href="#ipv4-only-exceptions" class="auto internal xref">Section 4.2</a>) are the controlled
@@ -2211,7 +2224,9 @@ see, for example, "API gateway is dual-stack but 80% of backend calls still use
 IPv4" or "this batch job is IPv4-only despite an IPv6-ready binary."<a href="#section-5.8-1" class="pilcrow">¶</a></p>
 <p id="section-5.8-2">Use call-tree family breakdown to prioritize refactors: fix the highest-volume
 IPv4-only edges first. Reconcile call-tree findings with the inventory --- a
-service marked "IPv6 ready" with no IPv6 traffic is not done.<a href="#section-5.8-2" class="pilcrow">¶</a></p>
+service marked "IPv6 ready" with no IPv6 traffic is not done.
+<span>[<a href="#I-D.ietf-v6ops-ipv6-app-testing" class="cite xref">I-D.ietf-v6ops-ipv6-app-testing</a>]</span> describes decomposing complex, multi-service
+cloud applications into per-flow test cases, matching this per-hop view.<a href="#section-5.8-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2446,21 +2461,28 @@ world. The <strong>Internet is not yet ready for an IPv6-only-only edge</strong>
 transit, partners, and operator tooling still expect <strong>dual-stack</strong> (or IPv4
 fallback) on <strong>external</strong> interfaces --- load balancers, border routers, VPN
 concentrators, and customer-facing anycast fronts.<a href="#section-8.5-1" class="pilcrow">¶</a></p>
-<p id="section-8.5-2">Plan accordingly:<a href="#section-8.5-2" class="pilcrow">¶</a></p>
+<p id="section-8.5-2">This document uses "IPv6-only," "dual-stack," and related terms informally for
+deployment context. For precise, testable definitions of the connectivity
+scenarios --- <strong>IPv4-only</strong>, <strong>dual-stack</strong>, <strong>IPv6-only with NAT64</strong>, and
+<strong>IPv6-only-strict</strong> (no IPv4 connectivity, encapsulated or translated) ---
+see <span>[<a href="#I-D.ietf-v6ops-ipv6-app-testing" class="cite xref">I-D.ietf-v6ops-ipv6-app-testing</a>]</span> and the terminology in
+<span>[<a href="#I-D.ietf-v6ops-ipv6-only" class="cite xref">I-D.ietf-v6ops-ipv6-only</a>]</span>. Aligning verification with those scenarios keeps
+this deployment guidance consistent with application-side IPv6 testing.<a href="#section-8.5-2" class="pilcrow">¶</a></p>
+<p id="section-8.5-3">Plan accordingly:<a href="#section-8.5-3" class="pilcrow">¶</a></p>
 <ul class="compact">
-<li class="compact" id="section-8.5-3.1">
+<li class="compact" id="section-8.5-4.1">
             <strong>Inside the data center:</strong> servers, containers, and service-to-service traffic
 <span class="bcp14">SHOULD</span> move to <strong>IPv6-only</strong> (or IPv6-primary) on internal VLANs and
-<code>/64</code> islands as readiness allows.<a href="#section-8.5-3.1" class="pilcrow">¶</a>
+<code>/64</code> islands as readiness allows.<a href="#section-8.5-4.1" class="pilcrow">¶</a>
 </li>
-          <li class="compact" id="section-8.5-3.2">
+          <li class="compact" id="section-8.5-4.2">
             <strong>At the edge:</strong> <strong>external interfaces SHOULD remain dual-stack</strong> until IPv4
 dependency is gone for your user base and upstream paths. The edge gateway
 performs translation when an internal IPv6-only host must reach IPv4-only
-destinations (see above).<a href="#section-8.5-3.2" class="pilcrow">¶</a>
+destinations (see above).<a href="#section-8.5-4.2" class="pilcrow">¶</a>
 </li>
         </ul>
-<p id="section-8.5-4"><strong>Dual-home servers on the edge</strong> --- one <strong>internal</strong> interface (IPv6-only or
+<p id="section-8.5-5"><strong>Dual-home servers on the edge</strong> --- one <strong>internal</strong> interface (IPv6-only or
 IPv6-primary) and one <strong>external</strong> interface (dual-stack) --- simplify
 <strong>administration and break-glass access</strong>: operators and automation can reach
 management paths on the internal v6 network while the service still serves
@@ -2468,7 +2490,7 @@ dual-stack Internet clients. Document which interface is which in IPAM and
 host naming; do not collapse "internal v6-only" and "external dual-stack" into
 a single ambiguous address on production boxes. During migration, the internal
 interface may remain <strong>IPv4-only</strong> for a time; see
-<a href="#dual-homed-transitional-routing" class="auto internal xref">Section 8.5.1</a> for routing and DNS pitfalls on those hosts.<a href="#section-8.5-4" class="pilcrow">¶</a></p>
+<a href="#dual-homed-transitional-routing" class="auto internal xref">Section 8.5.1</a> for routing and DNS pitfalls on those hosts.<a href="#section-8.5-5" class="pilcrow">¶</a></p>
 <div id="dual-homed-transitional-routing">
 <section id="section-8.5.1">
           <h4 id="name-dual-homed-hosts-during-int">
@@ -2562,7 +2584,10 @@ automation may lag by minutes</strong>. During that window the service can appea
 <strong>healthy on IPv4 but broken on IPv6</strong>, or reachable in one direction only.
 SRE runbooks <span class="bcp14">SHOULD</span> treat "IPv6 enabled on the host" and "IPv6 permitted
 end-to-end" as separate checklist items. Do not announce IPv6 on a load
-balancer until policy propagation completes.<a href="#section-8.7-1" class="pilcrow">¶</a></p>
+balancer until policy propagation completes. Application-level IP allow and
+deny lists are a related deployment risk: enabling IPv6 can shift clients onto
+addresses missing from the list, causing service disruption;
+<span>[<a href="#I-D.ietf-v6ops-ipv6-app-testing" class="cite xref">I-D.ietf-v6ops-ipv6-app-testing</a>]</span> discusses testing for this before rollout.<a href="#section-8.7-1" class="pilcrow">¶</a></p>
 <p id="section-8.7-2">Software teams <span class="bcp14">SHOULD NOT</span> create entirely new ACL models per address family
 when the same role-based policy can express both; parallel rule sets double
 drift risk. Where separate rules are unavoidable, generate them from the same
@@ -2898,7 +2923,10 @@ production topology before release. Those evaluation environments <span class="b
 include <strong>dual-stack</strong> and <strong>IPv6-only</strong> variants alongside legacy IPv4-only
 images where brownfield support is still required. CI pipelines <span class="bcp14">SHOULD</span> run
 integration tests against both address-family modes so a code push cannot
-silently regress IPv6 without failing the build.<a href="#section-12.3-2" class="pilcrow">¶</a></p>
+silently regress IPv6 without failing the build.
+<span>[<a href="#I-D.ietf-v6ops-ipv6-app-testing" class="cite xref">I-D.ietf-v6ops-ipv6-app-testing</a>]</span> defines the connectivity-scenario
+combinations and testing strategies these pipelines <span class="bcp14">SHOULD</span> cover, including
+IPv6-only-strict and IPv6-only with NAT64.<a href="#section-12.3-2" class="pilcrow">¶</a></p>
 <p id="section-12.3-3">Platform teams <span class="bcp14">SHOULD</span> publish standard developer network profiles (dual-stack
 lab, IPv6-only sandbox, simulated edge with NAT64) and document how to attach
 local IDEs, test harnesses, and AI coding agents to them.<a href="#section-12.3-3" class="pilcrow">¶</a></p>
@@ -2924,7 +2952,9 @@ systems that are IPv6-only on application interfaces and, on Linux, cannot
 disable IPv4 in the kernel entirely. Migration programs are not required to
 spend effort replacing every client connect to <code>127.0.0.1</code> when loopback IPv4 is left
 in place; prioritize <strong>listen</strong> misconfigurations that block IPv6-only local
-clients.<a href="#section-12.4-3" class="pilcrow">¶</a></p>
+clients. To surface applications that wrongly assume IPv4 loopback is present,
+<span>[<a href="#I-D.ietf-v6ops-ipv6-app-testing" class="cite xref">I-D.ietf-v6ops-ipv6-app-testing</a>]</span> recommends testing in an environment
+without IPv4 on the loopback interface.<a href="#section-12.4-3" class="pilcrow">¶</a></p>
 <p id="section-12.4-4">Similar <strong>listen-side</strong> bugs appear with <strong><code>0.0.0.0</code></strong> vs <strong><code>::</code></strong> semantics,
 health probes that curl IPv4 literals against services bound IPv6-only, and
 container images that ship <code>/etc/hosts</code> without IPv6 entries.<a href="#section-12.4-4" class="pilcrow">¶</a></p>
@@ -3303,7 +3333,11 @@ maintains its own resolver stack and system properties such as
 override address-family preference independently of <code>/etc/gai.conf</code>. A JVM
 configured to prefer IPv4 can appear "IPv6 broken" even when the OS resolver
 returns AAAA records. Test Java services with explicit property settings and
-with <strong><code>InetAddress.getAllByName()</code></strong>, not <strong><code>getByName()</code></strong>.<a href="#section-13.5-1" class="pilcrow">¶</a></p>
+with <strong><code>InetAddress.getAllByName()</code></strong>, not <strong><code>getByName()</code></strong>.
+<span>[<a href="#I-D.ietf-v6ops-ipv6-app-testing" class="cite xref">I-D.ietf-v6ops-ipv6-app-testing</a>]</span> catalogs these destination-address-selection
+and address-filtering deviations (including Java preferring IPv4 and resolvers
+such as NGINX that ignore address-family availability) as common IPv6 failure
+sources.<a href="#section-13.5-1" class="pilcrow">¶</a></p>
 <p id="section-13.5-2">In extreme cases, an <strong><code>/etc/resolv.conf</code></strong> that lists <strong>only IPv6 nameserver
 addresses</strong> can interact badly with runtimes that bootstrap DNS over IPv4 first
 or assume a v4-reachable resolver path. Symptoms include slow resolution,
@@ -3550,6 +3584,14 @@ editorial improvements to this document:<a href="#section-18-1" class="pilcrow">
 <dt id="ARIN-APPS-V6">[ARIN-APPS-V6]</dt>
       <dd>
 <span class="refAuthor">ARIN</span>, <span class="refTitle">"Preparing Applications for IPv6: A Software Developers Guide to Writing and Migrating Networked Applications for Use on IPv6 Networks"</span>, <span>&lt;<a href="https://www.arin.net/resources/guide/ipv6/preparing_apps_for_v6.pdf">https://www.arin.net/resources/guide/ipv6/preparing_apps_for_v6.pdf</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.ietf-v6ops-ipv6-app-testing">[I-D.ietf-v6ops-ipv6-app-testing]</dt>
+      <dd>
+<span class="refAuthor">Tiesel, P. S.</span>, <span class="refAuthor">Linkova, J.</span>, <span class="refAuthor">Ouellette, K.</span>, and <span class="refAuthor">B. Patton</span>, <span class="refTitle">"Testing Applications' IPv6 Support"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-v6ops-ipv6-app-testing-01</span>, <time datetime="2026-05-26" class="refDate">26 May 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-v6ops-ipv6-app-testing-01">https://datatracker.ietf.org/doc/html/draft-ietf-v6ops-ipv6-app-testing-01</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.ietf-v6ops-ipv6-only">[I-D.ietf-v6ops-ipv6-only]</dt>
+      <dd>
+<span class="refAuthor">Martinez, J. P.</span>, <span class="refTitle">"IPv6-Only and IPv6-Mostly Terminology Definitions"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-v6ops-ipv6-only-00</span>, <time datetime="2026-07-01" class="refDate">1 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-v6ops-ipv6-only-00">https://datatracker.ietf.org/doc/html/draft-ietf-v6ops-ipv6-only-00</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC2606">[RFC2606]</dt>
       <dd>

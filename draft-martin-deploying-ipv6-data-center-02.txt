@@ -4,12 +4,12 @@
 
 IPv6 Operations                                                F. Martin
 Internet-Draft                                           Peachymango.org
-Intended status: Informational                               7 July 2026
-Expires: 8 January 2027
+Intended status: Informational                              18 July 2026
+Expires: 19 January 2027
 
 
                      Deploying IPv6 in Data Centers
-               draft-martin-deploying-ipv6-data-center-01
+               draft-martin-deploying-ipv6-data-center-02
 
 Abstract
 
@@ -53,7 +53,7 @@ About This Document
 
 
 
-Martin                   Expires 8 January 2027                 [Page 1]
+Martin                   Expires 19 January 2027                [Page 1]
 
 Internet-Draft         deploying-ipv6-data-center              July 2026
 
@@ -73,7 +73,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 8 January 2027.
+   This Internet-Draft will expire on 19 January 2027.
 
 Copyright Notice
 
@@ -109,7 +109,7 @@ Table of Contents
 
 
 
-Martin                   Expires 8 January 2027                 [Page 2]
+Martin                   Expires 19 January 2027                [Page 2]
 
 Internet-Draft         deploying-ipv6-data-center              July 2026
 
@@ -146,16 +146,16 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
    9.  DNS Registration and Dynamic Addressing . . . . . . . . . . .  23
      9.1.  SLAAC, Switches, and the DNS Gap  . . . . . . . . . . . .  23
      9.2.  DHCPv6 and Hostname Registration  . . . . . . . . . . . .  23
-     9.3.  DHCPv6 Suitability Considerations . . . . . . . . . . . .  23
+     9.3.  DHCPv6 Suitability Considerations . . . . . . . . . . . .  24
    10. Hybrid On-Premise and Cloud Environments  . . . . . . . . . .  24
      10.1.  Connectivity Models  . . . . . . . . . . . . . . . . . .  24
      10.2.  Cloud Provider Gap Analysis  . . . . . . . . . . . . . .  25
      10.3.  Cloud as Platform Software . . . . . . . . . . . . . . .  25
-   11. ICMPv6, PMTUD, and Middleboxes  . . . . . . . . . . . . . . .  25
+   11. ICMPv6, PMTUD, and Middleboxes  . . . . . . . . . . . . . . .  26
      11.1.  Do Not Block ICMPv6  . . . . . . . . . . . . . . . . . .  26
      11.2.  Path MTU Discovery . . . . . . . . . . . . . . . . . . .  26
      11.3.  VPNs and NAT64 . . . . . . . . . . . . . . . . . . . . .  26
-   12. Application and Software Readiness  . . . . . . . . . . . . .  26
+   12. Application and Software Readiness  . . . . . . . . . . . . .  27
      12.1.  Enterprise Platform Inventory  . . . . . . . . . . . . .  27
      12.2.  Dependency and Platform Readiness Gates  . . . . . . . .  27
      12.3.  Developer and Pre-Production Environments  . . . . . . .  28
@@ -165,7 +165,7 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
 
 
 
-Martin                   Expires 8 January 2027                 [Page 3]
+Martin                   Expires 19 January 2027                [Page 3]
 
 Internet-Draft         deploying-ipv6-data-center              July 2026
 
@@ -175,24 +175,24 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
        12.8.1.  Pattern Scanners in CI . . . . . . . . . . . . . . .  30
        12.8.2.  Automated Remediation Pull Requests  . . . . . . . .  31
        12.8.3.  Opt-Out Annotations for Engineers  . . . . . . . . .  31
-       12.8.4.  AI Coding Agent Skills . . . . . . . . . . . . . . .  31
+       12.8.4.  AI Coding Agent Skills . . . . . . . . . . . . . . .  32
      12.9.  Documentation and Presentations  . . . . . . . . . . . .  32
-   13. Resolving Hostnames to Addresses  . . . . . . . . . . . . . .  32
+   13. Resolving Hostnames to Addresses  . . . . . . . . . . . . . .  33
      13.1.  Use getaddrinfo(), Not Legacy One-Address APIs . . . . .  33
      13.2.  Why the Full List Matters  . . . . . . . . . . . . . . .  34
-     13.3.  Numeric Input at the Edge  . . . . . . . . . . . . . . .  34
-     13.4.  Address Selection, gai.conf, and DNS Round Robin . . . .  34
-     13.5.  Runtime-Specific Resolution (Not Always glibc) . . . . .  35
-   14. Client-Side Load Balancing  . . . . . . . . . . . . . . . . .  35
-   15. Network Diagnostics in the Data Center  . . . . . . . . . . .  36
-     15.1.  Reverse DNS  . . . . . . . . . . . . . . . . . . . . . .  36
+     13.3.  Numeric Input at the Edge  . . . . . . . . . . . . . . .  35
+     13.4.  Address Selection, gai.conf, and DNS Round Robin . . . .  35
+     13.5.  Runtime-Specific Resolution (Not Always glibc) . . . . .  36
+   14. Client-Side Load Balancing  . . . . . . . . . . . . . . . . .  36
+   15. Network Diagnostics in the Data Center  . . . . . . . . . . .  37
+     15.1.  Reverse DNS  . . . . . . . . . . . . . . . . . . . . . .  37
      15.2.  Controlled ICMP Echo (Ping)  . . . . . . . . . . . . . .  37
-   16. Security Considerations . . . . . . . . . . . . . . . . . . .  37
+   16. Security Considerations . . . . . . . . . . . . . . . . . . .  38
    17. IANA Considerations . . . . . . . . . . . . . . . . . . . . .  38
    18. Acknowledgments . . . . . . . . . . . . . . . . . . . . . . .  38
    19. Normative References  . . . . . . . . . . . . . . . . . . . .  38
-   20. Informative References  . . . . . . . . . . . . . . . . . . .  40
-   Author's Address  . . . . . . . . . . . . . . . . . . . . . . . .  41
+   20. Informative References  . . . . . . . . . . . . . . . . . . .  41
+   Author's Address  . . . . . . . . . . . . . . . . . . . . . . . .  42
 
 1.  Introduction
 
@@ -221,7 +221,7 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
 
 
 
-Martin                   Expires 8 January 2027                 [Page 4]
+Martin                   Expires 19 January 2027                [Page 4]
 
 Internet-Draft         deploying-ipv6-data-center              July 2026
 
@@ -248,6 +248,12 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
 
    *  [RFC7381] --- enterprise IPv6 deployment framework (v6ops)
    *  [RFC4038] --- application aspects of IPv6 transition
+   *  [I-D.ietf-v6ops-ipv6-app-testing] --- testing applications' IPv6
+      support across IPv4-only, dual-stack, IPv6-only with NAT64, and
+      IPv6-only-strict scenarios (v6ops); the testing companion to the
+      deployment guidance in this document
+   *  [I-D.ietf-v6ops-ipv6-only] --- IPv6-only and IPv6-Mostly
+      terminology definitions (v6ops)
    *  [ARCEP-IPV6-GUIDE] --- enterprise IPv6 rollout guidance from ARCEP
       (France)
    *  [ARIN-APPS-V6] --- application and software developer guidance
@@ -267,20 +273,20 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
    appear where each audience needs them; sections cross-link rather
    than repeat editorially.
 
+
+
+
+
+Martin                   Expires 19 January 2027                [Page 5]
+
+Internet-Draft         deploying-ipv6-data-center              July 2026
+
+
    *Part I --- Running the migration:* Section 4 covers operating model
    and scope (greenfield provisioning vs brownfield conversion,
    IPv6-only jump hosts).  Section 5 defines inventory schema,
    dashboards, and success metrics --- fix what you measure before bulk
    technical change.
-
-
-
-
-
-Martin                   Expires 8 January 2027                 [Page 5]
-
-Internet-Draft         deploying-ipv6-data-center              July 2026
-
 
    *Part II --- Building the IPv6 data center* follows a bottom-up
    order: Section 7 (hardware and management plane), Section 8 and
@@ -327,13 +333,7 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
 
 
 
-
-
-
-
-
-
-Martin                   Expires 8 January 2027                 [Page 6]
+Martin                   Expires 19 January 2027                [Page 6]
 
 Internet-Draft         deploying-ipv6-data-center              July 2026
 
@@ -389,7 +389,7 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
 
 
 
-Martin                   Expires 8 January 2027                 [Page 7]
+Martin                   Expires 19 January 2027                [Page 7]
 
 Internet-Draft         deploying-ipv6-data-center              July 2026
 
@@ -445,7 +445,7 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
 
 
 
-Martin                   Expires 8 January 2027                 [Page 8]
+Martin                   Expires 19 January 2027                [Page 8]
 
 Internet-Draft         deploying-ipv6-data-center              July 2026
 
@@ -470,7 +470,11 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
    between the binary form and a human-readable representation for
    display and configuration I/O, and use those helpers at boundaries
    --- *never parse or compare address strings ad hoc* in application
-   logic.
+   logic.  When addresses are handled as data (logging, ACLs, management
+   output), test that code accepts all valid representations [RFC4291]
+   and renders canonical text [RFC5952];
+   [I-D.ietf-v6ops-ipv6-app-testing] covers this "addresses as data"
+   testing.
 
    Applications SHOULD treat names, not literal addresses, as the stable
    interface (see Section 2.9).  To turn a name into addresses, use the
@@ -497,11 +501,7 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
 
 
 
-
-
-
-
-Martin                   Expires 8 January 2027                 [Page 9]
+Martin                   Expires 19 January 2027                [Page 9]
 
 Internet-Draft         deploying-ipv6-data-center              July 2026
 
@@ -557,7 +557,7 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
 
 
 
-Martin                   Expires 8 January 2027                [Page 10]
+Martin                   Expires 19 January 2027               [Page 10]
 
 Internet-Draft         deploying-ipv6-data-center              July 2026
 
@@ -613,7 +613,7 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
 
 
 
-Martin                   Expires 8 January 2027                [Page 11]
+Martin                   Expires 19 January 2027               [Page 11]
 
 Internet-Draft         deploying-ipv6-data-center              July 2026
 
@@ -669,7 +669,7 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
 
 
 
-Martin                   Expires 8 January 2027                [Page 12]
+Martin                   Expires 19 January 2027               [Page 12]
 
 Internet-Draft         deploying-ipv6-data-center              July 2026
 
@@ -688,10 +688,12 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
    rising IPv4-only connection share for tier-1 services.  Where
    production remains dual-stack, synthetic probes SHOULD exercise *IPv6
    explicitly* (AAAA-only paths, IPv6 literal targets, or IPv6-only test
-   clients), not only dual-stack clients that can hide breakage.  The
-   sooner IPv6 errors page on-call the same way IPv4 errors do, the less
-   likely a team discovers IPv6 rot months later during an IPv4
-   decommissioning drill.
+   clients), not only dual-stack clients that can hide breakage.
+   [I-D.ietf-v6ops-ipv6-app-testing] describes client-, server-, and
+   network-based tracing strategies that distinguish genuine IPv6-only-
+   strict behavior from dual-stack masking.  The sooner IPv6 errors page
+   on-call the same way IPv4 errors do, the less likely a team discovers
+   IPv6 rot months later during an IPv4 decommissioning drill.
 
    Approved *IPv4-only exceptions* (see Section 4.2) are the controlled
    counterpart to this policy: hard failure is the default; a documented
@@ -723,9 +725,7 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
 
 
 
-
-
-Martin                   Expires 8 January 2027                [Page 13]
+Martin                   Expires 19 January 2027               [Page 13]
 
 Internet-Draft         deploying-ipv6-data-center              July 2026
 
@@ -781,7 +781,7 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
 
 
 
-Martin                   Expires 8 January 2027                [Page 14]
+Martin                   Expires 19 January 2027               [Page 14]
 
 Internet-Draft         deploying-ipv6-data-center              July 2026
 
@@ -799,7 +799,9 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
    Use call-tree family breakdown to prioritize refactors: fix the
    highest-volume IPv4-only edges first.  Reconcile call-tree findings
    with the inventory --- a service marked "IPv6 ready" with no IPv6
-   traffic is not done.
+   traffic is not done.  [I-D.ietf-v6ops-ipv6-app-testing] describes
+   decomposing complex, multi-service cloud applications into per-flow
+   test cases, matching this per-hop view.
 
 6.  Part II: Building the IPv6 Data Center
 
@@ -835,9 +837,7 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
 
 
 
-
-
-Martin                   Expires 8 January 2027                [Page 15]
+Martin                   Expires 19 January 2027               [Page 15]
 
 Internet-Draft         deploying-ipv6-data-center              July 2026
 
@@ -893,7 +893,7 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
 
 
 
-Martin                   Expires 8 January 2027                [Page 16]
+Martin                   Expires 19 January 2027               [Page 16]
 
 Internet-Draft         deploying-ipv6-data-center              July 2026
 
@@ -949,7 +949,7 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
 
 
 
-Martin                   Expires 8 January 2027                [Page 17]
+Martin                   Expires 19 January 2027               [Page 17]
 
 Internet-Draft         deploying-ipv6-data-center              July 2026
 
@@ -1005,7 +1005,7 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
 
 
 
-Martin                   Expires 8 January 2027                [Page 18]
+Martin                   Expires 19 January 2027               [Page 18]
 
 Internet-Draft         deploying-ipv6-data-center              July 2026
 
@@ -1036,6 +1036,15 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
    interfaces --- load balancers, border routers, VPN concentrators, and
    customer-facing anycast fronts.
 
+   This document uses "IPv6-only," "dual-stack," and related terms
+   informally for deployment context.  For precise, testable definitions
+   of the connectivity scenarios --- *IPv4-only*, *dual-stack*,
+   *IPv6-only with NAT64*, and *IPv6-only-strict* (no IPv4 connectivity,
+   encapsulated or translated) --- see [I-D.ietf-v6ops-ipv6-app-testing]
+   and the terminology in [I-D.ietf-v6ops-ipv6-only].  Aligning
+   verification with those scenarios keeps this deployment guidance
+   consistent with application-side IPv6 testing.
+
    Plan accordingly:
 
    *  *Inside the data center:* servers, containers, and service-to-
@@ -1049,6 +1058,14 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
    *Dual-home servers on the edge* --- one *internal* interface
    (IPv6-only or IPv6-primary) and one *external* interface (dual-stack)
    --- simplify *administration and break-glass access*: operators and
+
+
+
+Martin                   Expires 19 January 2027               [Page 19]
+
+Internet-Draft         deploying-ipv6-data-center              July 2026
+
+
    automation can reach management paths on the internal v6 network
    while the service still serves dual-stack Internet clients.  Document
    which interface is which in IPAM and host naming; do not collapse
@@ -1056,15 +1073,6 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
    address on production boxes.  During migration, the internal
    interface may remain *IPv4-only* for a time; see Section 8.5.1 for
    routing and DNS pitfalls on those hosts.
-
-
-
-
-
-Martin                   Expires 8 January 2027                [Page 19]
-
-Internet-Draft         deploying-ipv6-data-center              July 2026
-
 
 8.5.1.  Dual-Homed Hosts During Internal IPv6 Rollout
 
@@ -1105,6 +1113,15 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
       do not return AAAA for names that are reachable only on the
       internal IPv4 path until routing is fixed.
 
+
+
+
+
+Martin                   Expires 19 January 2027               [Page 20]
+
+Internet-Draft         deploying-ipv6-data-center              July 2026
+
+
    This pattern is *not* a substitute for enabling IPv6 on internal
    interfaces; it prevents *misrouted IPv6* during rollout.  Application
    code that stops after the first address (gethostbyname(),
@@ -1114,13 +1131,6 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
    Example (Linux, illustrative prefix):
 
    ip -6 route add unreachable 2001:db8:dc::/48
-
-
-
-Martin                   Expires 8 January 2027                [Page 20]
-
-Internet-Draft         deploying-ipv6-data-center              July 2026
-
 
    Express the same policy in configuration management on every dual-
    homed edge role during the transition; remove the unreachable route
@@ -1160,23 +1170,24 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
    in one direction only.  SRE runbooks SHOULD treat "IPv6 enabled on
    the host" and "IPv6 permitted end-to-end" as separate checklist
    items.  Do not announce IPv6 on a load balancer until policy
-   propagation completes.
+
+
+
+Martin                   Expires 19 January 2027               [Page 21]
+
+Internet-Draft         deploying-ipv6-data-center              July 2026
+
+
+   propagation completes.  Application-level IP allow and deny lists are
+   a related deployment risk: enabling IPv6 can shift clients onto
+   addresses missing from the list, causing service disruption;
+   [I-D.ietf-v6ops-ipv6-app-testing] discusses testing for this before
+   rollout.
 
    Software teams SHOULD NOT create entirely new ACL models per address
    family when the same role-based policy can express both; parallel
    rule sets double drift risk.  Where separate rules are unavoidable,
    generate them from the same source of truth.
-
-
-
-
-
-
-
-Martin                   Expires 8 January 2027                [Page 21]
-
-Internet-Draft         deploying-ipv6-data-center              July 2026
-
 
 8.7.1.  IPAM-Based IPv4-to-IPv6 Mapping for ACLs
 
@@ -1215,6 +1226,14 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
    host* without advertising *AAAA* in DNS.  IPAM assigns the predicted
    IPv6 address on the interface; the application tier can remain
    *IPv4-only* (A record only, IPv4 listen sockets) while *outbound*
+
+
+
+Martin                   Expires 19 January 2027               [Page 22]
+
+Internet-Draft         deploying-ipv6-data-center              July 2026
+
+
    traffic from the host uses IPv6.  That lets platform agents ---
    configuration management, monitoring, log shippers, vulnerability
    scanners, and other infrastructure daemons (see Section 5.5) ---
@@ -1226,13 +1245,6 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
    If ACL systems cannot accept hostnames and expand them through this
    logic, teams fall back to the lag problem described above --- IPv6
    goes live while firewall tickets are still in flight.
-
-
-
-Martin                   Expires 8 January 2027                [Page 22]
-
-Internet-Draft         deploying-ipv6-data-center              July 2026
-
 
 9.  DNS Registration and Dynamic Addressing
 
@@ -1264,6 +1276,20 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
    disabled in enterprise policy.  For why reverse zones matter during
    incidents, see Section 15.
 
+
+
+
+
+
+
+
+
+
+Martin                   Expires 19 January 2027               [Page 23]
+
+Internet-Draft         deploying-ipv6-data-center              July 2026
+
+
 9.3.  DHCPv6 Suitability Considerations
 
    DHCPv4 is extremely common in IPv4 deployments, as it is best
@@ -1280,15 +1306,6 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
    clients may not work at all (if SLAAC is disabled on the network).
    Operators SHOULD verify DHCPv6 support for all existing and planned
    hardware before relying on it for logging features.
-
-
-
-
-
-Martin                   Expires 8 January 2027                [Page 23]
-
-Internet-Draft         deploying-ipv6-data-center              July 2026
-
 
 10.  Hybrid On-Premise and Cloud Environments
 
@@ -1321,6 +1338,14 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
    *  *Centralized gateway or cloud edge* --- on-premise workloads reach
       cloud APIs and resources through a *narrow path*: site-to-site
       VPN, Direct Connect, ExpressRoute, Cloud Interconnect, transit
+
+
+
+Martin                   Expires 19 January 2027               [Page 24]
+
+Internet-Draft         deploying-ipv6-data-center              July 2026
+
+
       gateway, or operator translation at the border (see Section 8.4).
       IPv6 may terminate at that gateway; an internal v6-only host might
       reach cloud only via a dual-stack hub or translation.  Prefix
@@ -1333,18 +1358,6 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
       be validated end-to-end*, including cloud VPC/VNet IPv6 CIDRs,
       security groups, network ACLs, private endpoints, and on-premise
       firewall policy.
-
-
-
-
-
-
-
-
-Martin                   Expires 8 January 2027                [Page 24]
-
-Internet-Draft         deploying-ipv6-data-center              July 2026
-
 
    Document which model each environment uses *before* declaring
    internal IPv6-only.  A data center that is v6-only on the fabric but
@@ -1382,6 +1395,13 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
    platform adoption*, not after teams have built on IPv4-only managed
    services.
 
+
+
+Martin                   Expires 19 January 2027               [Page 25]
+
+Internet-Draft         deploying-ipv6-data-center              July 2026
+
+
    Hybrid programs SHOULD include *cloud account and landing-zone
    reviews* in the same governance cadence as on-premise migration
    metrics (see Section 5).  A service marked "IPv6-ready on-premise"
@@ -1391,16 +1411,6 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
    and exception tracking SHOULD start at program kickoff.
 
 11.  ICMPv6, PMTUD, and Middleboxes
-
-
-
-
-
-
-Martin                   Expires 8 January 2027                [Page 25]
-
-Internet-Draft         deploying-ipv6-data-center              July 2026
-
 
 11.1.  Do Not Block ICMPv6
 
@@ -1438,25 +1448,21 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
    should be native IPv6* on the data center side.  Until then, document
    which access paths require IPv4 literal connectivity vs IPv6.
 
+
+
+
+
+
+Martin                   Expires 19 January 2027               [Page 26]
+
+Internet-Draft         deploying-ipv6-data-center              July 2026
+
+
 12.  Application and Software Readiness
 
    IPv6 deployment exposes software that "worked on the LAN" only
    because the LAN was IPv4.  This section lists classes of problems
    seen in production data centers and enterprise rollouts.
-
-
-
-
-
-
-
-
-
-
-Martin                   Expires 8 January 2027                [Page 26]
-
-Internet-Draft         deploying-ipv6-data-center              July 2026
-
 
 12.1.  Enterprise Platform Inventory
 
@@ -1497,26 +1503,17 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
    below the threshold remain *blocked or flagged* in the inventory
    until upgraded.
 
+   *Automate enforcement* against that catalog: compare SBOMs,
+   lockfiles, image scans, and configuration-management reports to the
+   matrix on a schedule and in CI (see Section 5).  When a service
 
 
 
-
-
-
-
-
-
-
-
-
-Martin                   Expires 8 January 2027                [Page 27]
+Martin                   Expires 19 January 2027               [Page 27]
 
 Internet-Draft         deploying-ipv6-data-center              July 2026
 
 
-   *Automate enforcement* against that catalog: compare SBOMs,
-   lockfiles, image scans, and configuration-management reports to the
-   matrix on a schedule and in CI (see Section 5).  When a service
    crosses the threshold --- dependency bumped, agent replaced, golden
    image refreshed --- *update its readiness label* without requiring
    every engineer to audit socket call sites by hand.  Put the gates
@@ -1540,7 +1537,10 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
    alongside legacy IPv4-only images where brownfield support is still
    required.  CI pipelines SHOULD run integration tests against both
    address-family modes so a code push cannot silently regress IPv6
-   without failing the build.
+   without failing the build.  [I-D.ietf-v6ops-ipv6-app-testing] defines
+   the connectivity-scenario combinations and testing strategies these
+   pipelines SHOULD cover, including IPv6-only-strict and IPv6-only with
+   NAT64.
 
    Platform teams SHOULD publish standard developer network profiles
    (dual-stack lab, IPv6-only sandbox, simulated edge with NAT64) and
@@ -1565,7 +1565,7 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
 
 
 
-Martin                   Expires 8 January 2027                [Page 28]
+Martin                   Expires 19 January 2027               [Page 28]
 
 Internet-Draft         deploying-ipv6-data-center              July 2026
 
@@ -1575,7 +1575,9 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
    Migration programs are not required to spend effort replacing every
    client connect to 127.0.0.1 when loopback IPv4 is left in place;
    prioritize *listen* misconfigurations that block IPv6-only local
-   clients.
+   clients.  To surface applications that wrongly assume IPv4 loopback
+   is present, [I-D.ietf-v6ops-ipv6-app-testing] recommends testing in
+   an environment without IPv4 on the loopback interface.
 
    Similar *listen-side* bugs appear with *0.0.0.0* vs *::* semantics,
    health probes that curl IPv4 literals against services bound
@@ -1613,18 +1615,22 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
    testing produces false denials or overly broad grants.  Test
    USER@'2001:db8::/32'-style entries explicitly.
 
+
+
+
+
+
+
+Martin                   Expires 19 January 2027               [Page 29]
+
+Internet-Draft         deploying-ipv6-data-center              July 2026
+
+
    Security agents (EDR, IDS, WAF) may lack IPv6 decode paths even when
    they claim dual-stack support.  Validate *both directions* ---
    ingress to the service and egress from the service --- under
    IPv6-only client paths.  The same teams can extend PR checks with
    static analysis rules (see Section 12.8).
-
-
-
-Martin                   Expires 8 January 2027                [Page 29]
-
-Internet-Draft         deploying-ipv6-data-center              July 2026
-
 
 12.7.  Language Runtimes and Libraries
 
@@ -1668,20 +1674,19 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
    Ship *Semgrep*, *CodeQL*, or equivalent rules that flag likely
    IPv4-only patterns, for example:
 
+
+
+
+Martin                   Expires 19 January 2027               [Page 30]
+
+Internet-Draft         deploying-ipv6-data-center              July 2026
+
+
    *  Literal 127.0.0.1 or 0.0.0.0 in *listen/bind* configuration (not
       every client connect to 127.0.0.1; see Section 12.4), or dotted-
       decimal regexes used as addresses
    *  Calls to deprecated Python socket helpers (see Section 12.7)
    *  AF_INET sockets where dual-stack or AF_INET6 is required
-
-
-
-
-Martin                   Expires 8 January 2027                [Page 30]
-
-Internet-Draft         deploying-ipv6-data-center              July 2026
-
-
    *  Database columns or structs sized for IPv4-only (CHAR(15), 32-bit
       integers)
    *  String splits on . to parse "IP addresses"
@@ -1718,6 +1723,21 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
    Blanket disables of entire files SHOULD NOT be allowed without
    security team approval.
 
+
+
+
+
+
+
+
+
+
+
+Martin                   Expires 19 January 2027               [Page 31]
+
+Internet-Draft         deploying-ipv6-data-center              July 2026
+
+
 12.8.4.  AI Coding Agent Skills
 
    Many teams now use *AI coding agents* in the IDE and in CI.  Add an
@@ -1730,13 +1750,6 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
    paths).  Treat this as part of the same program as Semgrep and CodeQL
    rules, not a substitute for automated tests on dual-stack and
    IPv6-only runners (see Section 12.3).
-
-
-
-Martin                   Expires 8 January 2027                [Page 31]
-
-Internet-Draft         deploying-ipv6-data-center              July 2026
-
 
 12.9.  Documentation and Presentations
 
@@ -1769,6 +1782,18 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
    IPv6-first data center operation.  Prefer 2001:db8:... and service
    names unless the document explicitly covers legacy IPv4 behavior.
 
+
+
+
+
+
+
+
+Martin                   Expires 19 January 2027               [Page 32]
+
+Internet-Draft         deploying-ipv6-data-center              July 2026
+
+
 13.  Resolving Hostnames to Addresses
 
    This section covers name-to-address APIs and client resolution
@@ -1783,16 +1808,6 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
    connection attempt* so IPv6 has more time to succeed first --- a late
    start for IPv4 is consistent with [RFC8305] and reduces accidental
    IPv4-first behavior on dual-stack paths.
-
-
-
-
-
-
-Martin                   Expires 8 January 2027                [Page 32]
-
-Internet-Draft         deploying-ipv6-data-center              July 2026
-
 
    Even with correct client retry logic, *missing or wrong IPv6 routes*
    can send internal AAAA targets out an Internet default route.  Edge
@@ -1824,6 +1839,17 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
       --- fine for quick clients, unsuitable when the service relies on
       multiple A/AAAA records.
 
+
+
+
+
+
+
+Martin                   Expires 19 January 2027               [Page 33]
+
+Internet-Draft         deploying-ipv6-data-center              July 2026
+
+
    To request both IPv4 and IPv6 results, set hints.ai_family to
    AF_UNSPEC (unless a deliberate single-family policy applies).
    Inspect ai_family, ai_addrlen, and ai_addr on *each* list element; do
@@ -1842,13 +1868,6 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
    *  *Node.js:* dns.promises.resolve() or dns.lookup() with { all: true
       }; the default lookup() without all: true returns a single
       address.
-
-
-
-Martin                   Expires 8 January 2027                [Page 33]
-
-Internet-Draft         deploying-ipv6-data-center              July 2026
-
 
    Pay special attention when connecting to a *hostname* (as opposed to
    a numeric literal): resolution can return both IPv4 and IPv6
@@ -1875,6 +1894,18 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
    --- reorder yourself if policy requires --- but you cannot skip
    resolution and hope DNS order survives unchanged.
 
+
+
+
+
+
+
+
+Martin                   Expires 19 January 2027               [Page 34]
+
+Internet-Draft         deploying-ipv6-data-center              July 2026
+
+
 13.3.  Numeric Input at the Edge
 
    When configuration or user input contains an address *literal* rather
@@ -1898,14 +1929,6 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
    Resolver libraries such as *glibc* implement this sorting inside
    getaddrinfo().  The effect: *DNS round-robin is not a load-balancing
    strategy on IPv6* (and is weakened on IPv4 in many cases).  A round-
-
-
-
-Martin                   Expires 8 January 2027                [Page 34]
-
-Internet-Draft         deploying-ipv6-data-center              July 2026
-
-
    robin AAAA record can collapse to "always try the same address first"
    once Rule 9 runs, concentrating connections on one backend.  The
    problem is subtle on IPv4 but *often severe on IPv6*.
@@ -1929,6 +1952,16 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
    disable Rule 9* in all implementations.  Treat load balancing as a
    *software concern*, not something DNS alone provides.
 
+
+
+
+
+
+Martin                   Expires 19 January 2027               [Page 35]
+
+Internet-Draft         deploying-ipv6-data-center              July 2026
+
+
 13.5.  Runtime-Specific Resolution (Not Always glibc)
 
    Examples above assume POSIX *getaddrinfo()* via *glibc* (or an
@@ -1940,6 +1973,10 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
    prefer IPv4 can appear "IPv6 broken" even when the OS resolver
    returns AAAA records.  Test Java services with explicit property
    settings and with *InetAddress.getAllByName()*, not *getByName()*.
+   [I-D.ietf-v6ops-ipv6-app-testing] catalogs these destination-address-
+   selection and address-filtering deviations (including Java preferring
+   IPv4 and resolvers such as NGINX that ignore address-family
+   availability) as common IPv6 failure sources.
 
    In extreme cases, an */etc/resolv.conf* that lists *only IPv6
    nameserver addresses* can interact badly with runtimes that bootstrap
@@ -1952,15 +1989,6 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
 
    Client-side load balancing builds on the resolution patterns in
    Section 13 when services publish multiple A/AAAA records.
-
-
-
-
-
-Martin                   Expires 8 January 2027                [Page 35]
-
-Internet-Draft         deploying-ipv6-data-center              July 2026
-
 
    As described in Section 13.4, *RFC 6724 Rule 9* reorders addresses
    returned from DNS.  In data centers that rely on multiple AAAA
@@ -1980,6 +2008,15 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
    4.  *Randomize or round-robin within each family* rather than
        trusting DNS order after getaddrinfo().
    5.  Optionally implement retries across the full set on failure.
+
+
+
+
+
+Martin                   Expires 19 January 2027               [Page 36]
+
+Internet-Draft         deploying-ipv6-data-center              July 2026
+
 
    Implement load balancing in *shared client libraries* so every
    service does not rediscover the same RFC 6724 interaction.
@@ -2005,19 +2042,6 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
    Section 9).  Spot-check with dig -x or equivalent on both address
    families before relying on reverse lookup during an outage.
 
-
-
-
-
-
-
-
-
-Martin                   Expires 8 January 2027                [Page 36]
-
-Internet-Draft         deploying-ipv6-data-center              July 2026
-
-
 15.2.  Controlled ICMP Echo (Ping)
 
    Teams trained to drop *ICMP echo request/reply* ("ping") on the
@@ -2039,6 +2063,17 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
    inside the fabric: constrain abuse, but preserve a controlled way to
    test L3 connectivity during incidents.
 
+
+
+
+
+
+
+Martin                   Expires 19 January 2027               [Page 37]
+
+Internet-Draft         deploying-ipv6-data-center              July 2026
+
+
 16.  Security Considerations
 
    IPv6 restores global routability; *absence of NAT is not absence of
@@ -2059,20 +2094,6 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
    proven otherwise (see Section 5.5); establish a shared readiness
    process with security leadership rather than discovering blockers
    during the first IPv6-only pilot.
-
-
-
-
-
-
-
-
-
-
-Martin                   Expires 8 January 2027                [Page 37]
-
-Internet-Draft         deploying-ipv6-data-center              July 2026
-
 
    Security monitoring systems MUST receive IPv6 traffic mirrors, tap
    coverage, and metadata *on parity with IPv4* before declaring IPv6
@@ -2097,6 +2118,17 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
    *  *Jason Healy* (Suffield Academy)
 
 19.  Normative References
+
+
+
+
+
+
+
+Martin                   Expires 19 January 2027               [Page 38]
+
+Internet-Draft         deploying-ipv6-data-center              July 2026
+
 
    [RFC1918]  Rekhter, Y., Moskowitz, B., Karrenberg, D., de Groot, G.
               J., and E. Lear, "Address Allocation for Private
@@ -2123,13 +2155,6 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
               DOI 10.17487/RFC3849, July 2004,
               <https://www.rfc-editor.org/info/rfc3849>.
 
-
-
-Martin                   Expires 8 January 2027                [Page 38]
-
-Internet-Draft         deploying-ipv6-data-center              July 2026
-
-
    [RFC4193]  Hinden, R. and B. Haberman, "Unique Local IPv6 Unicast
               Addresses", RFC 4193, DOI 10.17487/RFC4193, October 2005,
               <https://www.rfc-editor.org/info/rfc4193>.
@@ -2153,6 +2178,13 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
               "Neighbor Discovery for IP version 6 (IPv6)", RFC 4861,
               DOI 10.17487/RFC4861, September 2007,
               <https://www.rfc-editor.org/info/rfc4861>.
+
+
+
+Martin                   Expires 19 January 2027               [Page 39]
+
+Internet-Draft         deploying-ipv6-data-center              July 2026
+
 
    [RFC4890]  Davies, E. and J. Mohacsi, "Recommendations for Filtering
               ICMPv6 Messages in Firewalls", RFC 4890,
@@ -2179,13 +2211,6 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
               (IPv6)", RFC 6724, DOI 10.17487/RFC6724, September 2012,
               <https://www.rfc-editor.org/info/rfc6724>.
 
-
-
-Martin                   Expires 8 January 2027                [Page 39]
-
-Internet-Draft         deploying-ipv6-data-center              July 2026
-
-
    [RFC6890]  Cotton, M., Vegoda, L., Bonica, R., Ed., and B. Haberman,
               "Special-Purpose IP Address Registries", BCP 153,
               RFC 6890, DOI 10.17487/RFC6890, April 2013,
@@ -2204,6 +2229,18 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
               "Path MTU Discovery for IP version 6", STD 87, RFC 8201,
               DOI 10.17487/RFC8201, July 2017,
               <https://www.rfc-editor.org/info/rfc8201>.
+
+
+
+
+
+
+
+
+Martin                   Expires 19 January 2027               [Page 40]
+
+Internet-Draft         deploying-ipv6-data-center              July 2026
+
 
    [RFC8415]  Mrugalski, T., Siodelski, M., Volz, B., Yourtchenko, A.,
               Richardson, M., Jiang, S., Lemon, T., and T. Winters,
@@ -2227,25 +2264,39 @@ Internet-Draft         deploying-ipv6-data-center              July 2026
               <https://www.arin.net/resources/guide/ipv6/
               preparing_apps_for_v6.pdf>.
 
+   [I-D.ietf-v6ops-ipv6-app-testing]
+              Tiesel, P. S., Linkova, J., Ouellette, K., and B. Patton,
+              "Testing Applications' IPv6 Support", Work in Progress,
+              Internet-Draft, draft-ietf-v6ops-ipv6-app-testing-01, 26
+              May 2026, <https://datatracker.ietf.org/doc/html/draft-
+              ietf-v6ops-ipv6-app-testing-01>.
+
+   [I-D.ietf-v6ops-ipv6-only]
+              Martinez, J. P., "IPv6-Only and IPv6-Mostly Terminology
+              Definitions", Work in Progress, Internet-Draft, draft-
+              ietf-v6ops-ipv6-only-00, 1 July 2026,
+              <https://datatracker.ietf.org/doc/html/draft-ietf-v6ops-
+              ipv6-only-00>.
+
    [RFC2606]  Eastlake 3rd, D. and A. Panitz, "Reserved Top Level DNS
               Names", BCP 32, RFC 2606, DOI 10.17487/RFC2606, June 1999,
               <https://www.rfc-editor.org/info/rfc2606>.
-
-
-
-
-
-
-
-Martin                   Expires 8 January 2027                [Page 40]
-
-Internet-Draft         deploying-ipv6-data-center              July 2026
-
 
    [RFC4038]  Shin, M., Ed., Hong, Y., Hagino, J., Savola, P., and E. M.
               Castro, "Application Aspects of IPv6 Transition",
               RFC 4038, DOI 10.17487/RFC4038, March 2005,
               <https://www.rfc-editor.org/info/rfc4038>.
+
+
+
+
+
+
+
+Martin                   Expires 19 January 2027               [Page 41]
+
+Internet-Draft         deploying-ipv6-data-center              July 2026
+
 
    [RFC7381]  Chittimaneni, K., Chown, T., Howard, L., Kuarsingh, V.,
               Pouffary, Y., and E. Vyncke, "Enterprise IPv6 Deployment
@@ -2293,4 +2344,9 @@ Author's Address
 
 
 
-Martin                   Expires 8 January 2027                [Page 41]
+
+
+
+
+
+Martin                   Expires 19 January 2027               [Page 42]
