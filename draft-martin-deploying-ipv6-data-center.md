@@ -6,11 +6,11 @@ area = "ops"
 workgroup = "IPv6 Operations"
 keyword = ["IPv6", "data center", "SRE", "software", "operations", "deployment"]
 
-date = 2026-07-18
+date = 2026-08-20
 
 [seriesInfo]
 name = "Internet-Draft"
-value = "draft-martin-deploying-ipv6-data-center-02"
+value = "draft-martin-deploying-ipv6-data-center-03"
 status = "informational"
 
 [[author]]
@@ -65,7 +65,9 @@ centers --- not primarily for network engineers designing routing policy.
 Network teams still own prefixes, routing, and firewalls, but IPv6
 deployment succeeds or fails in application code, configuration management,
 monitoring pipelines, and the long tail of enterprise software that assumes
-IPv4.
+IPv4. It also fails when the work is **unscheduled** against competing
+priorities, or when security and network teams meet the design only at cutover
+(see (#programme-sponsorship)).
 
 **Scope:** The primary audience runs services on infrastructure the organization
 **owns or directly controls** --- operator-managed networks, prefixes, routing,
@@ -107,10 +109,10 @@ center. Overlapping themes (for example internal vs external scope in
 (#internal-external) and (#provision-not-transform)) appear where each audience
 needs them; sections cross-link rather than repeat editorially.
 
-**Part I --- Running the migration:** (#transition) covers operating model and
-scope (greenfield provisioning vs brownfield conversion, IPv6-only jump hosts).
-(#observability) defines inventory schema, dashboards, and success metrics ---
-fix what you measure before bulk technical change.
+**Part I --- Running the migration:** (#transition) covers programme sponsorship,
+operating model and scope (greenfield provisioning vs brownfield conversion,
+IPv6-only jump hosts). (#observability) defines inventory schema, dashboards, and
+success metrics --- fix what you measure before bulk technical change.
 
 **Part II --- Building the IPv6 data center** follows a bottom-up order: (#oob-management)
 (hardware and management plane), (#internet-addressing) and (#dns-registration)
@@ -121,7 +123,10 @@ fix what you measure before bulk technical change.
 
 **Reading paths by role:**
 
-* *Program lead / engineering manager:* Part I first, then Part II as overview.
+* *Program lead / engineering manager:* Part I first (including
+  (#programme-sponsorship) and (#ipv4-only-exceptions)), then Part II as overview.
+* *Business sponsor / security lead:* (#programme-sponsorship),
+  (#ipv4-only-exceptions), (#icmpv6-pmtud), then Security Considerations.
 * *Network / DC infrastructure engineer:* (#ipv6-fundamentals), then Part II
   sections on OOB through (#hybrid-cloud) and ICMPv6/PMTUD.
 * *Application / SRE engineer:* (#ipv6-fundamentals), Part I (#observability),
@@ -271,9 +276,10 @@ not string parsing.
 On most LANs and data center segments, the **network/host split is at the
 64th bit** --- a `/64` prefix on the wire [@!RFC4291]. Roughly speaking, a
 `/64` is the IPv6 analogue of an IPv4 `/24` in terms of "one subnet per
-broadcast domain," though the address space is vastly larger. A good data
-center pattern assigns a **`/56` per host** so each container can receive its
-own **`/64`** (see (#prefix-allocation)).
+broadcast domain," though the address space is vastly larger. One illustrative
+data center template assigns a **`/56` per host** so each container can receive
+its own **`/64`**; operators **SHOULD** document their own numbering policy and
+growth plan (see (#prefix-allocation)).
 
 ## Link-Local Gateways
 
@@ -301,6 +307,34 @@ literals.
 # Part I: Running the Migration
 
 # Transition Strategies {#transition}
+
+## Programme Sponsorship and Stakeholders {#programme-sponsorship}
+
+[@?RFC7381] covers enterprise IPv6 deployment more broadly. This subsection is
+the SRE-facing minimum: who must prioritize the work and who must be in the room
+before the addressing plan is frozen.
+
+**Sponsorship schedules the work; escalation only unblocks it.** A named
+**business sponsor** ranks IPv6 against competing quarterly work so teams can
+staff the migration. That role is distinct from the **exception approver** in
+(#ipv4-only-exceptions) (who records a bounded IPv4-only waiver) and from
+**escalation** when a cooperating team is not moving. Escalation without
+sponsorship addresses obstruction after the work is already on the plan; without
+sponsorship the programme never gets scheduled in the first place.
+
+Treat **security and the business as primary stakeholders from kickoff**, not as
+late approval gates. Bring into the room early:
+
+* **Security** --- threat models and security policies **before** perimeter
+  rule changes (see (#icmpv6-pmtud) and Security Considerations).
+* **Network** --- prefix policy and allocation lead time (see
+  (#prefix-allocation)).
+* **Platform / SRE** --- inventory, observability, and jump-host readiness.
+* **Owners of tier-1 services** --- consent before a service flips to dual-stack
+  or IPv6-only.
+
+An IPv4-only exception process governs one artefact well; it does not replace
+sponsorship or early stakeholder consent.
 
 ## Easier to Provision Than to Transform {#provision-not-transform}
 
@@ -576,25 +610,39 @@ reduce outages during rollout.
 
 ## Prefix Allocation for Hosts and Containers {#prefix-allocation}
 
-A common data center pattern assigns a **`/56` to each physical host** (or
-rack entity), providing **256 `/64` subnets** --- one `/64` for the host itself
-and up to **255 `/64` prefixes** for containers, virtual machines, or
-Kubernetes pods. Each container **MAY** receive a full **`/64`**, not a
-longer prefix carved out of a single host `/64`. Routing between `/64` islands
-replaces NAT for east-west traffic and avoids CGNAT-style visibility loss in
-flow logs. Assigning only a **`/64` per host** (or per rack entity without
-further delegation) is **often insufficient** when multiple containers each
-need their own address space; request a **`/56` (or shorter)** delegation from
-the network team instead. In a **closed data center** with explicit routing and
-no SLAAC on container segments, some designs assign one **`/64` per physical
-host** and carve **`/72` (or longer) subnets** from that host prefix for
-container tiers. That pattern is **not** suitable on the public Internet or
-where hosts expect standard `/64` semantics; use it only with operator-wide
-agreement and tested CNI or orchestrator support.
+Operators **SHOULD** write down a **numbering policy** for the data center ---
+what receives a prefix (host, VM, container, pod, service, rack, or other role),
+at what length, and how those roles nest --- then **size for current inventory
+and plausible growth** (hosts, clusters, and sites). Request the next allocation
+**before** the last usable prefix is assigned; discovering a ceiling mid-migration
+turns a sizing choice into an allocation request with its own justification and
+lead time (the same early-case discipline as (#hybrid-cloud)).
+
+One **template** for counting `/64`s --- not a recommendation every estate must
+follow --- assigns a **`/56` to each physical host** (or rack entity), providing
+**256 `/64` subnets** --- one `/64` for the host itself and up to **255 `/64`
+prefixes** for containers, virtual machines, or pods. Under that template each
+container **MAY** receive a full **`/64`**, with routing between `/64` islands
+instead of NAT for east-west traffic. Arithmetic follows the policy: a `/56` per
+host exhausts a `/48` at **256 hosts**; larger estates need a shorter site prefix
+or a different per-entity size. Assigning only a **`/64` per host** without
+further delegation is **often insufficient** when many containers each need their
+own address space.
+
+Orchestrators such as **Kubernetes** often need **several ranges** (for example
+node, pod, and service) rather than a single per-host delegation. A common layout
+gives each node a `/64` from a pod range; that is **not** the same pattern as
+carving longer-than-`/64` subnets from one host prefix. In a **closed data center**
+with explicit routing and no SLAAC on container segments, some designs assign one
+**`/64` per physical host** and carve **`/72` (or longer) subnets** from that host
+prefix for container tiers. That `/72` pattern is **not** suitable on the public
+Internet or where hosts expect standard `/64` semantics; use it only with
+operator-wide agreement and tested CNI or orchestrator support --- do not read it
+as advising against ordinary orchestrator node `/64`s.
 
 The exact mapping depends on orchestrator and CNI design; the important software
-lesson is that **each tier needs an explicit prefix plan** rather than assuming
-"one address per host" as in legacy IPv4 NAT designs.
+lesson is an **explicit prefix plan per role**, sized for growth, rather than
+assuming "one address per host" as in legacy IPv4 NAT designs.
 
 These patterns assume an **operator-controlled** data center fabric where the
 network team can delegate prefixes freely. In **hybrid** environments that
@@ -603,7 +651,7 @@ connect on-premise fabric to public cloud (see (#hybrid-cloud)), operators
 sites. Cloud providers impose subnet sizes, delegation limits, and aggregation
 rules that cannot be changed from the data center alone; mirroring (or mapping
 cleanly to) those conventions on bare metal **MAY** simplify IPAM, ACLs, and
-runbooks even when a strict `/56`-per-host layout would otherwise be preferred
+runbooks even when a `/56`-per-host template would otherwise be preferred
 locally. The right trade-off depends on connectivity model, orchestrator, and
 how much of the estate shares addressing with cloud virtual networks. This
 document does not enumerate cloud or IaaS offerings; it focuses on networks
@@ -948,17 +996,43 @@ Cloud portfolios change frequently. Operators **SHOULD** maintain a
 **provider-specific IPv6 matrix** for every service in use --- compute, load
 balancing, databases, object storage, key management, logging, identity, managed
 Kubernetes control planes, firewalls, WAF, PrivateLink-style endpoints, and
-inter-region peering --- with **supported / partial / unsupported / unknown**
-labels and notes on **region, tier, and verification date**.
+inter-region peering --- with readiness labels and notes on **region, tier, and
+verification date**.
+
+Label by the **default client path** used in production (the hostname and options
+the running SDK, CLI, or library uses with **no extra configuration**), not by a
+provider capability page or an alternate dual-stack endpoint that applications do
+not call unless reconfigured:
+
+* **supported** --- the default client path resolves and works on IPv6.
+* **supported-not-default** --- IPv6 exists only behind an alternate hostname,
+  opt-in flag, or non-default region or SKU; production without that change stays
+  on IPv4.
+* **partial** --- incomplete feature coverage (some APIs, regions, or SKUs),
+  distinct from "complete but opt-in."
+* **unsupported** / **unknown** --- no usable IPv6 path, or not yet verified.
+
+Defaults move over time; re-check on the verification-date column rather than
+assuming a past "supported" label still matches what clients dial today.
+
+Where clients can use **operator-controlled DNS** (private zones, service
+discovery, or aliases under a stable convention), prefer names **independent of
+the provider's hostname taxonomy** (see (#naming-services)). Publish A and AAAA
+(or point aliases) under that convention so application configuration does not
+inherit provider path quirks --- for example when one provider hostname has AAAA
+and a sibling default does not. Operator names are a mitigation when the client
+stack allows them; the matrix still records whether the **provider default** path
+is IPv6-ready.
 
 **Identify blockers early:** review architecture diagrams and infrastructure-as-code
 for implicit IPv4 assumptions (RFC 1918-only security groups, IPv4 health checks,
-managed endpoints without AAAA, IPv4-only egress appliances). Open **provider
-support cases and feature requests** as soon as a required service lacks IPv6 ---
-enterprise cutover dates cannot wait for roadmap surprises discovered in production.
-Where IPv6 exists only in select regions or SKUs, record that constraint in the
-inventory and use (#ipv4-only-exceptions) when the business must stay on IPv4-only
-cloud paths temporarily.
+managed endpoints without AAAA on the default path, IPv4-only egress appliances).
+Open **provider support cases and feature requests** as soon as a required service
+lacks IPv6 --- enterprise cutover dates cannot wait for roadmap surprises
+discovered in production. Where IPv6 exists only as **supported-not-default** or
+only in select regions or SKUs, record that constraint in the inventory and use
+(#ipv4-only-exceptions) when the business must stay on IPv4-only cloud paths
+temporarily.
 
 ## Cloud as Platform Software
 
@@ -971,10 +1045,12 @@ managed services.
 
 Hybrid programs **SHOULD** include **cloud account and landing-zone reviews** in
 the same governance cadence as on-premise migration metrics (see (#observability)).
-A service marked "IPv6-ready on-premise" that calls an **IPv4-only cloud API** or
-runs on an **IPv4-only managed control plane** is not ready for internal v6-only
-operation. Treat cloud like any other long-lead vendor: inventory, support
-tickets, and exception tracking **SHOULD** start at program kickoff.
+A service marked "IPv6-ready on-premise" that calls an **IPv4-only cloud API**,
+depends on a **supported-not-default** cloud path without the required client
+change, or runs on an **IPv4-only managed control plane** is not ready for
+internal v6-only operation. Treat cloud like any other long-lead vendor:
+inventory, support tickets, and exception tracking **SHOULD** start at program
+kickoff.
 
 # ICMPv6, PMTUD, and Middleboxes {#icmpv6-pmtud}
 
@@ -986,6 +1062,13 @@ ICMPv6 produces hung connections, mysterious TLS timeouts, and DNS failures
 that are misdiagnosed as application bugs. Filter **specific message types**
 judiciously; do not implement blanket deny rules. For **echo request/reply**
 used in reachability testing inside the data center, see (#network-diagnostics).
+
+Blanket deny is often a **sequencing failure**, not only a knowledge gap:
+security meets IPv6 for the first time at the perimeter firewall late in the
+rollout, with no agreed threat model and full accountability for residual risk.
+Agree filtering with security when the addressing plan is written (see
+(#programme-sponsorship)), not as the last firewall change. Treat [@!RFC4890]
+training as a **prerequisite** to the rule change.
 
 ## Path MTU Discovery
 
@@ -1479,8 +1562,9 @@ ACLs and security products must parse IPv6 literals correctly (see
 **Security appliances and host security software are notoriously weak on IPv6**
 --- incomplete decode, IPv4-only dashboards, agents that drop or mislabel v6
 traffic, and policies that silently fail open or closed. Engage the **security
-organization very early** in the IPv6 program, in parallel with out-of-band and
-network design (see (#oob-management)). In many enterprises, application SREs
+organization very early** in the IPv6 program --- as a Part I stakeholder gate
+(see (#programme-sponsorship)), in parallel with out-of-band and network design
+(see (#oob-management)). In many enterprises, application SREs
 **do not have full visibility** into which tools the security team deploys;
 there is often deliberate **operational secrecy** around EDR, NDR, DLP, and
 forensics platforms. Assume unknown agents exist on every host until proven
@@ -1509,6 +1593,7 @@ The authors thank the following people who contributed suggestions and
 editorial improvements to this document:
 
 * **Jason Healy** (Suffield Academy)
+* **Spiro Stathakis** (isp6)
 
 <reference anchor="ARCEP-IPV6-GUIDE" target="https://www.arcep.fr/fileadmin/cru-1648459125/reprise/observatoire/ipv6/guide-entreprises-how-to-deploy-IPv6-march-2022.pdf">
   <front>

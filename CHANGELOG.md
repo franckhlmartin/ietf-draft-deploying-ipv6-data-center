@@ -6,6 +6,18 @@ semantics.
 
 ## Unreleased
 
+- **Revision -03:** Bump Internet-Draft version and date; rebuild outputs.
+- **Cloud provider gap analysis (§10.2):** Label by default client path; add
+  `supported-not-default` distinct from `partial`; prefer operator-owned names
+  independent of provider hostname taxonomy; no vendor-specific examples.
+- **Prefix allocation (§8.1):** Frame `/56`-per-host as a template; require a
+  numbering policy sized for growth; mention Kubernetes as needing multiple
+  ranges without a cluster recipe; clarify `/72` carve-out vs node `/64`.
+- **Programme sponsorship (§4.1, new):** Business sponsor vs exception approver
+  vs escalation; early security/network/platform/tier-1 stakeholders; wire §1.1,
+  reading paths, ICMPv6 sequencing, and Security Considerations.
+- **Acknowledgments:** Spiro Stathakis (isp6).
+
 - **Revision -02:** Bump Internet-Draft version and date for Datatracker
   submission; build outputs renamed to match.
 - **Related Guides (§1.2) and IPv6 testing cross-references:** Add informative
