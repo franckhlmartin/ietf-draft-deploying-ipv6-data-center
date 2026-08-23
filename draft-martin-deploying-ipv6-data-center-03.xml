@@ -102,8 +102,9 @@ center. Overlapping themes (for example internal vs external scope in
 needs them; sections cross-link rather than repeat editorially.</t>
 <t><strong>Part I --- Running the migration:</strong> <xref target="transition"></xref> covers programme sponsorship,
 operating model and scope (greenfield provisioning vs brownfield conversion,
-IPv6-only jump hosts). <xref target="observability"></xref> defines inventory schema, dashboards, and
-success metrics --- fix what you measure before bulk technical change.</t>
+IPv6-only jump hosts, noticeable IPv4 friction). <xref target="observability"></xref> defines
+inventory schema, dashboards, and success metrics --- fix what you measure
+before bulk technical change.</t>
 <t><strong>Part II --- Building the IPv6 data center</strong> follows a bottom-up order: <xref target="oob-management"></xref>
 (hardware and management plane), <xref target="internet-addressing"></xref> and <xref target="dns-registration"></xref>
 (provisioning), <xref target="hybrid-cloud"></xref> (on-premise plus public cloud connectivity),
@@ -382,8 +383,15 @@ configuration management, monitoring CLI tools, and break-glass SSH from those
 hosts, forcing administrative tooling onto IPv6. Maintain at least one
 <strong>dual-stack backup jump host</strong> during migration and <strong>audit who connects and
 which commands run</strong> until parity is proven.</t>
-<t>Temporarily <strong>reducing IPv4 SSH session timeouts</strong> on jump hosts can accelerate
-detection of accidental IPv4 dependency without blocking emergency access.</t>
+<t>On that dual-stack backup, operators <bcp14>MAY</bcp14> add <strong>noticeable but non-blocking
+IPv4 friction</strong> so a session that landed on IPv4 is obvious without denying
+access. Examples include a short <strong>login banner or <tt>sshd</tt> ForcedCommand
+countdown</strong> (for example five seconds) before the shell is granted, and
+temporarily <strong>reducing IPv4 SSH session timeouts</strong>. Emergency access still
+works; the delay is the signal that IPv6 is not functional or not preferred,
+so the path can be fixed while the window is calm. IPv6 sessions <bcp14>SHOULD NOT</bcp14>
+receive the same penalty. The same idea applies more broadly than SSH --- see
+<xref target="ipv4-friction"></xref>.</t>
 <t>Apply the same staged exposure to <strong>corporate wireless</strong>, not only SSH bastions.
 Provide <strong>dual-stack Wi-Fi</strong> for everyday employee devices during migration, and
 at least one <strong>IPv6-only employee Wi-Fi</strong> SSID so laptops, phones, VPN clients,
@@ -396,6 +404,31 @@ demonstrate that hardware and software work without IPv4 fallback during
 evaluations and acceptance testing. That network <bcp14>SHOULD</bcp14> be clearly marked,
 rate-limited, and isolated from internal management zones; it complements jump
 hosts but does not replace them for break-glass administration.</t>
+</section>
+
+<section anchor="ipv4-friction"><name>Noticeable IPv4 Friction</name>
+<t>IPv4 fallback on dual-stack paths is silent by default: Happy Eyeballs
+<xref target="name-resolution"></xref> and most clients succeed on IPv4 when IPv6 is slow or
+broken, so operators never see the failure. <strong>Prefer friction over hard
+blocks</strong> while production still needs IPv4 for emergencies.</t>
+<t>Operators <bcp14>MAY</bcp14> apply a <strong>modest delay or traffic shaping</strong> to IPv4 --- for
+example a few milliseconds via host or fabric QoS, or Linux <tt>tc</tt> delay on
+IPv4 classifiers --- so that:</t>
+
+<ul spacing="compact">
+<li>Human-facing tools (SSH, jump hosts --- see <xref target="ipv6-only-jump-hosts"></xref>) feel
+slower on IPv4.</li>
+<li>Inter-application RPC and HTTP paths show <strong>higher latency or lower queries
+per second (QPS)</strong> when IPv4 is suddenly preferred --- parameters most SRE
+teams already measure.</li>
+</ul>
+<t>The penalty <bcp14>MUST</bcp14> remain small enough that break-glass and degraded
+operation still succeed. The goal is detection, not outage: engineers notice
+that IPv6 is not preferred, and existing latency or QPS dashboards regress
+when a deploy or resolver change flips traffic to IPv4 (see
+<xref target="observability"></xref>). This operator-applied path delay is distinct from the
+Happy Eyeballs <strong>IPv4 connection-attempt delay</strong> in <xref target="name-resolution"></xref>, which
+races families at the client rather than making IPv4 worse on the wire.</t>
 </section>
 </section>
 
@@ -424,6 +457,8 @@ count and by criticality tier)</li>
 <li>Ratio of <strong>ingress bytes or connections</strong> over IPv6 vs IPv4 at load balancers</li>
 <li>Count of hosts or pods <strong>without any IPv6 address</strong> in IPAM or configuration
 management</li>
+<li><strong>Latency and QPS split by address family</strong>, or unexplained regressions
+correlated with rising IPv4 share (see <xref target="ipv4-friction"></xref>)</li>
 </ul>
 <t>Set explicit targets (for example, &quot;90% of tier-1 APIs dual-stack by Q4&quot;) and
 review the same metrics in change advisory boards.</t>
@@ -434,7 +469,12 @@ review the same metrics in change advisory boards.</t>
 regression</strong>. A service that passed dual-stack testing can <strong>stop working on IPv6</strong>
 after an unrelated code push --- for example, a new dependency, a changed bind
 address, or a refactored HTTP client that silently prefers IPv4. Unmonitored
-dual-stack fleets often <strong>mask</strong> such regressions because IPv4 still succeeds.</t>
+dual-stack fleets often <strong>mask</strong> such regressions because IPv4 still succeeds.
+Where operators apply modest IPv4 path friction <xref target="ipv4-friction"></xref>, a sudden
+preference for IPv4 often appears first as <strong>increased latency or reduced
+QPS</strong> on services that already export those metrics --- treat those
+regressions as IPv6-preference failures, not generic capacity events, until
+address-family split confirms otherwise.</t>
 <t><strong>Treat IPv6 failures as hard failures as soon as policy allows</strong> --- alert on
 IPv6-only health checks, IPv6 listen-socket regressions, and rising IPv4-only
 connection share for tier-1 services. Where production remains dual-stack,

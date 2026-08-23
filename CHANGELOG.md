@@ -6,7 +6,9 @@ semantics.
 
 ## Unreleased
 
-- **Revision -03:** Bump Internet-Draft version and date; rebuild outputs.
+- **Noticeable IPv4 friction (§4.4, §4.5 new, §5):** Non-blocking IPv4 delay
+  (SSH countdown on dual-stack jump hosts, modest traffic shaping) so silent
+  IPv4 preference is noticeable; latency/QPS as existing signals.
 - **Cloud provider gap analysis (§10.2):** Label by default client path; add
   `supported-not-default` distinct from `partial`; prefer operator-owned names
   independent of provider hostname taxonomy; no vendor-specific examples.

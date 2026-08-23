@@ -111,8 +111,9 @@ needs them; sections cross-link rather than repeat editorially.
 
 **Part I --- Running the migration:** (#transition) covers programme sponsorship,
 operating model and scope (greenfield provisioning vs brownfield conversion,
-IPv6-only jump hosts). (#observability) defines inventory schema, dashboards, and
-success metrics --- fix what you measure before bulk technical change.
+IPv6-only jump hosts, noticeable IPv4 friction). (#observability) defines
+inventory schema, dashboards, and success metrics --- fix what you measure
+before bulk technical change.
 
 **Part II --- Building the IPv6 data center** follows a bottom-up order: (#oob-management)
 (hardware and management plane), (#internet-addressing) and (#dns-registration)
@@ -383,7 +384,7 @@ exceptions in change advisory or migration governance the same way security
 reviews open risk acceptances --- stale plans become blockers again when dates
 slip without an updated timeline.
 
-## IPv6-Only Jump Hosts
+## IPv6-Only Jump Hosts {#ipv6-only-jump-hosts}
 
 Moving to IPv6 is not only a routing change --- it requires a **cultural shift**
 for SREs and SWEs who have spent years assuming IPv4 literals, RFC 1918 mental
@@ -401,8 +402,15 @@ hosts, forcing administrative tooling onto IPv6. Maintain at least one
 **dual-stack backup jump host** during migration and **audit who connects and
 which commands run** until parity is proven.
 
-Temporarily **reducing IPv4 SSH session timeouts** on jump hosts can accelerate
-detection of accidental IPv4 dependency without blocking emergency access.
+On that dual-stack backup, operators **MAY** add **noticeable but non-blocking
+IPv4 friction** so a session that landed on IPv4 is obvious without denying
+access. Examples include a short **login banner or `sshd` ForcedCommand
+countdown** (for example five seconds) before the shell is granted, and
+temporarily **reducing IPv4 SSH session timeouts**. Emergency access still
+works; the delay is the signal that IPv6 is not functional or not preferred,
+so the path can be fixed while the window is calm. IPv6 sessions **SHOULD NOT**
+receive the same penalty. The same idea applies more broadly than SSH --- see
+(#ipv4-friction).
 
 Apply the same staged exposure to **corporate wireless**, not only SSH bastions.
 Provide **dual-stack Wi-Fi** for everyday employee devices during migration, and
@@ -417,6 +425,31 @@ demonstrate that hardware and software work without IPv4 fallback during
 evaluations and acceptance testing. That network **SHOULD** be clearly marked,
 rate-limited, and isolated from internal management zones; it complements jump
 hosts but does not replace them for break-glass administration.
+
+## Noticeable IPv4 Friction {#ipv4-friction}
+
+IPv4 fallback on dual-stack paths is silent by default: Happy Eyeballs
+(#name-resolution) and most clients succeed on IPv4 when IPv6 is slow or
+broken, so operators never see the failure. **Prefer friction over hard
+blocks** while production still needs IPv4 for emergencies.
+
+Operators **MAY** apply a **modest delay or traffic shaping** to IPv4 --- for
+example a few milliseconds via host or fabric QoS, or Linux `tc` delay on
+IPv4 classifiers --- so that:
+
+* Human-facing tools (SSH, jump hosts --- see (#ipv6-only-jump-hosts)) feel
+  slower on IPv4.
+* Inter-application RPC and HTTP paths show **higher latency or lower queries
+  per second (QPS)** when IPv4 is suddenly preferred --- parameters most SRE
+  teams already measure.
+
+The penalty **MUST** remain small enough that break-glass and degraded
+operation still succeed. The goal is detection, not outage: engineers notice
+that IPv6 is not preferred, and existing latency or QPS dashboards regress
+when a deploy or resolver change flips traffic to IPv4 (see
+(#observability)). This operator-applied path delay is distinct from the
+Happy Eyeballs **IPv4 connection-attempt delay** in (#name-resolution), which
+races families at the client rather than making IPv4 worse on the wire.
 
 # Observability and Metrics {#observability}
 
@@ -444,6 +477,8 @@ Dashboards **SHOULD** expose fleet-level indicators, for example:
 * Ratio of **ingress bytes or connections** over IPv6 vs IPv4 at load balancers
 * Count of hosts or pods **without any IPv6 address** in IPAM or configuration
   management
+* **Latency and QPS split by address family**, or unexplained regressions
+  correlated with rising IPv4 share (see (#ipv4-friction))
 
 Set explicit targets (for example, "90% of tier-1 APIs dual-stack by Q4") and
 review the same metrics in change advisory boards.
@@ -455,6 +490,11 @@ regression**. A service that passed dual-stack testing can **stop working on IPv
 after an unrelated code push --- for example, a new dependency, a changed bind
 address, or a refactored HTTP client that silently prefers IPv4. Unmonitored
 dual-stack fleets often **mask** such regressions because IPv4 still succeeds.
+Where operators apply modest IPv4 path friction (#ipv4-friction), a sudden
+preference for IPv4 often appears first as **increased latency or reduced
+QPS** on services that already export those metrics --- treat those
+regressions as IPv6-preference failures, not generic capacity events, until
+address-family split confirms otherwise.
 
 **Treat IPv6 failures as hard failures as soon as policy allows** --- alert on
 IPv6-only health checks, IPv6 listen-socket regressions, and rising IPv4-only
