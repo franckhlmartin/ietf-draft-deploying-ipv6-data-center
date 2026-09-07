@@ -9,7 +9,7 @@
 </address></author><author initials="P.S." surname="Tiesel" fullname="Philipp S. Tiesel"><organization>SAP SE</organization><address><postal><street></street>
 </postal><email>philipp@tiesel.net</email>
 <email>philipp.tiesel@sap.com</email>
-</address></author><date year="2026" month="August" day="20"></date>
+</address></author><date year="2026" month="September" day="7"></date>
 <area>ops</area>
 <workgroup>IPv6 Operations</workgroup>
 <keyword>IPv6</keyword>
@@ -96,37 +96,46 @@ but cover broader enterprise and regional context.</t>
 </section>
 
 <section anchor="document-structure"><name>Document Structure</name>
-<t>This document uses a <strong>dual-track structure</strong> after <xref target="ipv6-fundamentals"></xref>: <strong>Part I</strong>
-defines migration policy and measurement; <strong>Part II</strong> implements the stack from
-management hardware upward. Fundamentals establish shared vocabulary for SREs
-and software engineers; both parts are required for a complete IPv6-only data
-center. Overlapping themes (for example internal vs external scope in
-<xref target="internal-external"></xref> and <xref target="provision-not-transform"></xref>) appear where each audience
-needs them; sections cross-link rather than repeat editorially.</t>
-<t><strong>Part I --- Migration Strategies:</strong> <xref target="transition"></xref> covers programme sponsorship,
-operating model and scope (greenfield provisioning vs brownfield conversion,
-IPv6-only jump hosts, noticeable IPv4 friction). <xref target="observability"></xref> defines
-inventory schema, dashboards, and success metrics --- fix what you measure
-before bulk technical change.</t>
-<t><strong>Part II --- Building the IPv6 data center</strong> follows a bottom-up order: <xref target="oob-management"></xref>
-(hardware and management plane), <xref target="internet-addressing"></xref> and <xref target="dns-registration"></xref>
-(provisioning), <xref target="hybrid-cloud"></xref> (on-premise plus public cloud connectivity),
-<xref target="icmpv6-pmtud"></xref> (transport health), then application work ---
-<xref target="application-readiness"></xref>, <xref target="name-resolution"></xref>, <xref target="client-load-balancing"></xref> --- and
-<xref target="network-diagnostics"></xref> for production troubleshooting.</t>
+<t>This document is organized by audience job --- <strong>strategy</strong>, then <strong>build</strong>, then
+<strong>tools</strong>, then <strong>pitfalls</strong> --- rather than by protocol layer or a single
+linear migration playbook. Overlapping themes (for example internal vs external
+scope in <xref target="internal-external"></xref> and <xref target="provision-not-transform"></xref>) appear where each
+audience needs them; sections cross-link rather than repeat editorially. IPv6
+fundamentals for software engineers (<xref target="ipv6-fundamentals"></xref>) sit as an <strong>appendix</strong>
+at the end for shared vocabulary; they are not the linear starting chapter.</t>
+<t><strong>Part I --- Migration Strategies</strong> (<xref target="transition"></xref>): scoping IPv6-only programs,
+programme sponsorship (<xref target="programme-sponsorship"></xref>), inventory and metrics
+(<xref target="observability"></xref>), hybrid on-premise and cloud (<xref target="hybrid-cloud"></xref>), and noticeable
+IPv4 friction (<xref target="ipv4-friction"></xref>) --- define policy and measurement before bulk
+technical change.</t>
+<t><strong>Part II --- Building the IPv6 Data Center:</strong> addressing and host/container
+provisioning (<xref target="internet-addressing"></xref> and related subsections), plus progress
+metrics that show dual-stack or IPv6-only adoption in the fabric.</t>
+<t><strong>Part III --- Tools &amp; Best Practices:</strong> developer and pre-production
+environments (<xref target="dev-environments"></xref>), IPv6-only jump hosts
+(<xref target="ipv6-only-jump-hosts"></xref>), network diagnostics (<xref target="network-diagnostics"></xref>), and
+tracking application readiness (<xref target="application-readiness"></xref>).</t>
+<t><strong>Part IV --- Pitfalls:</strong> out-of-band management (<xref target="oob-management"></xref>), DNS
+registration (<xref target="dns-registration"></xref>), ICMPv6 and PMTUD (<xref target="icmpv6-pmtud"></xref>), and
+application-layer traps --- localhost (<xref target="localhost-pitfalls"></xref>), name resolution
+(<xref target="name-resolution"></xref>), client-side load balancing (<xref target="client-load-balancing"></xref>),
+address storage, and language runtimes.</t>
 <t><strong>Reading paths by role:</strong></t>
 
 <ul spacing="compact">
 <li><em>Program lead / engineering manager:</em> Part I first (including
-<xref target="programme-sponsorship"></xref> and <xref target="ipv4-only-exceptions"></xref>), then Part II as overview.</li>
+<xref target="programme-sponsorship"></xref> and <xref target="ipv4-only-exceptions"></xref>), then skim Parts II and
+III as overview.</li>
 <li><em>Business sponsor / security lead:</em> <xref target="programme-sponsorship"></xref>,
 <xref target="ipv4-only-exceptions"></xref>, <xref target="icmpv6-pmtud"></xref>, then Security Considerations.</li>
-<li><em>Network / DC infrastructure engineer:</em> <xref target="ipv6-fundamentals"></xref>, then Part II
-sections on OOB through <xref target="hybrid-cloud"></xref> and ICMPv6/PMTUD.</li>
-<li><em>Application / SRE engineer:</em> <xref target="ipv6-fundamentals"></xref>, Part I <xref target="observability"></xref>,
-then Part II application and diagnostics sections.</li>
-<li><em>Full migration owner:</em> linear --- fundamentals, Part I, Part II, then
-Security Considerations.</li>
+<li><em>Network / DC infrastructure engineer:</em> Part II addressing, then Part IV on
+OOB, DNS registration, and ICMPv6/PMTUD; consult <xref target="ipv6-fundamentals"></xref> when
+vocabulary is needed.</li>
+<li><em>SRE/SWE engineer:</em> Part I <xref target="observability"></xref>, Part III tools and
+readiness tracking, then Part IV application pitfalls; consult
+<xref target="ipv6-fundamentals"></xref> when vocabulary is needed.</li>
+<li><em>Full migration owner:</em> linear --- Parts I through IV, then Security
+Considerations, with <xref target="ipv6-fundamentals"></xref> as reference.</li>
 </ul>
 </section>
 

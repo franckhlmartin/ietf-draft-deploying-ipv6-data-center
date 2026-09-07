@@ -6,6 +6,9 @@ semantics.
 
 ## Unreleased
 
+- **Document Structure (§1.3):** Rewrite for the four-part layout (strategy,
+  build, tools, pitfalls) with fundamentals as appendix; retarget role-based
+  reading paths (including SRE/SWE). Bump document date to 2026-09-07.
 - **Noticeable IPv4 friction (§4.4, §4.5 new, §5):** Non-blocking IPv4 delay
   (SSH countdown on dual-stack jump hosts, modest traffic shaping) so silent
   IPv4 preference is noticeable; latency/QPS as existing signals.
