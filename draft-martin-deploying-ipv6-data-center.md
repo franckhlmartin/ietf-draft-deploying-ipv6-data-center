@@ -6,7 +6,7 @@ area = "ops"
 workgroup = "IPv6 Operations"
 keyword = ["IPv6", "data center", "SRE", "software", "operations", "deployment"]
 
-date = 2026-08-20
+date = 2026-09-07
 
 [seriesInfo]
 name = "Internet-Draft"
@@ -109,39 +109,50 @@ but cover broader enterprise and regional context.
 
 ## Document Structure
 
-This document uses a **dual-track structure** after (#ipv6-fundamentals): **Part I**
-defines migration policy and measurement; **Part II** implements the stack from
-management hardware upward. Fundamentals establish shared vocabulary for SREs
-and software engineers; both parts are required for a complete IPv6-only data
-center. Overlapping themes (for example internal vs external scope in
-(#internal-external) and (#provision-not-transform)) appear where each audience
-needs them; sections cross-link rather than repeat editorially.
+This document is organized by audience job --- **strategy**, then **build**, then
+**tools**, then **pitfalls** --- rather than by protocol layer or a single
+linear migration playbook. Overlapping themes (for example internal vs external
+scope in (#internal-external) and (#provision-not-transform)) appear where each
+audience needs them; sections cross-link rather than repeat editorially. IPv6
+fundamentals for software engineers ((#ipv6-fundamentals)) sit as an **appendix**
+at the end for shared vocabulary; they are not the linear starting chapter.
 
-**Part I --- Migration Strategies:** (#transition) covers programme sponsorship,
-operating model and scope (greenfield provisioning vs brownfield conversion,
-IPv6-only jump hosts, noticeable IPv4 friction). (#observability) defines
-inventory schema, dashboards, and success metrics --- fix what you measure
-before bulk technical change.
+**Part I --- Migration Strategies** ((#transition)): scoping IPv6-only programs,
+programme sponsorship ((#programme-sponsorship)), inventory and metrics
+((#observability)), hybrid on-premise and cloud ((#hybrid-cloud)), and noticeable
+IPv4 friction ((#ipv4-friction)) --- define policy and measurement before bulk
+technical change.
 
-**Part II --- Building the IPv6 data center** follows a bottom-up order: (#oob-management)
-(hardware and management plane), (#internet-addressing) and (#dns-registration)
-(provisioning), (#hybrid-cloud) (on-premise plus public cloud connectivity),
-(#icmpv6-pmtud) (transport health), then application work ---
-(#application-readiness), (#name-resolution), (#client-load-balancing) --- and
-(#network-diagnostics) for production troubleshooting.
+**Part II --- Building the IPv6 Data Center:** addressing and host/container
+provisioning ((#internet-addressing) and related subsections), plus progress
+metrics that show dual-stack or IPv6-only adoption in the fabric.
+
+**Part III --- Tools & Best Practices:** developer and pre-production
+environments ((#dev-environments)), IPv6-only jump hosts
+((#ipv6-only-jump-hosts)), network diagnostics ((#network-diagnostics)), and
+tracking application readiness ((#application-readiness)).
+
+**Part IV --- Pitfalls:** out-of-band management ((#oob-management)), DNS
+registration ((#dns-registration)), ICMPv6 and PMTUD ((#icmpv6-pmtud)), and
+application-layer traps --- localhost ((#localhost-pitfalls)), name resolution
+((#name-resolution)), client-side load balancing ((#client-load-balancing)),
+address storage, and language runtimes.
 
 **Reading paths by role:**
 
 * *Program lead / engineering manager:* Part I first (including
-  (#programme-sponsorship) and (#ipv4-only-exceptions)), then Part II as overview.
+  (#programme-sponsorship) and (#ipv4-only-exceptions)), then skim Parts II and
+  III as overview.
 * *Business sponsor / security lead:* (#programme-sponsorship),
   (#ipv4-only-exceptions), (#icmpv6-pmtud), then Security Considerations.
-* *Network / DC infrastructure engineer:* (#ipv6-fundamentals), then Part II
-  sections on OOB through (#hybrid-cloud) and ICMPv6/PMTUD.
-* *Application / SRE engineer:* (#ipv6-fundamentals), Part I (#observability),
-  then Part II application and diagnostics sections.
-* *Full migration owner:* linear --- fundamentals, Part I, Part II, then
-  Security Considerations.
+* *Network / DC infrastructure engineer:* Part II addressing, then Part IV on
+  OOB, DNS registration, and ICMPv6/PMTUD; consult (#ipv6-fundamentals) when
+  vocabulary is needed.
+* *SRE/SWE engineer:* Part I (#observability), Part III tools and
+  readiness tracking, then Part IV application pitfalls; consult
+  (#ipv6-fundamentals) when vocabulary is needed.
+* *Full migration owner:* linear --- Parts I through IV, then Security
+  Considerations, with (#ipv6-fundamentals) as reference.
 
 ## Requirements Language
 
