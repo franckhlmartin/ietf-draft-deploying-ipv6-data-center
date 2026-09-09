@@ -30,18 +30,18 @@ group charter.
 <meta content="draft-martin-deploying-ipv6-data-center-03" name="ietf.draft">
 <!-- Generator version information:
   xml2rfc 3.34.0
-    Python 3.14.5
+    Python 3.14.6
     ConfigArgParse 1.7.5
     google-i18n-address 3.1.1
     intervaltree 3.2.1
     Jinja2 3.1.6
-    lxml 6.1.1
+    lxml 6.1.2
     natsort 8.4.0
-    platformdirs 4.10.0
+    platformdirs 4.11.5
     pycountry 26.2.16
     PyYAML 6.0.3
     requests 2.34.2
-    wcwidth 0.7.0
+    wcwidth 0.8.3
 -->
 <link href="draft-martin-deploying-ipv6-data-center-03.xml" rel="alternate" type="application/rfc+xml">
 <link href="#copyright" rel="license">
@@ -1951,20 +1951,23 @@ slip without an updated timeline.<a href="#section-2.3.1-4" class="pilcrow">¶</
 <p id="section-2.4-1">This section is <strong>in scope</strong> for operator-owned data centers that <strong>connect to</strong>
 public cloud; it is <strong>not</strong> a guide to replacing the data center with IaaS or to
 running production workloads <strong>inside</strong> provider-controlled virtual networks.
-Native IPv6 deployment on AWS, Azure, GCP, or other platforms belongs in
-provider documentation or a separate document --- prefix sizes, subnet models,
-managed services, and control-plane IPv6 support differ by vendor, region, and
+Native IPv6 deployment on public cloud providers like AWS, Azure, GCP,
+or other IaaS platforms belongs in provider documentation or a separate document.
+Managed services, and control-plane IPv6 support differ by vendor, region, and
 SKU in ways no single recommendation can capture. The material below <strong>does</strong>
 matter for on-premise migration: cloud dependencies, private connectivity, and
 provider IPv6 gaps routinely block or reshape IPv6-only programs on
 operator-managed fabric even when compute stays in the physical data center.<a href="#section-2.4-1" class="pilcrow">¶</a></p>
 <p id="section-2.4-2">Most enterprises are not pure on-premise: data centers connect to <strong>public
-cloud</strong> providers (AWS, Azure, GCP, and others) for burst capacity, managed
-services, disaster recovery, and SaaS integration. <strong>IPv6 support across cloud
-control planes and managed services is seldom complete</strong> --- capabilities differ
-by provider, region, SKU, and release. Hybrid gap analysis belongs in <strong>Part I
-inventory and early program planning</strong>, not a discovery phase after the
-on-premise fabric is already IPv6-only.<a href="#section-2.4-2" class="pilcrow">¶</a></p>
+cloud</strong> providers for burst capacity, managed
+services, disaster recovery, and SaaS integration.
+At the time of writing, <strong>IPv6 support across cloud control planes and
+managed services is incomplete</strong> --- capabilities differ
+by provider, region, SKU, and release.<a href="#section-2.4-2" class="pilcrow">¶</a></p>
+<p id="section-2.4-3">Hybrid gap analysis belongs in <strong>Part I inventory and early program planning</strong>,
+not a discovery phase after the on-premise fabric is already IPv6-only,
+as subtile limitations can dramatically effect feasibility of architectural
+pattern and prevent reaching project goals on some public cloud providers.<a href="#section-2.4-3" class="pilcrow">¶</a></p>
 <div id="connectivity-models">
 <section id="section-2.4.1">
           <h4 id="name-connectivity-models">
@@ -2127,10 +2130,15 @@ reduce outages during rollout.<a href="#section-3.1-1" class="pilcrow">¶</a></p
 <p id="section-3.2-1">On most LANs and data center segments, the <strong>network/host split is at the
 64th bit</strong> --- a <code>/64</code> prefix on the wire <span>[<a href="#RFC4291" class="cite xref">RFC4291</a>]</span>. Roughly speaking, a
 <code>/64</code> is the IPv6 analogue of an IPv4 <code>/24</code> in terms of "one subnet per
-broadcast domain," though the address space is vastly larger. One illustrative
-data center template assigns a <strong><code>/56</code> per host</strong> so each container can receive
-its own <strong><code>/64</code></strong>; operators <span class="bcp14">SHOULD</span> document their own numbering policy and
-growth plan (see <a href="#prefix-allocation" class="auto internal xref">Section 3.2.1</a>).<a href="#section-3.2-1" class="pilcrow">¶</a></p>
+broadcast domain," though the address space is vastly larger.<a href="#section-3.2-1" class="pilcrow">¶</a></p>
+<p id="section-3.2-2">Operators <span class="bcp14">SHOULD</span> document their own numbering policy and
+growth plan (see <a href="#prefix-allocation" class="auto internal xref">Section 3.2.1</a>).
+Based on hardware or infrastructure provider capabilities,
+this can manifest in different data center templates.<a href="#section-3.2-2" class="pilcrow">¶</a></p>
+<p id="section-3.2-3">For example, such a template may assign a <strong><code>/56</code> per host</strong> so each container can receive
+its own <strong><code>/64</code></strong>, highlighting the <code>/64</code> per virtual link on the host.
+Another variant, assigning a <strong><code>/64</code> per VLAN/link between hosts</strong> so each host can receive
+a fraction of it, e.g., a <code>/80</code> sill leaving addressing space for further subnet division on a per container basis.<a href="#section-3.2-3" class="pilcrow">¶</a></p>
 <div id="prefix-allocation">
 <section id="section-3.2.1">
           <h4 id="name-prefix-allocation-for-hosts">
@@ -2151,22 +2159,22 @@ container <span class="bcp14">MAY</span> receive a full <strong><code>/64</code>
 instead of NAT for east-west traffic. Arithmetic follows the policy: a <code>/56</code> per
 host exhausts a <code>/48</code> at <strong>256 hosts</strong>; larger estates need a shorter site prefix
 or a different per-entity size. Assigning only a <strong><code>/64</code> per host</strong> without
-further delegation is <strong>often insufficient</strong> when many containers each need their
-own address space.<a href="#section-3.2.1-2" class="pilcrow">¶</a></p>
+further delegation is <strong>often insufficient</strong> when containers need SLAAC for address assignment.<a href="#section-3.2.1-2" class="pilcrow">¶</a></p>
 <p id="section-3.2.1-3">Orchestrators such as <strong>Kubernetes</strong> often need <strong>several ranges</strong> (for example
-node, pod, and service) rather than a single per-host delegation. A common layout
-gives each node a <code>/64</code> from a pod range; that is <strong>not</strong> the same pattern as
-carving longer-than-<code>/64</code> subnets from one host prefix. In a <strong>closed data center</strong>
+node, pod, and service). Whether this can be combined with a single per-host delegation
+depends on the orchestrators and its CNI.
+Common layouts either gives each node a <code>/64</code> from a pod range or
+carve out longer-than-<code>/64</code> subnets from one host prefix.<a href="#section-3.2.1-3" class="pilcrow">¶</a></p>
+<p id="section-3.2.1-4">In a <strong>closed data center</strong>
 with explicit routing and no SLAAC on container segments, some designs assign one
-<strong><code>/64</code> per physical host</strong> and carve <strong><code>/72</code> (or longer) subnets</strong> from that host
-prefix for container tiers. That <code>/72</code> pattern is <strong>not</strong> suitable on the public
-Internet or where hosts expect standard <code>/64</code> semantics; use it only with
-operator-wide agreement and tested CNI or orchestrator support --- do not read it
-as advising against ordinary orchestrator node <code>/64</code>s.<a href="#section-3.2.1-3" class="pilcrow">¶</a></p>
-<p id="section-3.2.1-4">The exact mapping depends on orchestrator and CNI design; the important software
+<strong><code>/64</code> (or longer) per physical host</strong> and carve <strong><code>/72</code> (or longer) subnets</strong> from that host
+prefix for containers. That <code>/72</code> pattern is <strong>not</strong> suitable hosts expect standard <code>/64</code> semantics;
+use it only with operator-wide agreement and tested CNI or orchestrator support --- do not read it
+as advising against ordinary orchestrator node <code>/64</code>s.<a href="#section-3.2.1-4" class="pilcrow">¶</a></p>
+<p id="section-3.2.1-5">The exact mapping depends on orchestrator and CNI design; the important software
 lesson is an <strong>explicit prefix plan per role</strong>, sized for growth, rather than
-assuming "one address per host" as in legacy IPv4 NAT designs.<a href="#section-3.2.1-4" class="pilcrow">¶</a></p>
-<p id="section-3.2.1-5">These patterns assume an <strong>operator-controlled</strong> data center fabric where the
+assuming "one address per host" as in legacy IPv4 NAT designs.<a href="#section-3.2.1-5" class="pilcrow">¶</a></p>
+<p id="section-3.2.1-6">These patterns assume an <strong>operator-controlled</strong> data center fabric where the
 network team can delegate prefixes freely. In <strong>hybrid</strong> environments that
 connect on-premise fabric to public cloud (see <a href="#hybrid-cloud" class="auto internal xref">Section 2.4</a>), operators
 <span class="bcp14">MAY</span> choose different prefix plans so numbering stays consistent across
@@ -2177,12 +2185,12 @@ runbooks even when a <code>/56</code>-per-host template would otherwise be prefe
 locally. The right trade-off depends on connectivity model, orchestrator, and
 how much of the estate shares addressing with cloud virtual networks. This
 document does not enumerate cloud or IaaS offerings; it focuses on networks
-the operator controls directly.<a href="#section-3.2.1-5" class="pilcrow">¶</a></p>
-<p id="section-3.2.1-6">Kubernetes clusters often use eBPF-based service NAT on the node. Traditional
+the operator controls directly.<a href="#section-3.2.1-6" class="pilcrow">¶</a></p>
+<p id="section-3.2.1-7">Kubernetes clusters often use eBPF-based service NAT on the node. Traditional
 Linux tools (<code>ss</code>, <code>/proc/net/tcp</code>) may show node-level sockets, not pod-level
 flows, when NAT is involved. IPv6 routing reduces NAT use --- which also
 <strong>reduces the complexity inherent in NAT when tracing connections</strong> --- but
-<strong>does not remove the need for observability hooks</strong> at the CNI layer.<a href="#section-3.2.1-6" class="pilcrow">¶</a></p>
+<strong>does not remove the need for observability hooks</strong> at the CNI layer.<a href="#section-3.2.1-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>

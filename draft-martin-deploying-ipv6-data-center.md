@@ -271,21 +271,25 @@ slip without an updated timeline.
 This section is **in scope** for operator-owned data centers that **connect to**
 public cloud; it is **not** a guide to replacing the data center with IaaS or to
 running production workloads **inside** provider-controlled virtual networks.
-Native IPv6 deployment on AWS, Azure, GCP, or other platforms belongs in
-provider documentation or a separate document --- prefix sizes, subnet models,
-managed services, and control-plane IPv6 support differ by vendor, region, and
+Native IPv6 deployment on public cloud providers like AWS, Azure, GCP, 
+or other IaaS platforms belongs in provider documentation or a separate document.
+Managed services, and control-plane IPv6 support differ by vendor, region, and
 SKU in ways no single recommendation can capture. The material below **does**
 matter for on-premise migration: cloud dependencies, private connectivity, and
 provider IPv6 gaps routinely block or reshape IPv6-only programs on
 operator-managed fabric even when compute stays in the physical data center.
 
 Most enterprises are not pure on-premise: data centers connect to **public
-cloud** providers (AWS, Azure, GCP, and others) for burst capacity, managed
-services, disaster recovery, and SaaS integration. **IPv6 support across cloud
-control planes and managed services is seldom complete** --- capabilities differ
-by provider, region, SKU, and release. Hybrid gap analysis belongs in **Part I
-inventory and early program planning**, not a discovery phase after the
-on-premise fabric is already IPv6-only.
+cloud** providers for burst capacity, managed
+services, disaster recovery, and SaaS integration. 
+At the time of writing, **IPv6 support across cloud control planes and 
+managed services is incomplete** --- capabilities differ
+by provider, region, SKU, and release.
+
+Hybrid gap analysis belongs in **Part I inventory and early program planning**,
+not a discovery phase after the on-premise fabric is already IPv6-only,
+as subtile limitations can dramatically effect feasibility of architectural
+pattern and prevent reaching project goals on some public cloud providers.
 
 ### Connectivity Models
 
@@ -411,10 +415,17 @@ reduce outages during rollout.
 On most LANs and data center segments, the **network/host split is at the
 64th bit** --- a `/64` prefix on the wire [@!RFC4291]. Roughly speaking, a
 `/64` is the IPv6 analogue of an IPv4 `/24` in terms of "one subnet per
-broadcast domain," though the address space is vastly larger. One illustrative
-data center template assigns a **`/56` per host** so each container can receive
-its own **`/64`**; operators **SHOULD** document their own numbering policy and
+broadcast domain," though the address space is vastly larger. 
+
+Operators **SHOULD** document their own numbering policy and
 growth plan (see (#prefix-allocation)).
+Based on hardware or infrastructure provider capabilities,
+this can manifest in different data center templates.
+
+For example, such a template may assign a **`/56` per host** so each container can receive
+its own **`/64`**, highlighting the `/64` per virtual link on the host.
+Another variant, assigning a **`/64` per VLAN/link between hosts** so each host can receive
+a fraction of it, e.g., a `/80` sill leaving addressing space for further subnet division on a per container basis.
 
 ### Prefix Allocation for Hosts and Containers {#prefix-allocation}
 
@@ -434,18 +445,19 @@ container **MAY** receive a full **`/64`**, with routing between `/64` islands
 instead of NAT for east-west traffic. Arithmetic follows the policy: a `/56` per
 host exhausts a `/48` at **256 hosts**; larger estates need a shorter site prefix
 or a different per-entity size. Assigning only a **`/64` per host** without
-further delegation is **often insufficient** when many containers each need their
-own address space.
+further delegation is **often insufficient** when containers need SLAAC for address assignment.
 
 Orchestrators such as **Kubernetes** often need **several ranges** (for example
-node, pod, and service) rather than a single per-host delegation. A common layout
-gives each node a `/64` from a pod range; that is **not** the same pattern as
-carving longer-than-`/64` subnets from one host prefix. In a **closed data center**
+node, pod, and service). Whether this can be combined with a single per-host delegation
+depends on the orchestrators and its CNI. 
+Common layouts either gives each node a `/64` from a pod range or 
+carve out longer-than-`/64` subnets from one host prefix. 
+
+In a **closed data center**
 with explicit routing and no SLAAC on container segments, some designs assign one
-**`/64` per physical host** and carve **`/72` (or longer) subnets** from that host
-prefix for container tiers. That `/72` pattern is **not** suitable on the public
-Internet or where hosts expect standard `/64` semantics; use it only with
-operator-wide agreement and tested CNI or orchestrator support --- do not read it
+**`/64` (or longer) per physical host** and carve **`/72` (or longer) subnets** from that host
+prefix for containers. That `/72` pattern is **not** suitable hosts expect standard `/64` semantics;
+use it only with operator-wide agreement and tested CNI or orchestrator support --- do not read it
 as advising against ordinary orchestrator node `/64`s.
 
 The exact mapping depends on orchestrator and CNI design; the important software
