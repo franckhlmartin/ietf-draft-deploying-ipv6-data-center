@@ -149,12 +149,35 @@ when, they appear in all capitals, as shown here.</t>
 </section>
 
 <section anchor="transition"><name>Part I: Migration Strategies</name>
-
-<section anchor="scoping-ipv6-migration-projects"><name>Scoping IPv6 Migration Projects</name>
-<t><em>TODO: add discussion about phased migration and good chunks for IPv6-only projects.</em></t>
+<t>This section underlines one uncomfortable truth: The hardest challenges
+on the way to IPv6 (only) are organizational issues and incentivization.
+Thus, it provides guidance how to pick and slice candidates for
+a migration to IPv6 only and how to structure such a migration effort.</t>
+<t>While it makes sense to roll out dual stack and IPv6 mostly in breadth
+for access networks, a clear scope is essential for the success of
+IPv6 only project. Depending on the organizational structure and
+experience with IPv6, the scope should be limited to a manageable
+size like a application landscape, platform instance or data center.</t>
 
 <section anchor="reasons-to-start-ipv6-only-programs"><name>Reasons to start IPv6 only Programs</name>
-<t><em>TODO: write about DC buildout, Greenfield, Re-platforming</em></t>
+<t>In most commercial environments, IPv6 only projects over the size of a
+proof of concept are hard to justify from a business perspective.
+Therefore, the migration towards IPv6 only should be planned around
+other activities including, but not limited to:</t>
+
+<ul spacing="compact">
+<li>Major hardware replacements,</li>
+<li>Data center builds or expansions,</li>
+<li>Re-platforming of applications or infrastructures,</li>
+<li>Move from on-premise to the cloud (or the other way around),</li>
+<li>Integration of AI workloads,</li>
+<li>Introduction of zero trust networking, and</li>
+<li>Containerization.</li>
+</ul>
+<t>While the aforementioned projects justify to start the project,
+realizing them with an IPv6 only architecture provides cost savings
+by reducing overall complexity, improving scalability, and allowing
+end-to-end audition of data flows.</t>
 </section>
 
 <section anchor="provision-not-transform"><name>Easier to Provision Than to Transform</name>
@@ -172,11 +195,6 @@ only where external reachability requires it</strong>, rather than cloning an IP
 template and scheduling conversion later. Brownfield conversion remains necessary
 for legacy estates, but the default for greenfield work <bcp14>SHOULD NOT</bcp14> be
 &quot;IPv4 now, IPv6 someday.&quot;</t>
-</section>
-
-<section anchor="combine-with-other-goals-that-have-synergies"><name>Combine with other goals that have synergies</name>
-<t><em>TODO: write about Zero trust, AI, integration</em></t>
-</section>
 </section>
 
 <section anchor="programme-sponsorship"><name>Programme Sponsorship and Stakeholders</name>
@@ -217,6 +235,7 @@ dual-stack, IPv4-only, unknown). Inventory alone is not enough --- operators
 images, load balancer pools, and DNS names against the catalog and <strong>flags
 unregistered services</strong>. Shadow deployments and shared hosts routinely run
 software that no team has classified.</t>
+</section>
 
 <section anchor="ipv4-only-exceptions"><name>IPv4-Only Exceptions and Remediation Plans</name>
 <t>The business will sometimes <strong>require an IPv4-only product, service, or
@@ -245,7 +264,6 @@ bounded period; it <bcp14>MUST NOT</bcp14> be an informal verbal waiver. Review 
 exceptions in change advisory or migration governance the same way security
 reviews open risk acceptances --- stale plans become blockers again when dates
 slip without an updated timeline.</t>
-</section>
 </section>
 
 <section anchor="hybrid-cloud"><name>Hybrid On-Premise and Cloud Environments</name>
