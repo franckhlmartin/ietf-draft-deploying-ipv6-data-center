@@ -1236,7 +1236,7 @@ li > p:last-of-type:only-child {
 </tr></thead>
 <tfoot><tr>
 <td class="left">Martin &amp; Tiesel</td>
-<td class="center">Expires 11 March 2027</td>
+<td class="center">Expires 14 March 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1249,12 +1249,12 @@ li > p:last-of-type:only-child {
 <dd class="internet-draft">draft-martin-deploying-ipv6-data-center-03</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-09-07" class="published">7 September 2026</time>
+<time datetime="2026-09-10" class="published">10 September 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-03-11">11 March 2027</time></dd>
+<dd class="expires"><time datetime="2027-03-14">14 March 2027</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1318,7 +1318,7 @@ mailing list (<a href="mailto:v6ops@ietf.org">mailto:v6ops@ietf.org</a>), which 
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 11 March 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 14 March 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -3409,10 +3409,18 @@ application logic. When addresses are handled as data (logging, ACLs,
 management output), test that code accepts all valid representations <span>[<a href="#RFC4291" class="cite xref">RFC4291</a>]</span>
 and renders canonical text <span>[<a href="#RFC5952" class="cite xref">RFC5952</a>]</span>; <span>[<a href="#I-D.ietf-v6ops-ipv6-app-testing" class="cite xref">I-D.ietf-v6ops-ipv6-app-testing</a>]</span>
 covers this "addresses as data" testing.<a href="#section-5.6-5" class="pilcrow">¶</a></p>
-<p id="section-5.6-6">Applications <span class="bcp14">SHOULD</span> treat names, not literal addresses, as the stable
+<p id="section-5.6-6">For <strong>human comparison</strong> in fixed-width tables, spreadsheets, or IPAM grids,
+operators <span class="bcp14">MAY</span> deliberately diverge from <span>[<a href="#RFC5952" class="cite xref">RFC5952</a>]</span> --- for example by
+suppressing <code>::</code> compression or zero-padding hextets --- so columns align and
+adjacent addresses are easier to scan. That form <span class="bcp14">SHOULD</span> be consistent
+within the display context. Interchange formats, APIs, logs-as-data, and
+configuration that software parses <span class="bcp14">SHOULD</span> still use binary storage or
+canonical text per <span>[<a href="#RFC5952" class="cite xref">RFC5952</a>]</span>; do not treat a tabular display convention as
+the on-the-wire or storage format.<a href="#section-5.6-6" class="pilcrow">¶</a></p>
+<p id="section-5.6-7">Applications <span class="bcp14">SHOULD</span> treat names, not literal addresses, as the stable
 interface (see <a href="#name-resolution" class="auto internal xref">Section 5.5</a>). To turn a name into addresses, use the
 APIs described in <a href="#name-resolution" class="auto internal xref">Section 5.5</a> --- not legacy one-address helpers and
-not string parsing.<a href="#section-5.6-6" class="pilcrow">¶</a></p>
+not string parsing.<a href="#section-5.6-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="client-load-balancing">
