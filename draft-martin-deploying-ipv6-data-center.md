@@ -164,15 +164,42 @@ when, they appear in all capitals, as shown here.
 
 # Part I: Migration Strategies {#transition}
 
-## Scoping IPv6 Migration Projects
+This section underlines one uncomfortable truth: The hardest challenges
+on the way to IPv6 (only) are organizational issues and incentivization.
+Thus, it provides guidance how to pick and slice candidates for
+a migration to IPv6 only and how to structure such a migration effort.
 
-*TODO: add discussion about phased migration and good chunks for IPv6-only projects.*
+While it makes sense to roll out dual stack and IPv6 mostly in breadth
+for access networks, a clear scope is essential for the success of
+IPv6 only project. Depending on the organizational structure and
+experience with IPv6, the scope should be limited to a manageable
+size like a application landscape, platform instance or data center.
 
-### Reasons to start IPv6 only Programs
+## Reasons to start IPv6 only Programs
 
-*TODO: write about DC buildout, Greenfield, Re-platforming*
+In most commercial environments, IPv6 only projects over the size of a
+proof of concept are hard to justify from a business perspective.
+Therefore, the migration towards IPv6 only should be planned around
+other activities including, but not limited to:
 
-### Easier to Provision Than to Transform {#provision-not-transform}
+- Major hardware replacements,
+- Data center builds or expansions,
+- Re-platforming of applications or infrastructures,
+- Move from on-premise to the cloud (or the other way around),
+- Integration of AI workloads,
+- Introduction of zero trust networking, and
+- Containerization.
+
+While the aforementioned projects justify to start the project,
+realizing them with an IPv6 only architecture provides cost savings,
+can improve scalability, provide growth opportunities and may
+benefit overall security management by reducing overall complexity,
+and allowing end-to-end audition of data flows.
+Especially if such activities require costly IPv4 numbering re-architecture
+or acquisition of IPv4 address space, a cost benefit analysis will
+likely be in favour of an IPv6-only architecture.
+
+## Easier to Provision Than to Transform {#provision-not-transform}
 
 **It is easier to provision IPv6 correctly than to transform a running service.**
 Enabling dual-stack or IPv6-only on a server, container, or service that was
@@ -189,10 +216,6 @@ only where external reachability requires it**, rather than cloning an IPv4-only
 template and scheduling conversion later. Brownfield conversion remains necessary
 for legacy estates, but the default for greenfield work **SHOULD NOT** be
 "IPv4 now, IPv6 someday."
-
-### Combine with other goals that have synergies 
-
-*TODO: write about Zero trust, AI, integration*
 
 ## Programme Sponsorship and Stakeholders {#programme-sponsorship}
 
@@ -222,7 +245,6 @@ late approval gates. Bring into the room early:
 An IPv4-only exception process governs one artefact well; it does not replace
 sponsorship or early stakeholder consent.
 
-
 ## Inventory and Metrics {#observability}
 
 IPv6 migration needs **inventory plus measurement**: a service list with IPv6
@@ -237,7 +259,7 @@ images, load balancer pools, and DNS names against the catalog and **flags
 unregistered services**. Shadow deployments and shared hosts routinely run
 software that no team has classified.
 
-### IPv4-Only Exceptions and Remediation Plans {#ipv4-only-exceptions}
+## IPv4-Only Exceptions and Remediation Plans {#ipv4-only-exceptions}
 
 The business will sometimes **require an IPv4-only product, service, or
 technology** --- a vendor constraint, acquisition, regulated workload, or
