@@ -30,18 +30,18 @@ group charter.
 <meta content="draft-martin-deploying-ipv6-data-center-03" name="ietf.draft">
 <!-- Generator version information:
   xml2rfc 3.34.0
-    Python 3.14.6
+    Python 3.14.5
     ConfigArgParse 1.7.5
     google-i18n-address 3.1.1
     intervaltree 3.2.1
     Jinja2 3.1.6
-    lxml 6.1.2
+    lxml 6.1.1
     natsort 8.4.0
-    platformdirs 4.11.5
+    platformdirs 4.10.0
     pycountry 26.2.16
     PyYAML 6.0.3
     requests 2.34.2
-    wcwidth 0.8.3
+    wcwidth 0.7.0
 -->
 <link href="draft-martin-deploying-ipv6-data-center-03.xml" rel="alternate" type="application/rfc+xml">
 <link href="#copyright" rel="license">
@@ -1967,17 +1967,17 @@ Managed services, and control-plane IPv6 support differ by vendor, region, and
 SKU in ways no single recommendation can capture. The material below <strong>does</strong>
 matter for on-premise migration: cloud dependencies, private connectivity, and
 provider IPv6 gaps routinely block or reshape IPv6-only programs on
-operator-managed fabric even when compute stays in the physical data center.<a href="#section-2.4-1" class="pilcrow">¶</a></p>
-<p id="section-2.4-2">Most enterprises are not pure on-premise: data centers connect to <strong>public
+operator-managed fabric even when compute stays in the physical data center.<a href="#section-2.6-1" class="pilcrow">¶</a></p>
+<p id="section-2.6-2">Most enterprises are not pure on-premise: data centers connect to <strong>public
 cloud</strong> providers for burst capacity, managed
 services, disaster recovery, and SaaS integration.
 At the time of writing, <strong>IPv6 support across cloud control planes and
 managed services is incomplete</strong> --- capabilities differ
-by provider, region, SKU, and release.<a href="#section-2.4-2" class="pilcrow">¶</a></p>
-<p id="section-2.4-3">Hybrid gap analysis belongs in <strong>Part I inventory and early program planning</strong>,
+by provider, region, SKU, and release.<a href="#section-2.6-2" class="pilcrow">¶</a></p>
+<p id="section-2.6-3">Hybrid gap analysis belongs in <strong>Part I inventory and early program planning</strong>,
 not a discovery phase after the on-premise fabric is already IPv6-only,
 as subtile limitations can dramatically effect feasibility of architectural
-pattern and prevent reaching project goals on some public cloud providers.<a href="#section-2.4-3" class="pilcrow">¶</a></p>
+pattern and prevent reaching project goals on some public cloud providers.<a href="#section-2.6-3" class="pilcrow">¶</a></p>
 <div id="connectivity-models">
 <section id="section-2.6.1">
           <h4 id="name-connectivity-models">
