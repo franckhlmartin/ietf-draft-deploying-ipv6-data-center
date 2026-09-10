@@ -191,9 +191,13 @@ other activities including, but not limited to:
 - Containerization.
 
 While the aforementioned projects justify to start the project,
-realizing them with an IPv6 only architecture provides cost savings
-by reducing overall complexity, improving scalability, and allowing
-end-to-end audition of data flows.
+realizing them with an IPv6 only architecture provides cost savings,
+can improve scalability, provide growth opportunities and may
+benefit overall security management by reducing overall complexity,
+and allowing end-to-end audition of data flows.
+Especially if such activities require costly IPv4 numbering re-architecture
+or acquisition of IPv4 address space, a cost benefit analysis will
+likely be in favour of an IPv6-only architecture.
 
 ## Easier to Provision Than to Transform {#provision-not-transform}
 
