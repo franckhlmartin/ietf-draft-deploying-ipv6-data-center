@@ -231,14 +231,14 @@ sponsorship or early stakeholder consent.</t>
 <t>Update <strong>purchase requirements, RFPs, and vendor questionnaires</strong> at program
 kickoff --- ideally <strong>before</strong> any production dual-stack or IPv6-only cutover
 --- so new acquisitions cannot quietly extend the IPv4-only lifetime of the
-fleet. Infrastructure and facility gear often have <strong>multi-year refresh
-cycles</strong> and little or no field-upgradable network stack; buying IPv4-only
+fleet. Infrastructure and facility gear often have 10+ refresh
+cycles and little or no field-upgradable network stack; buying IPv4-only
 today can block IPv4 decommissioning long after application code is ready
 (see <xref target="oob-management"></xref>).</t>
 <t>Operators <bcp14>SHOULD</bcp14>:</t>
 
 <ul spacing="compact">
-<li>Require <strong>dual-stack or IPv6-only</strong> support for new purchases that attach to
+<li><strong>Require IPv6-only and dual-stack support</strong> for new purchases that attach to
 data center or management networks --- compute BMCs, switches, consoles,
 PDUs, environmental monitors, <strong>network time appliances</strong> (NTP or PTP,
 including GPS-synced stratum servers), <strong>storage appliances</strong>, and similar
@@ -1435,6 +1435,14 @@ application logic. When addresses are handled as data (logging, ACLs,
 management output), test that code accepts all valid representations <xref target="RFC4291"></xref>
 and renders canonical text <xref target="RFC5952"></xref>; <xref target="I-D.ietf-v6ops-ipv6-app-testing"></xref>
 covers this &quot;addresses as data&quot; testing.</t>
+<t>For <strong>human comparison</strong> in fixed-width tables, spreadsheets, or IPAM grids,
+operators <bcp14>MAY</bcp14> deliberately diverge from <xref target="RFC5952"></xref> --- for example by
+suppressing <tt>::</tt> compression or zero-padding hextets --- so columns align and
+adjacent addresses are easier to scan. That form <bcp14>SHOULD</bcp14> be consistent
+within the display context. Interchange formats, APIs, logs-as-data, and
+configuration that software parses <bcp14>SHOULD</bcp14> still use binary storage or
+canonical text per <xref target="RFC5952"></xref>; do not treat a tabular display convention as
+the on-the-wire or storage format.</t>
 <t>Applications <bcp14>SHOULD</bcp14> treat names, not literal addresses, as the stable
 interface (see <xref target="name-resolution"></xref>). To turn a name into addresses, use the
 APIs described in <xref target="name-resolution"></xref> --- not legacy one-address helpers and

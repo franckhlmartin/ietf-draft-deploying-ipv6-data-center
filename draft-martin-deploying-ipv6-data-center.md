@@ -1502,6 +1502,15 @@ management output), test that code accepts all valid representations [@!RFC4291]
 and renders canonical text [@!RFC5952]; [@?I-D.ietf-v6ops-ipv6-app-testing]
 covers this "addresses as data" testing.
 
+For **human comparison** in fixed-width tables, spreadsheets, or IPAM grids,
+operators **MAY** deliberately diverge from [@!RFC5952] --- for example by
+suppressing `::` compression or zero-padding hextets --- so columns align and
+adjacent addresses are easier to scan. That form **SHOULD** be consistent
+within the display context. Interchange formats, APIs, logs-as-data, and
+configuration that software parses **SHOULD** still use binary storage or
+canonical text per [@!RFC5952]; do not treat a tabular display convention as
+the on-the-wire or storage format.
+
 Applications **SHOULD** treat names, not literal addresses, as the stable
 interface (see (#name-resolution)). To turn a name into addresses, use the
 APIs described in (#name-resolution) --- not legacy one-address helpers and
