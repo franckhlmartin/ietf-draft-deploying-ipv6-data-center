@@ -1236,7 +1236,7 @@ li > p:last-of-type:only-child {
 </tr></thead>
 <tfoot><tr>
 <td class="left">Martin &amp; Tiesel</td>
-<td class="center">Expires 14 March 2027</td>
+<td class="center">Expires 15 March 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1249,12 +1249,12 @@ li > p:last-of-type:only-child {
 <dd class="internet-draft">draft-martin-deploying-ipv6-data-center-03</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-09-10" class="published">10 September 2026</time>
+<time datetime="2026-09-11" class="published">11 September 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-03-14">14 March 2027</time></dd>
+<dd class="expires"><time datetime="2027-03-15">15 March 2027</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1318,7 +1318,7 @@ mailing list (<a href="mailto:v6ops@ietf.org">mailto:v6ops@ietf.org</a>), which 
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 14 March 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 15 March 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -2551,12 +2551,18 @@ count and by criticality tier)<a href="#section-3.8-2.1" class="pilcrow">¶</a>
 </li>
           <li class="compact" id="section-3.8-2.3">Ratio of <strong>ingress bytes or connections</strong> over IPv6 vs IPv4 at load balancers<a href="#section-3.8-2.3" class="pilcrow">¶</a>
 </li>
-          <li class="compact" id="section-3.8-2.4">Count of hosts or pods <strong>without any IPv6 address</strong> in IPAM or configuration
-management<a href="#section-3.8-2.4" class="pilcrow">¶</a>
+          <li class="compact" id="section-3.8-2.4">Where available, <strong>TCP connection-establishment</strong> counters split by address
+family --- for example SYN or connection attempts versus successfully
+established sessions, handshake timeouts, and SYN retransmissions --- so
+path or middlebox problems that drop or stall IPv6 handshakes are not hidden
+by byte or connection totals that still look healthy<a href="#section-3.8-2.4" class="pilcrow">¶</a>
 </li>
-          <li class="compact" id="section-3.8-2.5">
+          <li class="compact" id="section-3.8-2.5">Count of hosts or pods <strong>without any IPv6 address</strong> in IPAM or configuration
+management<a href="#section-3.8-2.5" class="pilcrow">¶</a>
+</li>
+          <li class="compact" id="section-3.8-2.6">
             <strong>Latency and QPS split by address family</strong>, or unexplained regressions
-correlated with rising IPv4 share (see <a href="#ipv4-friction" class="auto internal xref">Section 2.7</a>)<a href="#section-3.8-2.5" class="pilcrow">¶</a>
+correlated with rising IPv4 share (see <a href="#ipv4-friction" class="auto internal xref">Section 2.7</a>)<a href="#section-3.8-2.6" class="pilcrow">¶</a>
 </li>
         </ul>
 <p id="section-3.8-3">Set explicit targets (for example, "90% of tier-1 APIs dual-stack by Q4") and
@@ -2581,7 +2587,12 @@ IPv6-only health checks, IPv6 listen-socket regressions, and rising IPv4-only
 connection share for tier-1 services. Where production remains dual-stack,
 synthetic probes <span class="bcp14">SHOULD</span> exercise <strong>IPv6 explicitly</strong> (AAAA-only paths,
 IPv6 literal targets, or IPv6-only test clients), not only dual-stack clients
-that can hide breakage. <span>[<a href="#I-D.ietf-v6ops-ipv6-app-testing" class="cite xref">I-D.ietf-v6ops-ipv6-app-testing</a>]</span> describes
+that can hide breakage. When probing a load balancer or VIP <strong>by address</strong> to
+separate DNS or address-selection failures from the data path, HTTP and TLS
+checks <span class="bcp14">SHOULD</span> still present the production <strong>hostname</strong> (TLS SNI and HTTP
+<code>Host</code>) so the probe exercises the same certificate and virtual-host path as
+real clients; a bare IP literal may pass TCP while missing application-layer
+faults. <span>[<a href="#I-D.ietf-v6ops-ipv6-app-testing" class="cite xref">I-D.ietf-v6ops-ipv6-app-testing</a>]</span> describes
 client-, server-, and network-based tracing strategies that distinguish
 genuine IPv6-only-strict behavior from dual-stack masking. The sooner IPv6 errors page on-call the same way IPv4
 errors do, the less likely a team discovers IPv6 rot months later during an
@@ -2795,9 +2806,13 @@ on reverse lookup during an outage.<a href="#section-4.3.1-1" class="pilcrow">¶
 sometimes apply the same rule everywhere. <strong>Inside the data center</strong>, allowing
 echo request/reply <strong>with limits</strong> --- rate limits, scoped ACLs, source
 restrictions to management networks or jump hosts, or equivalent controls --- is
-<span class="bcp14">RECOMMENDED</span> for troubleshooting. A successful or failed ping quickly
-separates "no route" from "route but service down" on both IPv4 and IPv6 without
-opening application ports.<a href="#section-4.3.2-1" class="pilcrow">¶</a></p>
+<span class="bcp14">RECOMMENDED</span> for troubleshooting. A <strong>successful</strong> ping confirms basic IP
+reachability (when echo is permitted) without opening application ports. A
+<strong>failed</strong> ping alone <strong>does not</strong> prove there is no route: filtering, rate
+limits, host firewall policy, or a destination that does not answer echo can
+produce the same symptom. Combine ping with <code>traceroute</code>, <code>tracepath</code>, or <code>mtr</code>,
+TCP connects to a known port, or other checks before concluding "no route"
+versus "route but service down."<a href="#section-4.3.2-1" class="pilcrow">¶</a></p>
 <p id="section-4.3.2-2">This is separate from the ICMPv6 requirements in <a href="#icmpv6-pmtud" class="auto internal xref">Section 5.3</a>: Neighbor
 Discovery and Path MTU Discovery need specific ICMPv6 types on production paths
 and <span class="bcp14">MUST NOT</span> be blocked wholesale. Controlled echo is an additional
@@ -3490,13 +3505,34 @@ delay</strong> so IPv6 connections have priority time to complete.<a href="#sect
 </li>
           <li id="section-5.7-4.4">
             <strong>Randomize or round-robin within each family</strong> rather than trusting DNS
-order after <code>getaddrinfo()</code>.<a href="#section-5.7-4.4" class="pilcrow">¶</a>
+order after <code>getaddrinfo()</code>. When service discovery or endpoint metadata
+provides <strong>weights</strong>, prefer <strong>weighted</strong> selection within a family;
+equal random or round-robin remains appropriate when endpoints are
+equivalent.<a href="#section-5.7-4.4" class="pilcrow">¶</a>
 </li>
           <li id="section-5.7-4.5">Optionally implement retries across the full set on failure.<a href="#section-5.7-4.5" class="pilcrow">¶</a>
 </li>
         </ol>
-<p id="section-5.7-5">Implement load balancing in <strong>shared client libraries</strong> so every service does
-not rediscover the same RFC 6724 interaction.<a href="#section-5.7-5" class="pilcrow">¶</a></p>
+<p id="section-5.7-5">Prefer OS or shared-library Happy Eyeballs and resolver behavior over
+reimplementing racing logic in every application (see <a href="#name-resolution" class="auto internal xref">Section 5.5</a>).<a href="#section-5.7-5" class="pilcrow">¶</a></p>
+<p id="section-5.7-6"><strong>Endpoint freshness:</strong> treat selection policy as distinct from
+<strong>discovery and refresh</strong>. Re-resolve on DNS TTL expiry or refresh from
+service discovery so drained, replaced, or newly added backends enter and
+leave the candidate set; otherwise clients keep balancing across stale
+addresses.<a href="#section-5.7-6" class="pilcrow">¶</a></p>
+<p id="section-5.7-7"><strong>Long-lived connections:</strong> for HTTP/2, gRPC, and similar multiplexed pools,
+endpoint selection often occurs only when a connection is opened. Equal
+distribution of <strong>connections</strong> does not imply equal distribution of
+<strong>requests</strong>, and weight or membership changes may take effect only as old
+connections drain.<a href="#section-5.7-7" class="pilcrow">¶</a></p>
+<p id="section-5.7-8">Implement load balancing in <strong>shared client libraries</strong> so every service does
+not rediscover the same RFC 6724 interaction. Most software engineers are not
+DNS or path-selection specialists, and they should not have to be: put
+resolution, Happy Eyeballs, and within-family spreading in <strong>one</strong> (or a small
+set of) platform libraries used across the codebase. Platform and SRE teams can
+then clear IPv6 readiness by saying <strong>upgrade the shared client to version X</strong>,
+rather than teaching each application team how to rewrite connection logic ---
+the same readiness-gate pattern as <a href="#application-readiness" class="auto internal xref">Section 4.4</a>.<a href="#section-5.7-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="ip-address-storage-in-application-data">
@@ -3641,6 +3677,9 @@ editorial improvements to this document:<a href="#section-8-1" class="pilcrow">�
 </li>
         <li class="compact" id="section-8-2.2">
           <strong>Spiro Stathakis</strong> (isp6)<a href="#section-8-2.2" class="pilcrow">¶</a>
+</li>
+        <li class="compact" id="section-8-2.3">
+          <strong>Sulabh Soneji</strong><a href="#section-8-2.3" class="pilcrow">¶</a>
 </li>
       </ul>
 </section>
@@ -3869,7 +3908,7 @@ design</strong>. With rare exceptions (link-local, ULA, and special-purpose rang
 in <span>[<a href="#RFC6890" class="cite xref">RFC6890</a>]</span>), <strong>IPv6 unicast addresses are designed to be globally
 unique and routable</strong>. Security boundaries are enforced by routing policy and
 firewall rules, not by assuming addresses are inherently non-routable.  We
-use two additional terms to distinguish addresses based on thes policies:<a href="#appendix-A.5-5" class="pilcrow">¶</a></p>
+use two additional terms to distinguish addresses based on these policies:<a href="#appendix-A.5-5" class="pilcrow">¶</a></p>
 <p id="appendix-A.5-6"><strong>Internal global unicast address</strong>: A globally routable IPv6 address used
 <strong>inside</strong> the data center.  These addresses are reachable according to
 routing and security policy, not because they are "private."<a href="#appendix-A.5-6" class="pilcrow">¶</a></p>

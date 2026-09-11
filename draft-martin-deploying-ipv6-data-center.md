@@ -6,7 +6,7 @@ area = "ops"
 workgroup = "IPv6 Operations"
 keyword = ["IPv6", "data center", "SRE", "software", "operations", "deployment"]
 
-date = 2026-09-10
+date = 2026-09-11
 
 [seriesInfo]
 name = "Internet-Draft"
@@ -790,6 +790,11 @@ Dashboards **SHOULD** expose fleet-level indicators, for example:
   count and by criticality tier)
 * Trend of **AAAA vs A-only** DNS names for production hostnames
 * Ratio of **ingress bytes or connections** over IPv6 vs IPv4 at load balancers
+* Where available, **TCP connection-establishment** counters split by address
+  family --- for example SYN or connection attempts versus successfully
+  established sessions, handshake timeouts, and SYN retransmissions --- so
+  path or middlebox problems that drop or stall IPv6 handshakes are not hidden
+  by byte or connection totals that still look healthy
 * Count of hosts or pods **without any IPv6 address** in IPAM or configuration
   management
 * **Latency and QPS split by address family**, or unexplained regressions
@@ -816,7 +821,12 @@ IPv6-only health checks, IPv6 listen-socket regressions, and rising IPv4-only
 connection share for tier-1 services. Where production remains dual-stack,
 synthetic probes **SHOULD** exercise **IPv6 explicitly** (AAAA-only paths,
 IPv6 literal targets, or IPv6-only test clients), not only dual-stack clients
-that can hide breakage. [@?I-D.ietf-v6ops-ipv6-app-testing] describes
+that can hide breakage. When probing a load balancer or VIP **by address** to
+separate DNS or address-selection failures from the data path, HTTP and TLS
+checks **SHOULD** still present the production **hostname** (TLS SNI and HTTP
+`Host`) so the probe exercises the same certificate and virtual-host path as
+real clients; a bare IP literal may pass TCP while missing application-layer
+faults. [@?I-D.ietf-v6ops-ipv6-app-testing] describes
 client-, server-, and network-based tracing strategies that distinguish
 genuine IPv6-only-strict behavior from dual-stack masking. The sooner IPv6 errors page on-call the same way IPv4
 errors do, the less likely a team discovers IPv6 rot months later during an
@@ -993,9 +1003,13 @@ Teams trained to drop **ICMP echo request/reply** ("ping") on the public Interne
 sometimes apply the same rule everywhere. **Inside the data center**, allowing
 echo request/reply **with limits** --- rate limits, scoped ACLs, source
 restrictions to management networks or jump hosts, or equivalent controls --- is
-**RECOMMENDED** for troubleshooting. A successful or failed ping quickly
-separates "no route" from "route but service down" on both IPv4 and IPv6 without
-opening application ports.
+**RECOMMENDED** for troubleshooting. A **successful** ping confirms basic IP
+reachability (when echo is permitted) without opening application ports. A
+**failed** ping alone **does not** prove there is no route: filtering, rate
+limits, host firewall policy, or a destination that does not answer echo can
+produce the same symptom. Combine ping with `traceroute`, `tracepath`, or `mtr`,
+TCP connects to a known port, or other checks before concluding "no route"
+versus "route but service down."
 
 This is separate from the ICMPv6 requirements in (#icmpv6-pmtud): Neighbor
 Discovery and Path MTU Discovery need specific ICMPv6 types on production paths
@@ -1536,11 +1550,35 @@ already obtained the **full address list** using the patterns in
    or parallel). For Happy Eyeballs, **start IPv4 attempts after a deliberate
    delay** so IPv6 connections have priority time to complete.
 4. **Randomize or round-robin within each family** rather than trusting DNS
-   order after `getaddrinfo()`.
+   order after `getaddrinfo()`. When service discovery or endpoint metadata
+   provides **weights**, prefer **weighted** selection within a family;
+   equal random or round-robin remains appropriate when endpoints are
+   equivalent.
 5. Optionally implement retries across the full set on failure.
 
+Prefer OS or shared-library Happy Eyeballs and resolver behavior over
+reimplementing racing logic in every application (see (#name-resolution)).
+
+**Endpoint freshness:** treat selection policy as distinct from
+**discovery and refresh**. Re-resolve on DNS TTL expiry or refresh from
+service discovery so drained, replaced, or newly added backends enter and
+leave the candidate set; otherwise clients keep balancing across stale
+addresses.
+
+**Long-lived connections:** for HTTP/2, gRPC, and similar multiplexed pools,
+endpoint selection often occurs only when a connection is opened. Equal
+distribution of **connections** does not imply equal distribution of
+**requests**, and weight or membership changes may take effect only as old
+connections drain.
+
 Implement load balancing in **shared client libraries** so every service does
-not rediscover the same RFC 6724 interaction.
+not rediscover the same RFC 6724 interaction. Most software engineers are not
+DNS or path-selection specialists, and they should not have to be: put
+resolution, Happy Eyeballs, and within-family spreading in **one** (or a small
+set of) platform libraries used across the codebase. Platform and SRE teams can
+then clear IPv6 readiness by saying **upgrade the shared client to version X**,
+rather than teaching each application team how to rewrite connection logic ---
+the same readiness-gate pattern as (#application-readiness).
 
 ## IP Address Storage in Application Data
 
@@ -1646,6 +1684,7 @@ editorial improvements to this document:
 
 * **Jason Healy** (Suffield Academy)
 * **Spiro Stathakis** (isp6)
+* **Sulabh Soneji**
 
 <reference anchor="ARCEP-IPV6-GUIDE" target="https://www.arcep.fr/fileadmin/cru-1648459125/reprise/observatoire/ipv6/guide-entreprises-how-to-deploy-IPv6-march-2022.pdf">
   <front>
@@ -1746,7 +1785,7 @@ design**. With rare exceptions (link-local, ULA, and special-purpose ranges
 in [@!RFC6890]), **IPv6 unicast addresses are designed to be globally
 unique and routable**. Security boundaries are enforced by routing policy and
 firewall rules, not by assuming addresses are inherently non-routable.  We
-use two additional terms to distinguish addresses based on thes policies:
+use two additional terms to distinguish addresses based on these policies:
 
 **Internal global unicast address**: A globally routable IPv6 address used
 **inside** the data center.  These addresses are reachable according to
