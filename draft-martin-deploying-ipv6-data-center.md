@@ -250,8 +250,8 @@ sponsorship or early stakeholder consent.
 Update **purchase requirements, RFPs, and vendor questionnaires** at program
 kickoff --- ideally **before** any production dual-stack or IPv6-only cutover
 --- so new acquisitions cannot quietly extend the IPv4-only lifetime of the
-fleet. Infrastructure and facility gear often have **multi-year refresh
-cycles** and little or no field-upgradable network stack; buying IPv4-only
+fleet. Infrastructure and facility gear often have 10+ refresh
+cycles and little or no field-upgradable network stack; buying IPv4-only
 today can block IPv4 decommissioning long after application code is ready
 (see (#oob-management)).
 
