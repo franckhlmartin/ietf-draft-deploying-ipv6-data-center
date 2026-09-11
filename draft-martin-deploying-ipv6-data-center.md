@@ -257,7 +257,7 @@ today can block IPv4 decommissioning long after application code is ready
 
 Operators **SHOULD**:
 
-* Require **dual-stack or IPv6-only** support for new purchases that attach to
+* **Require IPv6-only and dual-stack support** for new purchases that attach to
   data center or management networks --- compute BMCs, switches, consoles,
   PDUs, environmental monitors, **network time appliances** (NTP or PTP,
   including GPS-synced stratum servers), **storage appliances**, and similar
