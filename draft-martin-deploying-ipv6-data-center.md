@@ -118,10 +118,10 @@ fundamentals for software engineers ((#ipv6-fundamentals)) sit as an **appendix*
 at the end for shared vocabulary; they are not the linear starting chapter.
 
 **Part I --- Migration Strategies** ((#transition)): scoping IPv6-only programs,
-programme sponsorship ((#programme-sponsorship)), inventory and metrics
-((#observability)), hybrid on-premise and cloud ((#hybrid-cloud)), and noticeable
-IPv4 friction ((#ipv4-friction)) --- define policy and measurement before bulk
-technical change.
+programme sponsorship and early procurement ((#programme-sponsorship),
+(#procurement)), inventory and metrics ((#observability)), hybrid on-premise and
+cloud ((#hybrid-cloud)), and noticeable IPv4 friction ((#ipv4-friction)) ---
+define policy and measurement before bulk technical change.
 
 **Part II --- Building the IPv6 Data Center:** addressing and host/container
 provisioning ((#internet-addressing) and related subsections), plus progress
@@ -141,8 +141,8 @@ address storage, and language runtimes.
 **Reading paths by role:**
 
 * *Program lead / engineering manager:* Part I first (including
-  (#programme-sponsorship) and (#ipv4-only-exceptions)), then skim Parts II and
-  III as overview.
+  (#programme-sponsorship), (#procurement), and (#ipv4-only-exceptions)), then
+  skim Parts II and III as overview.
 * *Business sponsor / security lead:* (#programme-sponsorship),
   (#ipv4-only-exceptions), (#icmpv6-pmtud), then Security Considerations.
 * *Network / DC infrastructure engineer:* Part II addressing, then Part IV on
@@ -244,6 +244,35 @@ late approval gates. Bring into the room early:
 
 An IPv4-only exception process governs one artefact well; it does not replace
 sponsorship or early stakeholder consent.
+
+### Procurement and Long-Lead Hardware {#procurement}
+
+Update **purchase requirements, RFPs, and vendor questionnaires** at program
+kickoff --- ideally **before** any production dual-stack or IPv6-only cutover
+--- so new acquisitions cannot quietly extend the IPv4-only lifetime of the
+fleet. Infrastructure and facility gear often have 10+ refresh
+cycles and little or no field-upgradable network stack; buying IPv4-only
+today can block IPv4 decommissioning long after application code is ready
+(see (#oob-management)).
+
+Operators **SHOULD**:
+
+* **Require IPv6-only and dual-stack support** for new purchases that attach to
+  data center or management networks --- compute BMCs, switches, consoles,
+  PDUs, environmental monitors, **network time appliances** (NTP or PTP,
+  including GPS-synced stratum servers), **storage appliances**, and similar
+  long-lived devices --- not only for application software.
+* Distinguish **systems the organization owns or controls** (and can mandate
+  in contracts) from **systems it does not** (public cloud SKUs, SaaS, leased
+  facility gear) so inventory and exception tracking cover both classes early
+  (see (#observability) and (#hybrid-cloud)).
+* Treat written vendor claims as necessary but insufficient: qualify candidates
+  in a **lab or acceptance network**, including an **IPv6-only** path where
+  practical (see (#ipv6-only-jump-hosts) for IPv6-only guest or demo Wi-Fi),
+  before production purchase or racking.
+
+Procurement language is the contractual backup; lab "show me" testing catches
+products that claim IPv6 readiness and fail under operational load.
 
 ## Inventory and Metrics {#observability}
 
@@ -1126,7 +1155,8 @@ power-cycled** over IPv6. This area **SHOULD be tackled very early** in an IPv6
 program --- before application tiers --- because **hardware refresh cycles can
 take up to five years**. A server bought today with an IPv4-only baseboard
 management controller (BMC) or provisioning stack may still block IPv6-only
-operation long after application code is ready.
+operation long after application code is ready. Align purchase and RFP language
+with that timeline (see (#procurement)).
 
 ### Often-Forgotten Infrastructure Devices
 

@@ -1375,6 +1375,11 @@ mailing list (<a href="mailto:v6ops@ietf.org">mailto:v6ops@ietf.org</a>), which 
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.3">
                 <p id="section-toc.1-1.2.2.3.1"><a href="#section-2.3" class="auto internal xref">2.3</a>.  <a href="#name-programme-sponsorship-and-s" class="internal xref">Programme Sponsorship and Stakeholders</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.3.2.1">
+                    <p id="section-toc.1-1.2.2.3.2.1.1"><a href="#section-2.3.1" class="auto internal xref">2.3.1</a>.  <a href="#name-procurement-and-long-lead-h" class="internal xref">Procurement and Long-Lead Hardware</a></p>
+</li>
+                </ul>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.4">
                 <p id="section-toc.1-1.2.2.4.1"><a href="#section-2.4" class="auto internal xref">2.4</a>.  <a href="#name-inventory-and-metrics" class="internal xref">Inventory and Metrics</a></p>
@@ -1730,10 +1735,10 @@ audience needs them; sections cross-link rather than repeat editorially. IPv6
 fundamentals for software engineers (<a href="#ipv6-fundamentals" class="auto internal xref">Appendix A</a>) sit as an <strong>appendix</strong>
 at the end for shared vocabulary; they are not the linear starting chapter.<a href="#section-1.3-1" class="pilcrow">¶</a></p>
 <p id="section-1.3-2"><strong>Part I --- Migration Strategies</strong> (<a href="#transition" class="auto internal xref">Section 2</a>): scoping IPv6-only programs,
-programme sponsorship (<a href="#programme-sponsorship" class="auto internal xref">Section 2.3</a>), inventory and metrics
-(<a href="#observability" class="auto internal xref">Section 2.4</a>), hybrid on-premise and cloud (<a href="#hybrid-cloud" class="auto internal xref">Section 2.6</a>), and noticeable
-IPv4 friction (<a href="#ipv4-friction" class="auto internal xref">Section 2.7</a>) --- define policy and measurement before bulk
-technical change.<a href="#section-1.3-2" class="pilcrow">¶</a></p>
+programme sponsorship and early procurement (<a href="#programme-sponsorship" class="auto internal xref">Section 2.3</a>,
+<a href="#procurement" class="auto internal xref">Section 2.3.1</a>), inventory and metrics (<a href="#observability" class="auto internal xref">Section 2.4</a>), hybrid on-premise and
+cloud (<a href="#hybrid-cloud" class="auto internal xref">Section 2.6</a>), and noticeable IPv4 friction (<a href="#ipv4-friction" class="auto internal xref">Section 2.7</a>) ---
+define policy and measurement before bulk technical change.<a href="#section-1.3-2" class="pilcrow">¶</a></p>
 <p id="section-1.3-3"><strong>Part II --- Building the IPv6 Data Center:</strong> addressing and host/container
 provisioning (<a href="#internet-addressing" class="auto internal xref">Section 3.1</a> and related subsections), plus progress
 metrics that show dual-stack or IPv6-only adoption in the fabric.<a href="#section-1.3-3" class="pilcrow">¶</a></p>
@@ -1750,8 +1755,8 @@ address storage, and language runtimes.<a href="#section-1.3-5" class="pilcrow">
 <ul class="compact">
 <li class="compact" id="section-1.3-7.1">
             <em>Program lead / engineering manager:</em> Part I first (including
-<a href="#programme-sponsorship" class="auto internal xref">Section 2.3</a> and <a href="#ipv4-only-exceptions" class="auto internal xref">Section 2.5</a>), then skim Parts II and
-III as overview.<a href="#section-1.3-7.1" class="pilcrow">¶</a>
+<a href="#programme-sponsorship" class="auto internal xref">Section 2.3</a>, <a href="#procurement" class="auto internal xref">Section 2.3.1</a>, and <a href="#ipv4-only-exceptions" class="auto internal xref">Section 2.5</a>), then
+skim Parts II and III as overview.<a href="#section-1.3-7.1" class="pilcrow">¶</a>
 </li>
           <li class="compact" id="section-1.3-7.2">
             <em>Business sponsor / security lead:</em> <a href="#programme-sponsorship" class="auto internal xref">Section 2.3</a>,
@@ -1894,6 +1899,42 @@ or IPv6-only.<a href="#section-2.3-4.4" class="pilcrow">¶</a>
         </ul>
 <p id="section-2.3-5">An IPv4-only exception process governs one artefact well; it does not replace
 sponsorship or early stakeholder consent.<a href="#section-2.3-5" class="pilcrow">¶</a></p>
+<div id="procurement">
+<section id="section-2.3.1">
+          <h4 id="name-procurement-and-long-lead-h">
+<a href="#section-2.3.1" class="section-number selfRef">2.3.1. </a><a href="#name-procurement-and-long-lead-h" class="section-name selfRef">Procurement and Long-Lead Hardware</a>
+          </h4>
+<p id="section-2.3.1-1">Update <strong>purchase requirements, RFPs, and vendor questionnaires</strong> at program
+kickoff --- ideally <strong>before</strong> any production dual-stack or IPv6-only cutover
+--- so new acquisitions cannot quietly extend the IPv4-only lifetime of the
+fleet. Infrastructure and facility gear often have 10+ refresh
+cycles and little or no field-upgradable network stack; buying IPv4-only
+today can block IPv4 decommissioning long after application code is ready
+(see <a href="#oob-management" class="auto internal xref">Section 5.1</a>).<a href="#section-2.3.1-1" class="pilcrow">¶</a></p>
+<p id="section-2.3.1-2">Operators <span class="bcp14">SHOULD</span>:<a href="#section-2.3.1-2" class="pilcrow">¶</a></p>
+<ul class="compact">
+<li class="compact" id="section-2.3.1-3.1">
+              <strong>Require IPv6-only and dual-stack support</strong> for new purchases that attach to
+data center or management networks --- compute BMCs, switches, consoles,
+PDUs, environmental monitors, <strong>network time appliances</strong> (NTP or PTP,
+including GPS-synced stratum servers), <strong>storage appliances</strong>, and similar
+long-lived devices --- not only for application software.<a href="#section-2.3.1-3.1" class="pilcrow">¶</a>
+</li>
+            <li class="compact" id="section-2.3.1-3.2">Distinguish <strong>systems the organization owns or controls</strong> (and can mandate
+in contracts) from <strong>systems it does not</strong> (public cloud SKUs, SaaS, leased
+facility gear) so inventory and exception tracking cover both classes early
+(see <a href="#observability" class="auto internal xref">Section 2.4</a> and <a href="#hybrid-cloud" class="auto internal xref">Section 2.6</a>).<a href="#section-2.3.1-3.2" class="pilcrow">¶</a>
+</li>
+            <li class="compact" id="section-2.3.1-3.3">Treat written vendor claims as necessary but insufficient: qualify candidates
+in a <strong>lab or acceptance network</strong>, including an <strong>IPv6-only</strong> path where
+practical (see <a href="#ipv6-only-jump-hosts" class="auto internal xref">Section 4.2</a> for IPv6-only guest or demo Wi-Fi),
+before production purchase or racking.<a href="#section-2.3.1-3.3" class="pilcrow">¶</a>
+</li>
+          </ul>
+<p id="section-2.3.1-4">Procurement language is the contractual backup; lab "show me" testing catches
+products that claim IPv6 readiness and fail under operational load.<a href="#section-2.3.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="observability">
@@ -2969,7 +3010,8 @@ power-cycled</strong> over IPv6. This area <strong>SHOULD be tackled very early<
 program --- before application tiers --- because <strong>hardware refresh cycles can
 take up to five years</strong>. A server bought today with an IPv4-only baseboard
 management controller (BMC) or provisioning stack may still block IPv6-only
-operation long after application code is ready.<a href="#section-5.1-1" class="pilcrow">¶</a></p>
+operation long after application code is ready. Align purchase and RFP language
+with that timeline (see <a href="#procurement" class="auto internal xref">Section 2.3.1</a>).<a href="#section-5.1-1" class="pilcrow">¶</a></p>
 <div id="often-forgotten-infrastructure-devices">
 <section id="section-5.1.1">
           <h4 id="name-often-forgotten-infrastruct">

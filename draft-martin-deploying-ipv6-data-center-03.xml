@@ -104,10 +104,10 @@ audience needs them; sections cross-link rather than repeat editorially. IPv6
 fundamentals for software engineers (<xref target="ipv6-fundamentals"></xref>) sit as an <strong>appendix</strong>
 at the end for shared vocabulary; they are not the linear starting chapter.</t>
 <t><strong>Part I --- Migration Strategies</strong> (<xref target="transition"></xref>): scoping IPv6-only programs,
-programme sponsorship (<xref target="programme-sponsorship"></xref>), inventory and metrics
-(<xref target="observability"></xref>), hybrid on-premise and cloud (<xref target="hybrid-cloud"></xref>), and noticeable
-IPv4 friction (<xref target="ipv4-friction"></xref>) --- define policy and measurement before bulk
-technical change.</t>
+programme sponsorship and early procurement (<xref target="programme-sponsorship"></xref>,
+<xref target="procurement"></xref>), inventory and metrics (<xref target="observability"></xref>), hybrid on-premise and
+cloud (<xref target="hybrid-cloud"></xref>), and noticeable IPv4 friction (<xref target="ipv4-friction"></xref>) ---
+define policy and measurement before bulk technical change.</t>
 <t><strong>Part II --- Building the IPv6 Data Center:</strong> addressing and host/container
 provisioning (<xref target="internet-addressing"></xref> and related subsections), plus progress
 metrics that show dual-stack or IPv6-only adoption in the fabric.</t>
@@ -124,8 +124,8 @@ address storage, and language runtimes.</t>
 
 <ul spacing="compact">
 <li><em>Program lead / engineering manager:</em> Part I first (including
-<xref target="programme-sponsorship"></xref> and <xref target="ipv4-only-exceptions"></xref>), then skim Parts II and
-III as overview.</li>
+<xref target="programme-sponsorship"></xref>, <xref target="procurement"></xref>, and <xref target="ipv4-only-exceptions"></xref>), then
+skim Parts II and III as overview.</li>
 <li><em>Business sponsor / security lead:</em> <xref target="programme-sponsorship"></xref>,
 <xref target="ipv4-only-exceptions"></xref>, <xref target="icmpv6-pmtud"></xref>, then Security Considerations.</li>
 <li><em>Network / DC infrastructure engineer:</em> Part II addressing, then Part IV on
@@ -226,6 +226,35 @@ or IPv6-only.</li>
 </ul>
 <t>An IPv4-only exception process governs one artefact well; it does not replace
 sponsorship or early stakeholder consent.</t>
+
+<section anchor="procurement"><name>Procurement and Long-Lead Hardware</name>
+<t>Update <strong>purchase requirements, RFPs, and vendor questionnaires</strong> at program
+kickoff --- ideally <strong>before</strong> any production dual-stack or IPv6-only cutover
+--- so new acquisitions cannot quietly extend the IPv4-only lifetime of the
+fleet. Infrastructure and facility gear often have 10+ refresh
+cycles and little or no field-upgradable network stack; buying IPv4-only
+today can block IPv4 decommissioning long after application code is ready
+(see <xref target="oob-management"></xref>).</t>
+<t>Operators <bcp14>SHOULD</bcp14>:</t>
+
+<ul spacing="compact">
+<li><strong>Require IPv6-only and dual-stack support</strong> for new purchases that attach to
+data center or management networks --- compute BMCs, switches, consoles,
+PDUs, environmental monitors, <strong>network time appliances</strong> (NTP or PTP,
+including GPS-synced stratum servers), <strong>storage appliances</strong>, and similar
+long-lived devices --- not only for application software.</li>
+<li>Distinguish <strong>systems the organization owns or controls</strong> (and can mandate
+in contracts) from <strong>systems it does not</strong> (public cloud SKUs, SaaS, leased
+facility gear) so inventory and exception tracking cover both classes early
+(see <xref target="observability"></xref> and <xref target="hybrid-cloud"></xref>).</li>
+<li>Treat written vendor claims as necessary but insufficient: qualify candidates
+in a <strong>lab or acceptance network</strong>, including an <strong>IPv6-only</strong> path where
+practical (see <xref target="ipv6-only-jump-hosts"></xref> for IPv6-only guest or demo Wi-Fi),
+before production purchase or racking.</li>
+</ul>
+<t>Procurement language is the contractual backup; lab &quot;show me&quot; testing catches
+products that claim IPv6 readiness and fail under operational load.</t>
+</section>
 </section>
 
 <section anchor="observability"><name>Inventory and Metrics</name>
@@ -1070,7 +1099,8 @@ power-cycled</strong> over IPv6. This area <strong>SHOULD be tackled very early<
 program --- before application tiers --- because <strong>hardware refresh cycles can
 take up to five years</strong>. A server bought today with an IPv4-only baseboard
 management controller (BMC) or provisioning stack may still block IPv6-only
-operation long after application code is ready.</t>
+operation long after application code is ready. Align purchase and RFP language
+with that timeline (see <xref target="procurement"></xref>).</t>
 
 <section anchor="often-forgotten-infrastructure-devices"><name>Often-Forgotten Infrastructure Devices</name>
 <t>Out-of-band work is not limited to compute <strong>IPMI</strong>, <strong>Redfish</strong>, and <strong>PXE</strong>.
