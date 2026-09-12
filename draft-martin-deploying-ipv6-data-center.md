@@ -6,7 +6,7 @@ area = "ops"
 workgroup = "IPv6 Operations"
 keyword = ["IPv6", "data center", "SRE", "software", "operations", "deployment"]
 
-date = 2026-09-11
+date = 2026-09-12
 
 [seriesInfo]
 name = "Internet-Draft"
@@ -204,10 +204,13 @@ likely be in favour of an IPv6-only architecture.
 ## Easier to Provision Than to Transform {#provision-not-transform}
 
 **It is easier to provision IPv6 correctly than to transform a running service.**
-Enabling dual-stack or IPv6-only on a server, container, or service that was
-deployed IPv4-only means changing addresses, ACLs, DNS, health checks, and
-often application configuration --- then **restarting in place** and hoping
-nothing was missed. Provisioning time already runs those checks, supports
+Enabling dual-stack on a server, container, or service that was deployed
+IPv4-only is already a substantial change --- addresses, ACLs, DNS, health
+checks, and often application configuration --- then **restarting in place**
+and hoping nothing was missed. Going **IPv6-only** is a further step: it
+removes the IPv4 safety net and usually requires more of the dependency and
+operations stack to be ready. Both benefit from greenfield timing; they are
+not the same difficulty. Provisioning time already runs those checks, supports
 canary or phased ramp-up, and catches failures before the service takes
 production traffic.
 
@@ -227,11 +230,12 @@ before the addressing plan is frozen.
 
 **Sponsorship schedules the work; escalation only unblocks it.** A named
 **business sponsor** ranks IPv6 against competing quarterly work so teams can
-staff the migration. That role is distinct from the **exception approver** in
-(#ipv4-only-exceptions) (who records a bounded IPv4-only waiver) and from
-**escalation** when a cooperating team is not moving. Escalation without
-sponsorship addresses obstruction after the work is already on the plan; without
-sponsorship the programme never gets scheduled in the first place.
+staff the migration. The same person **MAY** also approve IPv4-only exceptions
+or escalate blocked teams, but those are different decisions: sponsorship puts
+the programme on the plan; exception approval bounds a waiver
+(#ipv4-only-exceptions); escalation clears obstruction after the work is
+already scheduled. Without sponsorship the programme never gets scheduled in
+the first place.
 
 Treat **security and the business as primary stakeholders from kickoff**, not as
 late approval gates. Bring into the room early:
@@ -431,28 +435,39 @@ kickoff.
 
 ## Adding Noticeable IPv4 Friction {#ipv4-friction}
 
-IPv4 fallback on dual-stack paths is silent by default: Happy Eyeballs
+This technique belongs in a **working dual-stack** environment where **IPv6 is
+already preferred** --- not during the initial dual-stack rollout, when IPv4 is
+still the expected path. IPv4 fallback is silent by default: Happy Eyeballs
 (#name-resolution) and most clients succeed on IPv4 when IPv6 is slow or
-broken, so operators never see the failure. **Prefer friction over hard
-blocks** while production still needs IPv4 for emergencies.
+broken, so a deploy can undo IPv6 preference without paging anyone. Prefer
+**observability split by address family** (see (#observability)) and correct
+client Happy Eyeballs behavior first.
 
-Operators **MAY** apply a **modest delay or traffic shaping** to IPv4 --- for
-example a few milliseconds via host or fabric QoS, or Linux `tc` delay on
-IPv4 classifiers --- so that:
+Two related uses:
 
-* Human-facing tools (SSH, jump hosts --- see (#ipv6-only-jump-hosts)) feel
-  slower on IPv4.
-* Inter-application RPC and HTTP paths show **higher latency or lower queries
-  per second (QPS)** when IPv4 is suddenly preferred --- parameters most SRE
-  teams already measure.
+* **Culture and training (humans):** on dual-stack **jump hosts** and similar
+  admin paths, make IPv4 sessions **obvious** (for example a login banner ---
+  see (#ipv6-only-jump-hosts)) so SREs and SWEs internalize that **IPv6 is now
+  preferred** before the first sev-1 forces the lesson.
+* **Silent regression (machines):** on inter-application RPC and HTTP paths,
+  operators **MAY** apply a **modest delay or traffic shaping** to IPv4 --- for
+  example a few milliseconds via host or fabric QoS, or Linux `tc` delay on
+  IPv4 classifiers --- so unintended IPv4 preference shows up as **higher
+  latency or lower QPS**, metrics most SRE teams already watch. That is a
+  **soft failure** while the estate is still dual-stack; after **IPv6-only**,
+  the same breakage becomes a **hard failure**.
+
+**Hard blocks** on IPv4 remain a last resort while production still needs IPv4
+for emergencies. Treat intentional path degradation with care: it can interact
+poorly with client Happy Eyeballs implementations and feels like an eternity
+under incident pressure. On break-glass admin paths, prefer a **visible
+signal** (banner, metric regression) over multi-second delays.
 
 The penalty **MUST** remain small enough that break-glass and degraded
-operation still succeed. The goal is detection, not outage: engineers notice
-that IPv6 is not preferred, and existing latency or QPS dashboards regress
-when a deploy or resolver change flips traffic to IPv4 (see
-(#observability)). This operator-applied path delay is distinct from the
-Happy Eyeballs **IPv4 connection-attempt delay** in (#name-resolution), which
-races families at the client rather than making IPv4 worse on the wire.
+operation still succeed. Detection, not outage. This operator-applied path
+delay is distinct from the Happy Eyeballs **IPv4 connection-attempt delay** in
+(#name-resolution), which races families at the client rather than making IPv4
+worse on the wire.
 
 
 # Part II: Building the IPv6 Data Center
@@ -482,13 +497,17 @@ a fraction of it, e.g., a `/80` sill leaving addressing space for further subnet
 
 ### Prefix Allocation for Hosts and Containers {#prefix-allocation}
 
-Operators **SHOULD** write down a **numbering policy** for the data center ---
-what receives a prefix (host, VM, container, pod, service, rack, or other role),
-at what length, and how those roles nest --- then **size for current inventory
-and plausible growth** (hosts, clusters, and sites). Request the next allocation
-**before** the last usable prefix is assigned; discovering a ceiling mid-migration
-turns a sizing choice into an allocation request with its own justification and
-lead time (the same early-case discipline as (#hybrid-cloud)).
+The important software lesson is an **explicit prefix plan per role**, sized for
+growth --- what receives a prefix (host, VM, container, pod, service, rack, or
+other role), at what length, and how those roles nest --- rather than assuming
+"one address per host" as in legacy IPv4 NAT designs. Operators **SHOULD** write
+that numbering policy down, then **size for current inventory and plausible 10+ years
+growth** (hosts, clusters, and sites). Request the next allocation **before**
+the last usable prefix is assigned; discovering a ceiling mid-migration turns a
+sizing choice into an allocation request with its own justification and lead
+time (the same early-case discipline as (#hybrid-cloud)). The exact mapping
+depends on orchestrator and CNI design; the templates below are examples, not a
+single mandatory layout.
 
 One **template** for counting `/64`s --- not a recommendation every estate must
 follow --- assigns a **`/56` to each physical host** (or rack entity), providing
@@ -512,10 +531,6 @@ with explicit routing and no SLAAC on container segments, some designs assign on
 prefix for containers. That `/72` pattern is **not** suitable hosts expect standard `/64` semantics;
 use it only with operator-wide agreement and tested CNI or orchestrator support --- do not read it
 as advising against ordinary orchestrator node `/64`s.
-
-The exact mapping depends on orchestrator and CNI design; the important software
-lesson is an **explicit prefix plan per role**, sized for growth, rather than
-assuming "one address per host" as in legacy IPv4 NAT designs.
 
 These patterns assume an **operator-controlled** data center fabric where the
 network team can delegate prefixes freely. In **hybrid** environments that
@@ -554,7 +569,9 @@ example by clearing the **Managed** and **Other** flags) **and** disable
 **SLAAC** on **servers and other endpoints** when static addressing is required.
 Applying both controls --- at the **network edge and on the host** --- provides
 **two layers of protection** so hosts do not acquire unexpected addresses
-alongside provisioned ones.
+alongside provisioned ones. That double safeguard also limits surprise growth
+in the number of addresses the fabric and security devices must track (see
+(#address-types) on multiple addresses per host).
 
 Gateway at **`fe80::1`**, global addresses from IPAM, and DNS names registered
 in forward and reverse zones should be one coordinated change set.
@@ -577,6 +594,10 @@ example:
   block is purely semantic and routing summarizes wider internally)
 * **Everything employees** --- corporate VPN, office wired/wireless for staff
 * **Everything guest Wi-Fi** --- captive portal and untrusted clients
+
+Where operators must read or type addresses by hand, aligning those class
+boundaries on a **nibble boundary** (a multiple of four bits) keeps the hex
+form easier to scan than an arbitrary bit split.
 
 SREs then remember **three networks**, not hundreds of `/64`s, when filtering
 pcaps, writing runbooks, or explaining an incident. Document these prefixes in
@@ -684,6 +705,11 @@ a working IPv6 path from every interface:
   internal IPv4 path (see (#name-resolution)). Do **not** use a **`blackhole`**
   route for this purpose: blackhole **silently discards** packets and recreates
   the same **timeout** behavior the operator is trying to avoid.
+* **Border visibility:** operators **MAY** also monitor or log at Internet or
+  site border devices any packets destined to **internal-only** IPv6 aggregates
+  that should never appear on external policy paths --- a useful signal of
+  mis-egress during rollout. Blocking those flows at the border can help, but
+  treat hard denies carefully in multihomed designs.
 * **Alternative:** **split-horizon DNS** so resolvers used on edge hosts do not
   return AAAA for names that are reachable only on the internal IPv4 path until
   routing is fixed.
@@ -769,6 +795,11 @@ enables IPv6 and the AAAA is published, the pre-provisioned rules should match
 without a second ACL rollout. The site translation plan in step 5 **MUST** be
 documented and stable; ad hoc embedding layouts defeat this approach.
 
+Operators **SHOULD** detect **drift** when DNS or IPAM changes: for example,
+compare published A/AAAA records to the address predicted by the embedding
+plan, and alert when they diverge so pre-built ACLs are not left pointing at
+the wrong host.
+
 The same correlation policy supports an **early dual-stack step on the host**
 without advertising **AAAA** in DNS. IPAM assigns the predicted IPv6 address on
 the interface; the application tier can remain **IPv4-only** (A record only,
@@ -792,6 +823,10 @@ Dashboards **SHOULD** expose fleet-level indicators, for example:
   count and by criticality tier)
 * Trend of **AAAA vs A-only** DNS names for production hostnames
 * Ratio of **ingress bytes or connections** over IPv6 vs IPv4 at load balancers
+* Where NAT64 or similar translation is in use, a **third traffic class** ---
+  pure IPv6, pure IPv4, and **transitional** (IPv6 inside the site, IPv4
+  outside via translation) --- so operators can see when it is safe to remove
+  translators from a segment
 * Where available, **TCP/TLS/QUIC connection-establishment** counters split by address
   family --- for example SYN or connection attempts versus successfully
   established sessions, handshake timeouts, and SYN retransmissions --- so
@@ -909,7 +944,9 @@ see, for example, "API gateway is dual-stack but 80% of backend calls still use
 IPv4" or "this batch job is IPv4-only despite an IPv6-ready binary."
 
 Use call-tree family breakdown to prioritize refactors: fix the highest-volume
-IPv4-only edges first. Reconcile call-tree findings with the inventory --- a
+IPv4-only edges first. Where translation is present, tag hops as **native
+IPv6**, **native IPv4**, or **transitional** so dashboards show when NAT64 can
+be retired from a path. Reconcile call-tree findings with the inventory --- a
 service marked "IPv6 ready" with no IPv6 traffic is not done.
 [@?I-D.ietf-v6ops-ipv6-app-testing] describes decomposing complex, multi-service
 cloud applications into per-flow test cases, matching this per-hop view.
@@ -949,28 +986,43 @@ new defaults while change windows are calm. Engineers under incident pressure
 on an `ip6.arpa` name or SSH over a global v6 management address is during a
 sev-1, the organization has already failed the migration program.
 
-A practical staged transition puts **administrative jump hosts on IPv6-only**
-access while leaving application tiers dual-stack temporarily. Engineers run
-configuration management, monitoring CLI tools, and break-glass SSH from those
-hosts, forcing administrative tooling onto IPv6. Maintain at least one
-**dual-stack backup jump host** during migration and **audit who connects and
-which commands run** until parity is proven.
+A practical staged transition puts **administrative jump hosts** on an
+IPv6-first path while leaving application tiers dual-stack temporarily.
+"IPv6-only" for that host means two different things --- do not conflate them:
+
+* **`sshd` (and similar entry points) listen only on IPv6:** employees and IT
+  must reach the bastion over IPv6. The **client path** can still be dual-stack
+  (laptop, VPN, corp Wi-Fi); the point is to force IT to **provide a working
+  IPv6 environment to staff** so people can get in at all.
+* **No IPv4 address on the jump host:** once operators are on the box, every
+  management command and every call to **management APIs** (config management,
+  inventory, monitoring, cloud control planes, and similar) must succeed over
+  IPv6. That is a stricter proof that the **operations stack** is IPv6-ready,
+  not only that SSH answered on a AAAA.
+
+Engineers run break-glass SSH and day-to-day tooling from those hosts. Maintain
+at least one **dual-stack backup jump host** during migration and **audit who
+connects and which commands run** until parity is proven.
 
 On that dual-stack backup, operators **MAY** add **noticeable but non-blocking
 IPv4 friction** so a session that landed on IPv4 is obvious without denying
-access. Examples include a short **login banner or `sshd` ForcedCommand
-countdown** (for example five seconds) before the shell is granted, and
-temporarily **reducing IPv4 SSH session timeouts**. Emergency access still
-works; the delay is the signal that IPv6 is not functional or not preferred,
-so the path can be fixed while the window is calm. IPv6 sessions **SHOULD NOT**
-receive the same penalty. The same idea applies more broadly than SSH --- see
-(#ipv4-friction).
+access. Prefer a **login banner** that states the session used IPv4 over
+multi-second delays: under incident pressure, even a few seconds of ForcedCommand
+countdown can feel like an outage. If a delay is used at all, keep it minimal
+and temporary, and consider reducing IPv4 SSH session timeouts instead.
+Emergency access still works; the signal is that IPv6 is not functional or not
+preferred, so the path can be fixed while the window is calm. IPv6 sessions
+**SHOULD NOT** receive the same penalty. The same idea applies more broadly than
+SSH --- see (#ipv4-friction).
 
-Apply the same staged exposure to **corporate wireless**, not only SSH bastions.
-Provide **dual-stack Wi-Fi** for everyday employee devices during migration, and
-at least one **IPv6-only employee Wi-Fi** SSID so laptops, phones, VPN clients,
-and captive-portal flows are exercised on AAAA-only paths before production
-depends on them. Label SSIDs explicitly (for example, `corp-dualstack` and
+Corporate and guest **Wi-Fi** are **ops- and lab-adjacent** to the data center
+fabric (different device churn and trust model than server VLANs). Treat them as
+useful migration exercise networks, not as a substitute for jump-host discipline;
+broader enterprise wireless guidance is in [@?RFC7381]. Provide **dual-stack
+Wi-Fi** for everyday employee devices during migration, and at least one
+**IPv6-only employee Wi-Fi** SSID so laptops, phones, VPN clients, and
+captive-portal flows are exercised on AAAA-only paths before production depends
+on them. Label SSIDs explicitly (for example, `corp-dualstack` and
 `corp-v6-only`) so engineers know which network they joined.
 
 Some operators **MAY** additionally offer **IPv6-only guest Wi-Fi** --- for
@@ -1031,13 +1083,15 @@ centers and enterprise rollouts.
 ### Enterprise Platform Inventory
 
 Many enterprise platforms still assume IPv4-only access paths. Examples
-reported in operator experience include **Hadoop**, certain **object storage
-APIs**, **Kubernetes** dependencies (especially third-party charts and
-sidecars), **cloud firewalls** (for example, Azure Firewall and third-party
-NGFW images on cloud platforms where IPv6 support lagged vendor roadmaps), and
-**security analytics** pipelines that ingest NetFlow or packet metadata on
-IPv4 only. Hybrid and multi-cloud estates need the same inventory discipline
-for managed services and connectivity paths (see (#hybrid-cloud)).
+reported in operator experience **as of this writing** include **Hadoop**,
+certain **object storage APIs**, **Kubernetes** dependencies (especially
+third-party charts and sidecars), **cloud firewalls** (for example,
+Firewalls and third-party NGFW images on cloud platforms where IPv6 support
+lagged vendor roadmaps), and **security analytics** pipelines that ingest
+NetFlow or packet metadata on IPv4 only. Re-check product status at
+publication and deployment time --- capability claims change. Hybrid and
+multi-cloud estates need the same inventory discipline for managed services and
+connectivity paths (see (#hybrid-cloud)).
 
 **Action for SRE teams:** maintain a **living inventory** of software in the
 deployment path (data plane, control plane, CI/CD, security, logging) with an
@@ -1046,9 +1100,6 @@ pipelines **SHOULD** continuously **discover services not yet in that inventory*
 (see (#observability)). Security research or monitoring that runs IPv4-only
 cannot validate IPv6 attack surface; teams **SHOULD** require IPv6 parity before
 accepting "no IPv6 security issues" claims.
-
-This document does not attempt a canonical vendor matrix --- products change
---- but the inventory practice is mandatory for sane rollout planning.
 
 ### Dependency and Platform Readiness Gates
 
@@ -1293,7 +1344,9 @@ policy**, not from IPv6 itself.
 
 Hard PMTUD failures also interact with **DNS over large responses** when
 fragmentation is mishandled. If fragmented UDP is dropped, DNS appears
-"flaky" only for some records.
+"flaky" only for some large records. Where classic ICMP-based PMTUD is unreliable,
+operators and implementers **MAY** also use Packetization Layer Path MTU
+Discovery (DPLPMTUD) [@?RFC8899].
 
 ### VPNs and NAT64
 
@@ -1350,13 +1403,16 @@ This section covers name-to-address APIs and client resolution behavior --- the
 connection layer above application readiness gaps cataloged above.
 
 Turning a hostname into addresses is a separate step from choosing which
-address to connect to. Application code **MUST** use an API that returns **all**
-candidate addresses, then apply local policy (retries, Happy Eyeballs
-[@?RFC8305], load spreading --- see (#address-selection) and
-(#client-load-balancing)). When implementing Happy Eyeballs, **delay the IPv4
-connection attempt** so IPv6 has more time to succeed first --- a late start for
-IPv4 is consistent with [@?RFC8305] and reduces accidental IPv4-first behavior
-on dual-stack paths.
+address to connect to. Prefer an **address-family-agnostic** API in the OS,
+library, or framework that already returns the full candidate set and supports
+both IPv4 and IPv6, unless there is a specific reason to do otherwise.
+Application code **MUST** obtain **all** candidate addresses, then apply local
+policy (retries, Happy Eyeballs [@?RFC8305], load spreading --- see
+(#address-selection) and (#client-load-balancing)). **Prefer the OS or a shared
+library's Happy Eyeballs implementation** over reimplementing connection racing
+in each application; when a custom implementation is unavoidable, **delay the
+IPv4 connection attempt** so IPv6 has more time to succeed first --- consistent
+with [@?RFC8305] and with ongoing work in the HAPPY working group.
 
 Even with correct client retry logic, **missing or wrong IPv6 routes** can send
 internal AAAA targets out an Internet default route. Edge hosts in transitional
@@ -1365,7 +1421,8 @@ address-family fallback can succeed (see (#dual-homed-transitional-routing)).
 
 ### Use getaddrinfo(), Not Legacy One-Address APIs
 
-On POSIX systems the correct resolver entry point is **`getaddrinfo()`**
+On POSIX systems, when a higher-level family-agnostic helper is not available,
+the correct resolver entry point is **`getaddrinfo()`**
 [@!RFC3493]. It takes a hostname (or numeric address string), service/port hints,
 and an `addrinfo` hints structure, and returns a **linked list of `addrinfo`
 structures** --- one node per address. The caller **MUST iterate the entire
@@ -1506,17 +1563,18 @@ in code and configuration:
 * Hex packed in configs: `0xC0000201`
 * Mapped in IPv6 APIs: `::ffff:192.0.2.1`
 
-In software, addresses **MUST** be stored in a **binary field or structure
-sized for 128 bits** (for example, `in6_addr`, `sockaddr_storage`, or an
-equivalent language type), so the same field can hold IPv4 or IPv6. **Do not
-store addresses as strings** in databases, logs-as-data, caches, or message
-payloads. Provide helper functions to convert between the binary form and a
-human-readable representation for display and configuration I/O, and use those
-helpers at boundaries --- **never parse or compare address strings ad hoc** in
-application logic. When addresses are handled as data (logging, ACLs,
-management output), test that code accepts all valid representations [@!RFC4291]
-and renders canonical text [@!RFC5952]; [@?I-D.ietf-v6ops-ipv6-app-testing]
-covers this "addresses as data" testing.
+In software, addresses **SHOULD** be stored in a **normalized** form ---
+preferably a **binary field or structure sized for 128 bits** (for example,
+`in6_addr`, `sockaddr_storage`, or an equivalent language type), so the same
+field can hold IPv4 or IPv6 and equality is unambiguous. Binary storage provides
+normalization by construction. If a string form is unavoidable, apply a **strict
+canonicalization** function (for example [@!RFC5952]) at write time and compare
+only normalized values --- never parse or compare address strings ad hoc in
+application logic. Provide helpers to convert between binary and human-readable
+forms at display and configuration I/O boundaries. When addresses are handled as
+data (logging, ACLs, management output), test that code accepts all valid
+representations [@!RFC4291] and renders canonical text [@!RFC5952];
+[@?I-D.ietf-v6ops-ipv6-app-testing] covers this "addresses as data" testing.
 
 For **human comparison** in fixed-width tables, spreadsheets, or IPAM grids,
 operators **MAY** deliberately diverge from [@!RFC5952] --- for example by
@@ -1544,9 +1602,11 @@ connections while others appear idle. This section assumes the application has
 already obtained the **full address list** using the patterns in
 (#name-resolution).
 
-**Recommended pattern:**
+**Recommended pattern** (when the shared library does not already encapsulate
+this --- prefer OS or library Happy Eyeballs and service-discovery clients
+first; see (#name-resolution) and the HAPPY working group):
 
-1. Resolve the service name to all addresses.
+1. Resolve the service name to all addresses (or refresh from service discovery).
 2. Partition addresses by address family.
 3. Apply family preference policy (operator choice: IPv6-first, happy eyeballs,
    or parallel). For Happy Eyeballs, **start IPv4 attempts after a deliberate
@@ -1557,9 +1617,6 @@ already obtained the **full address list** using the patterns in
    equal random or round-robin remains appropriate when endpoints are
    equivalent.
 5. Optionally implement retries across the full set on failure.
-
-Prefer OS or shared-library Happy Eyeballs and resolver behavior over
-reimplementing racing logic in every application (see (#name-resolution)).
 
 **Endpoint freshness:** treat selection policy as distinct from
 **discovery and refresh**. Re-resolve on DNS TTL expiry or refresh from
@@ -1687,6 +1744,7 @@ editorial improvements to this document:
 * **Jason Healy** (Suffield Academy)
 * **Spiro Stathakis** (isp6)
 * **Sulabh Soneji**
+* **Andrew Yourtchenko** (Cisco)
 
 <reference anchor="ARCEP-IPV6-GUIDE" target="https://www.arcep.fr/fileadmin/cru-1648459125/reprise/observatoire/ipv6/guide-entreprises-how-to-deploy-IPv6-march-2022.pdf">
   <front>
@@ -1739,7 +1797,9 @@ IPv4 allowed routers to fragment packets in transit. IPv6 **fragments only at
 endpoints** [@!RFC8200]. If a packet exceeds the path MTU, the source discovers
 the limit through Path MTU Discovery (see (#icmpv6-pmtud)) rather than relying
 on router fragmentation. Application teams that tune MSS or disable PMTUD on
-IPv4 must not copy those habits blindly to IPv6.
+IPv4 often **cannot** copy those habits to IPv6: endpoints alone fragment, and
+paths that depended on router fragmentation or aggressive MSS clamping may fail
+until PMTUD (or DPLPMTUD [@?RFC8899]) works end-to-end (see (#icmpv6-pmtud)).
 
 ## ICMPv6 and Neighbor Discovery
 
@@ -1801,4 +1861,8 @@ of their interfaces.  The link-local addresses are necessary to participate
 in Neighbor Discovery and so serve a vital purpose even though they are not
 globally routable.  Additionally, because so many IPv6 addresses are
 available, some machines may use multiple global addresses simultaneously
-for purposes such as privacy or temporary use.
+for purposes such as privacy or temporary use. The number of addresses per
+host can matter for **TCAM and ACL scale** on switches and firewalls --- another
+reason to prefer an explicit addressing plan and to avoid unexpected
+autoconfigured addresses (see (#prefix-allocation) and the RA/SLAAC double
+safeguard under Static Addressing, Router Advertisements, and IPAM).
