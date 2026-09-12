@@ -9,7 +9,7 @@
 </address></author><author initials="P.S." surname="Tiesel" fullname="Philipp S. Tiesel"><organization>SAP SE</organization><address><postal><street></street>
 </postal><email>philipp@tiesel.net</email>
 <email>philipp.tiesel@sap.com</email>
-</address></author><date year="2026" month="September" day="10"></date>
+</address></author><date year="2026" month="September" day="11"></date>
 <area>ops</area>
 <workgroup>IPv6 Operations</workgroup>
 <keyword>IPv6</keyword>
@@ -748,6 +748,11 @@ firewall tickets are still in flight.</t>
 count and by criticality tier)</li>
 <li>Trend of <strong>AAAA vs A-only</strong> DNS names for production hostnames</li>
 <li>Ratio of <strong>ingress bytes or connections</strong> over IPv6 vs IPv4 at load balancers</li>
+<li>Where available, <strong>TCP connection-establishment</strong> counters split by address
+family --- for example SYN or connection attempts versus successfully
+established sessions, handshake timeouts, and SYN retransmissions --- so
+path or middlebox problems that drop or stall IPv6 handshakes are not hidden
+by byte or connection totals that still look healthy</li>
 <li>Count of hosts or pods <strong>without any IPv6 address</strong> in IPAM or configuration
 management</li>
 <li><strong>Latency and QPS split by address family</strong>, or unexplained regressions
@@ -772,7 +777,12 @@ IPv6-only health checks, IPv6 listen-socket regressions, and rising IPv4-only
 connection share for tier-1 services. Where production remains dual-stack,
 synthetic probes <bcp14>SHOULD</bcp14> exercise <strong>IPv6 explicitly</strong> (AAAA-only paths,
 IPv6 literal targets, or IPv6-only test clients), not only dual-stack clients
-that can hide breakage. <xref target="I-D.ietf-v6ops-ipv6-app-testing"></xref> describes
+that can hide breakage. When probing a load balancer or VIP <strong>by address</strong> to
+separate DNS or address-selection failures from the data path, HTTP and TLS
+checks <bcp14>SHOULD</bcp14> still present the production <strong>hostname</strong> (TLS SNI and HTTP
+<tt>Host</tt>) so the probe exercises the same certificate and virtual-host path as
+real clients; a bare IP literal may pass TCP while missing application-layer
+faults. <xref target="I-D.ietf-v6ops-ipv6-app-testing"></xref> describes
 client-, server-, and network-based tracing strategies that distinguish
 genuine IPv6-only-strict behavior from dual-stack masking. The sooner IPv6 errors page on-call the same way IPv4
 errors do, the less likely a team discovers IPv6 rot months later during an
@@ -940,9 +950,13 @@ on reverse lookup during an outage.</t>
 sometimes apply the same rule everywhere. <strong>Inside the data center</strong>, allowing
 echo request/reply <strong>with limits</strong> --- rate limits, scoped ACLs, source
 restrictions to management networks or jump hosts, or equivalent controls --- is
-<bcp14>RECOMMENDED</bcp14> for troubleshooting. A successful or failed ping quickly
-separates &quot;no route&quot; from &quot;route but service down&quot; on both IPv4 and IPv6 without
-opening application ports.</t>
+<bcp14>RECOMMENDED</bcp14> for troubleshooting. A <strong>successful</strong> ping confirms basic IP
+reachability (when echo is permitted) without opening application ports. A
+<strong>failed</strong> ping alone <strong>does not</strong> prove there is no route: filtering, rate
+limits, host firewall policy, or a destination that does not answer echo can
+produce the same symptom. Combine ping with <tt>traceroute</tt>, <tt>tracepath</tt>, or <tt>mtr</tt>,
+TCP connects to a known port, or other checks before concluding &quot;no route&quot;
+versus &quot;route but service down.&quot;</t>
 <t>This is separate from the ICMPv6 requirements in <xref target="icmpv6-pmtud"></xref>: Neighbor
 Discovery and Path MTU Discovery need specific ICMPv6 types on production paths
 and <bcp14>MUST NOT</bcp14> be blocked wholesale. Controlled echo is an additional
@@ -1467,11 +1481,32 @@ already obtained the <strong>full address list</strong> using the patterns in
 or parallel). For Happy Eyeballs, <strong>start IPv4 attempts after a deliberate
 delay</strong> so IPv6 connections have priority time to complete.</li>
 <li><strong>Randomize or round-robin within each family</strong> rather than trusting DNS
-order after <tt>getaddrinfo()</tt>.</li>
+order after <tt>getaddrinfo()</tt>. When service discovery or endpoint metadata
+provides <strong>weights</strong>, prefer <strong>weighted</strong> selection within a family;
+equal random or round-robin remains appropriate when endpoints are
+equivalent.</li>
 <li>Optionally implement retries across the full set on failure.</li>
 </ol>
+<t>Prefer OS or shared-library Happy Eyeballs and resolver behavior over
+reimplementing racing logic in every application (see <xref target="name-resolution"></xref>).</t>
+<t><strong>Endpoint freshness:</strong> treat selection policy as distinct from
+<strong>discovery and refresh</strong>. Re-resolve on DNS TTL expiry or refresh from
+service discovery so drained, replaced, or newly added backends enter and
+leave the candidate set; otherwise clients keep balancing across stale
+addresses.</t>
+<t><strong>Long-lived connections:</strong> for HTTP/2, gRPC, and similar multiplexed pools,
+endpoint selection often occurs only when a connection is opened. Equal
+distribution of <strong>connections</strong> does not imply equal distribution of
+<strong>requests</strong>, and weight or membership changes may take effect only as old
+connections drain.</t>
 <t>Implement load balancing in <strong>shared client libraries</strong> so every service does
-not rediscover the same RFC 6724 interaction.</t>
+not rediscover the same RFC 6724 interaction. Most software engineers are not
+DNS or path-selection specialists, and they should not have to be: put
+resolution, Happy Eyeballs, and within-family spreading in <strong>one</strong> (or a small
+set of) platform libraries used across the codebase. Platform and SRE teams can
+then clear IPv6 readiness by saying <strong>upgrade the shared client to version X</strong>,
+rather than teaching each application team how to rewrite connection logic ---
+the same readiness-gate pattern as <xref target="application-readiness"></xref>.</t>
 </section>
 
 <section anchor="ip-address-storage-in-application-data"><name>IP Address Storage in Application Data</name>
@@ -1577,6 +1612,7 @@ editorial improvements to this document:</t>
 <ul spacing="compact">
 <li><strong>Jason Healy</strong> (Suffield Academy)</li>
 <li><strong>Spiro Stathakis</strong> (isp6)</li>
+<li><strong>Sulabh Soneji</strong></li>
 </ul>
 </section>
 
@@ -1703,7 +1739,7 @@ design</strong>. With rare exceptions (link-local, ULA, and special-purpose rang
 in <xref target="RFC6890"></xref>), <strong>IPv6 unicast addresses are designed to be globally
 unique and routable</strong>. Security boundaries are enforced by routing policy and
 firewall rules, not by assuming addresses are inherently non-routable.  We
-use two additional terms to distinguish addresses based on thes policies:</t>
+use two additional terms to distinguish addresses based on these policies:</t>
 <t><strong>Internal global unicast address</strong>: A globally routable IPv6 address used
 <strong>inside</strong> the data center.  These addresses are reachable according to
 routing and security policy, not because they are &quot;private.&quot;</t>
