@@ -50,6 +50,8 @@ This note is to be removed before publishing as an RFC.
 
 The latest revision of this draft can be found at
 https://github.com/franckhlmartin/ietf-draft-deploying-ipv6-data-center/.
+An HTML editor's copy is at
+https://franckhlmartin.github.io/ietf-draft-deploying-ipv6-data-center/draft-martin-deploying-ipv6-data-center.html.
 Status information for this document may be found at
 https://datatracker.ietf.org/doc/draft-martin-deploying-ipv6-data-center/.
 

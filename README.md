@@ -5,12 +5,13 @@ IPv6 in data centers.
 
 **IETF Datatracker:** [draft-martin-deploying-ipv6-data-center](https://datatracker.ietf.org/doc/draft-martin-deploying-ipv6-data-center/)
 
+**Editor's copy (HTML):** [franckhlmartin.github.io/ietf-draft-deploying-ipv6-data-center](https://franckhlmartin.github.io/ietf-draft-deploying-ipv6-data-center/) ([HTML](https://franckhlmartin.github.io/ietf-draft-deploying-ipv6-data-center/draft-martin-deploying-ipv6-data-center.html), [TXT](https://franckhlmartin.github.io/ietf-draft-deploying-ipv6-data-center/draft-martin-deploying-ipv6-data-center.txt), [XML](https://franckhlmartin.github.io/ietf-draft-deploying-ipv6-data-center/draft-martin-deploying-ipv6-data-center.xml))
+
 **Source of truth:** `draft-martin-deploying-ipv6-data-center.md` is the only
-authoritative source. After the first build, the repository may also include
-generated `draft-martin-deploying-ipv6-data-center-01.xml`, `.txt`, and `.html`
-files so you can read the draft on GitHub without building locally. Those copies
-may be out of date if someone edits the Markdown without running `make` and
-committing the outputs; when in doubt, build from the `.md` file.
+authoritative source and the only draft file committed to git. Generated
+`.xml`, `.txt`, and `.html` files are produced locally by `make` and on GitHub
+Actions (idnits plus downloadable artifacts on every push/PR; the editor's copy
+is published to GitHub Pages from `main`). Do not commit the generated files.
 
 ## Building
 
@@ -29,10 +30,10 @@ make clean    # remove generated outputs
 make clean-all # also remove the local .venv
 ```
 
-Before submitting, run `make` and commit the updated `.xml`, `.txt`, and `.html`
-if you want the GitHub copies to stay in sync. The submission file is
-`draft-martin-deploying-ipv6-data-center-01.xml`. Upload it to the
+Before submitting, run `make` and upload the generated XML (for example
+`draft-martin-deploying-ipv6-data-center-03.xml`) to the
 [IETF Datatracker submission tool](https://datatracker.ietf.org/submit/).
+Do not add the generated `.xml`, `.txt`, or `.html` files to the commit.
 
 When editing the Markdown source, use [mmark](https://github.com/mmarkdown/mmark)
 conventions: internal links are `(#anchor)` (not `{{anchor}}`), and tables use
