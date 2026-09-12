@@ -790,7 +790,7 @@ Dashboards **SHOULD** expose fleet-level indicators, for example:
   count and by criticality tier)
 * Trend of **AAAA vs A-only** DNS names for production hostnames
 * Ratio of **ingress bytes or connections** over IPv6 vs IPv4 at load balancers
-* Where available, **TCP connection-establishment** counters split by address
+* Where available, **TCP/TLS/QUIC connection-establishment** counters split by address
   family --- for example SYN or connection attempts versus successfully
   established sessions, handshake timeouts, and SYN retransmissions --- so
   path or middlebox problems that drop or stall IPv6 handshakes are not hidden
