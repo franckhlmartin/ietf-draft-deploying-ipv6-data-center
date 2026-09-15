@@ -1425,16 +1425,16 @@ On POSIX systems, when a higher-level family-agnostic helper is not available,
 the correct resolver entry point is **`getaddrinfo()`**
 [@!RFC3493]. It takes a hostname (or numeric address string), service/port hints,
 and an `addrinfo` hints structure, and returns a **linked list of `addrinfo`
-structures** --- one node per address. The caller **MUST iterate the entire
-list** (the `ai_next` chain), copy each `sockaddr` into binary form (see
-(#address-representation)), and **MUST** release the list with `freeaddrinfo()`.
+structures** --- one node per destination address candidate. The caller
+**MUST iterate over the entire list** (the `ai_next` chain) trying to connect
+to each candidate until either successful or no candidates are left,
+and **MUST** release the list with `freeaddrinfo()` afterwards.
 
 Please note: **`getaddrinfo()`** is the name-to-address API for retrieving a
 full list; it is not the same as:
 
 * **`gethostbyname()`** and **`gethostbyname2()`** --- deprecated, not
-  thread-safe, and still present in old tutorials. Many call sites use only the
-  first address even when multiple are available.
+  thread-safe, and still present in old tutorials.
 * **`inet_addr()`**, **`inet_aton()`**, and **`inet_pton()`** --- parse a
   **literal** address string into binary; they perform **no DNS lookup** and
   return a single address only.
@@ -1451,13 +1451,14 @@ Language runtimes expose the same idea under different names:
 
 * **Python:** `socket.getaddrinfo()` returns a list of tuples --- iterate all
   entries; avoid `socket.gethostbyname()`, which returns one IPv4 address.
-* **Go:** `net.DefaultResolver.LookupIPAddr()` or `LookupIP()`; avoid code paths
-  that stop after the first returned address.
+* **Go:** `net.DefaultResolver.LookupIPAddr()` or `LookupIP()`;
+  better use `net.Dialer` which provides Happy Eyeballs support.
 * **Java:** `InetAddress.getAllByName()` returns an array; **`getByName()`**
   returns only the first address and is a common source of "works in the lab"
   failures under round-robin DNS.
-* **Node.js:** `dns.promises.resolve()` or `dns.lookup()` with `{ all: true }`;
-  the default `lookup()` without `all: true` returns a single address.
+* **Node.js:** `dns.promises.lookup()` or `dns.lookup()` with `{ all: true }`
+  as the default `lookup()` without `all: true` returns a single address;
+  better use `net.connect` with `autoSelectFamily` which provides Happy Eyeballs support.
 
 Pay special attention when connecting to a **hostname** (as opposed to a numeric
 literal): resolution can return both IPv4 and IPv6 addresses, and often more than
