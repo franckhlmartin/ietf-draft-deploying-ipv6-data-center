@@ -1456,7 +1456,7 @@ Language runtimes expose the same idea under different names:
 * **Java:** `InetAddress.getAllByName()` returns an array; **`getByName()`**
   returns only the first address and is a common source of "works in the lab"
   failures under round-robin DNS.
-* **Node.js:** `dns.promises.resolve()` or `dns.lookup()` with `{ all: true }`
+* **Node.js:** `dns.promises.lookup()` or `dns.lookup()` with `{ all: true }`
   as the default `lookup()` without `all: true` returns a single address;
   better use `net.connect` with `autoSelectFamily` which provides Happy Eyeballs support.
 
