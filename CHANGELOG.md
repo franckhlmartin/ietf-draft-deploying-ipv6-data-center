@@ -6,6 +6,10 @@ semantics.
 
 ## Unreleased
 
+- **Application readiness (dependency gates):** Version/image is a
+  prerequisite, not proof of IPv6 readiness; pair it with the effective
+  configuration profile (CM inheritance/overrides, independently deployed
+  config versions) and end-to-end path validation.
 - **Document Structure (§1.3):** Rewrite for the four-part layout (strategy,
   build, tools, pitfalls) with fundamentals as appendix; retarget role-based
   reading paths (including SRE/SWE). Bump document date to 2026-09-07.
