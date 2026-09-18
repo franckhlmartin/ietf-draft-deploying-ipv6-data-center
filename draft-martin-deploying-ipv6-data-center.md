@@ -1108,20 +1108,44 @@ Many SREs and software engineers **will not** study address representation,
 to before every deploy. Platform teams **SHOULD** publish **monitored readiness
 gates**: for each shared dependency (language runtime, HTTP/RPC client, database
 driver, messaging library, observability agent, base container image), document
-a **minimum version or image tag** validated on dual-stack and IPv6-only paths.
-Example gate: *upgrade **`example-http-client` to 2.4.0 or newer** --- then the
-service is cleared for IPv6*; versions below the threshold remain **blocked or
-flagged** in the inventory until upgraded.
+a **minimum version or image tag** *and* the **required configuration
+profile**, both validated on dual-stack and IPv6-only paths.
+
+A version or image threshold is a **prerequisite**, not proof that the
+deployed service is IPv6-ready. The same binary can still run IPv4-only
+because a feature flag, environment variable, listen address, or
+endpoint-selection setting is wrong. Software version and configuration
+version **MAY** be shipped as one bundle or pushed independently --- the
+usual case in large data centers using **Puppet**, **Ansible**, or similar.
+Operators already monitor which software and configuration versions are
+deployed; IPv6 gates **SHOULD** use those same signals.
+
+Configuration commonly **inherits and overrides** along a hierarchy (for
+example organisation, site, maintenance zone, application, host). A ready
+package with a leftover override is still not ready. The gate is therefore
+often "upgrade to version X" **and/or** "remove the override so the general
+value applies" --- for instance dropping a host-level
+`java.net.preferIPv4Stack=true` (see (#runtime-resolution)).
+
+Example gates: *upgrade **`example-http-client` to 2.4.0 or newer***; *remove
+application or host overrides of `java.net.preferIPv4Stack`*. Versions or
+profiles below the threshold remain **blocked or flagged** in the inventory
+until both the package and the **effective** configuration match.
 
 **Automate enforcement** against that catalog: compare SBOMs, lockfiles, image
-scans, and configuration-management reports to the matrix on a schedule and in
-CI (see (#observability)). When a service crosses the threshold --- dependency
-bumped, agent replaced, golden image refreshed --- **update its readiness label**
-without requiring every engineer to audit socket call sites by hand. Put the gates
-where teams already work (service catalog, Renovate or equivalent dependency
-bots, deployment checklists) and **SHOULD** tie change-advisory or promotion
-policy to them so **unknown** or **below-minimum** software cannot reach
-production dual-stack or IPv6-only paths unnoticed.
+scans, and configuration-management reports (resolved inheritance, not only
+the default) to the matrix on a schedule and in CI (see (#observability)).
+Crossing the software-version threshold **SHOULD NOT** by itself mark a
+service ready. When version **and** configuration match the gate and
+**end-to-end validation** on dual-stack and IPv6-only paths succeeds ---
+dependency bumped, agent replaced, golden image refreshed, override removed
+--- **update its readiness label** without requiring every engineer to audit
+socket call sites by hand. Put the gates where teams already work (service
+catalog, Renovate or equivalent dependency bots, configuration-management
+dashboards, deployment checklists) and **SHOULD** tie change-advisory or
+promotion policy to them so **unknown**, **below-minimum**, or
+**misconfigured** software cannot reach production dual-stack or IPv6-only
+paths unnoticed.
 
 ### Static Analysis and Pull Request Automation {#static-analysis}
 
@@ -1636,9 +1660,10 @@ not rediscover the same RFC 6724 interaction. Most software engineers are not
 DNS or path-selection specialists, and they should not have to be: put
 resolution, Happy Eyeballs, and within-family spreading in **one** (or a small
 set of) platform libraries used across the codebase. Platform and SRE teams can
-then clear IPv6 readiness by saying **upgrade the shared client to version X**,
-rather than teaching each application team how to rewrite connection logic ---
-the same readiness-gate pattern as (#application-readiness).
+then clear IPv6 readiness by saying **upgrade the shared client to version X**
+and apply (or stop overriding) the documented dual-stack profile, rather than
+teaching each application team how to rewrite connection logic --- the same
+readiness-gate pattern as (#application-readiness).
 
 ## IP Address Storage in Application Data
 
