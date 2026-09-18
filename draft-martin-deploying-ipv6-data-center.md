@@ -6,7 +6,7 @@ area = "ops"
 workgroup = "IPv6 Operations"
 keyword = ["IPv6", "data center", "SRE", "software", "operations", "deployment"]
 
-date = 2026-09-12
+date = 2026-09-18
 
 [seriesInfo]
 name = "Internet-Draft"
@@ -103,6 +103,12 @@ alongside this draft:
   IPv4-only, dual-stack, IPv6-only with NAT64, and IPv6-only-strict scenarios (v6ops);
   the testing companion to the deployment guidance in this document
 * [@?I-D.ietf-v6ops-ipv6-only] --- IPv6-only and IPv6-Mostly terminology definitions (v6ops)
+* [@?I-D.ietf-6man-rfc6724-update] --- RFC 6724 policy-table update: known-local
+  ULA preference over IPv4 and over GUA for local use (6man; RFC Editor queue)
+* [@?I-D.martin-ipv6-addr-selection-updates] --- proposed further destination-
+  selection updates; includes an attempt to preserve DNS order where Rule 9
+  would otherwise collapse it. Until that is implemented on hosts, clients
+  still handle load spreading (see (#address-selection))
 * [@?ARCEP-IPV6-GUIDE] --- enterprise IPv6 rollout guidance from ARCEP (France)
 * [@?ARIN-APPS-V6] --- application and software developer guidance from ARIN
 
@@ -1165,6 +1171,10 @@ patterns, for example:
 * `AF_INET` sockets where dual-stack or `AF_INET6` is required
 * Database columns or structs sized for IPv4-only (`CHAR(15)`, 32-bit integers)
 * String splits on `.` to parse "IP addresses"
+* `getaddrinfo()` (and language equivalents) that use only the first returned
+  address, or that treat DNS response order as load balancing without
+  within-family selection --- assumptions that ordinary review often misses
+  (see (#address-selection) and (#client-load-balancing))
 
 Security teams often own the rule pack; application teams own remediation.
 Rules **SHOULD** be published internally with examples and fix guidance.
@@ -1491,16 +1501,23 @@ mean the host is unreachable. Application code **MUST NOT** report the
 destination as down after trying only the first AAAA or A record and never
 the other family, or after IPv4 fails while unused IPv6 candidates remain (and
 vice versa). Try other addresses from the resolved list --- or use Happy Eyeballs
-[@?RFC8305] --- before concluding that the service cannot be reached.
+[@?RFC8305] --- before concluding that the service cannot be reached. When
+**none** of the candidates succeed, do **not** surface only the error from the
+first attempt: report the **most pertinent** failure --- typically the attempt
+that progressed furthest (for example TCP handshake completed but TLS or
+application protocol failed, or a clear ICMP unreachable rather than a
+timeout on an earlier candidate).
 
 ### Why the Full List Matters
 
 DNS often publishes **multiple A and AAAA records** for availability and load
 distribution. Connecting to `result->ai_addr` and ignoring `ai_next` defeats
 that design. After collecting the list, the application (or a shared library)
-chooses order: IPv6-first, Happy Eyeballs, random shuffle within a family, or
-explicit retry on failure. **`getaddrinfo()` supplies candidates; it does not
-replace client-side load balancing.**
+chooses order: IPv6-first, Happy Eyeballs, within-family random or weighted
+selection for equivalent data-center backends (while [@!RFC6724] Rule 9 still reorders;
+see (#address-selection)), or explicit retry on failure. **`getaddrinfo()`
+supplies candidates; it may not replace client-side load balancing or best 
+destination selection.**
 
 Note that libc implementations may **reorder** the list per [@!RFC6724] before
 returning it (see (#address-selection)). You still need every element --- reorder
@@ -1522,31 +1539,58 @@ The Linux file `/etc/gai.conf` and the algorithms in [@!RFC6724] control
 which destination address are tried first. This is invisible in application
 source but visible in production load distribution.
 
-**RFC 6724 destination address selection Rule 9** ("Use longest matching
-prefix") compares each candidate destination with its likely source address
-and **sorts addresses deterministically** [@!RFC6724]. Resolver libraries such
-as **glibc** implement this sorting inside `getaddrinfo()`. The effect:
-**DNS round-robin is not a load-balancing strategy on IPv6** (and is weakened
-on IPv4 in many cases). A round-robin AAAA record can collapse to "always try
-the same address first" once Rule 9 runs, concentrating connections on one
-backend. The problem is subtle on IPv4 but **often severe on IPv6**.
+RFC 6724 has two axes that operators often conflate:
 
-Rule 9 is reasonable on the global Internet but **often wrong inside a data
-center**, where many servers are functionally declared equidistant and
-operators expect DNS or
-anycast to spread load. Mitigations include:
+* The **policy table** decides which *class* wins (for example ULA vs GUA vs
+  IPv4). [@?I-D.ietf-6man-rfc6724-update] updates that table so known-local
+  ULA-ULA is preferred over IPv4 and, for local use, over GUA. That helps
+  dual-stack sites that use ULAs internally. It does **not** change Rule 9.
+* **Rule 9** ("Use longest matching prefix") decides which *same-family*
+  destination is tried first. It compares each candidate with its likely
+  source address and **sorts addresses deterministically** [@!RFC6724].
+  Resolver libraries such as **glibc** implement this sorting inside
+  `getaddrinfo()`.
 
-* Perform **client-side load balancing** in the application or library.
-* Fetch all addresses (for example, via `getaddrinfo()` without premature
-  sorting, or via a resolver that preserves DNS order), then choose randomly
-  **within the same address family** --- do not shuffle v4 and v6 together in
-  ways that accidentally defeat IPv6 preference policy.
-* Use service meshes, anycast, or explicit endpoint lists rather than naive
-  round-robin alone.
+**Rule 9 is a problem if you expect DNS load balancing.** A rotated set of A
+or AAAA records can collapse to "always try the same address first" once
+Rule 9 runs, concentrating connections on one backend. The problem is subtle
+on IPv4 but **often severe on IPv6**, especially inside a data center where
+many servers are functionally equidistant and operators expect DNS or anycast
+to spread load. Changing `/etc/gai.conf` adjusts precedence tables but
+**does not fully disable Rule 9** in all implementations.
 
-Changing `/etc/gai.conf` adjusts precedence tables but **does not fully
-disable Rule 9** in all implementations. Treat load balancing as a **software
-concern**, not something DNS alone provides.
+[@?I-D.martin-ipv6-addr-selection-updates] is **trying to address** that gap
+at the resolver: operators would configure prefix ranges for which Rule 9
+does not apply, so `getaddrinfo()` preserves same-family DNS order without
+application changes. That is not something operators can assume on the fleet
+today.
+
+**Meanwhile, load balancing MUST be treated as something the client handles**
+--- a shared library, service-discovery client, or mesh --- not DNS order
+after `getaddrinfo()`. The discipline matches Happy Eyeballs: **do not
+assume** destination selection is correct for every language, runtime, and
+client. **Review it per client**, especially inside a data center where
+Rule 9 is most harmful. DNS load balancing is often an **implicit
+assumption** buried in connection code --- "we publish multiple AAAA records,
+so clients will spread" --- so ordinary code review may never surface it.
+Pattern scanners such as **Semgrep** or **CodeQL** (see (#static-analysis))
+**SHOULD** flag `getaddrinfo()` and language equivalents that take only the
+first result, skip within-family spreading, or otherwise treat DNS order as
+load balancing, so each call site is questioned rather than assumed correct.
+
+Mitigations while Rule 9 still reorders:
+
+* **Internal / cluster backends** intended to be equivalent: within-family
+  random or weighted selection (or service mesh / anycast). Do **not** trust
+  DNS or `getaddrinfo()` order for spread. Do **not** shuffle the **entire**
+  resolved list across families --- that breaks IPv6 preference; partition by
+  family first, then randomize or weight **within** each family.
+* **External Internet destinations:** keep RFC 6724 family and prefix-class
+  order (do not shuffle IPv4 with IPv6). Same-family DNS round-robin is still
+  not a load-balancing strategy while Rule 9 runs.
+* Prefer putting resolution, Happy Eyeballs, and within-family spreading in
+  **shared client libraries** so each application team does not rediscover
+  the same interaction (see (#client-load-balancing)).
 
 ### Runtime-Specific Resolution (Not Always glibc) {#runtime-resolution}
 
@@ -1636,11 +1680,17 @@ first; see (#name-resolution) and the HAPPY working group):
 3. Apply family preference policy (operator choice: IPv6-first, happy eyeballs,
    or parallel). For Happy Eyeballs, **start IPv4 attempts after a deliberate
    delay** so IPv6 connections have priority time to complete.
-4. **Randomize or round-robin within each family** rather than trusting DNS
-   order after `getaddrinfo()`. When service discovery or endpoint metadata
-   provides **weights**, prefer **weighted** selection within a family;
-   equal random or round-robin remains appropriate when endpoints are
-   equivalent.
+4. For **equivalent data-center backends**, **randomize or round-robin within
+   each family** rather than trusting DNS order after `getaddrinfo()` --- Rule 9
+   defeats DNS load balancing today (see (#address-selection));
+   [@?I-D.martin-ipv6-addr-selection-updates] is trying to fix that in the
+   resolver, but clients must handle spreading until hosts implement it. When
+   service discovery or endpoint metadata provides **weights**, prefer
+   **weighted** selection within a family. For **external Internet**
+   destinations, keep family preference from RFC 6724 / Happy Eyeballs; do
+   **not** shuffle IPv4 and IPv6 together. Like Happy Eyeballs, destination
+   selection is a **client behavior to inventory and review**, not a property
+   of DNS.
 5. Optionally implement retries across the full set on failure.
 
 **Endpoint freshness:** treat selection policy as distinct from
@@ -1659,11 +1709,16 @@ Implement load balancing in **shared client libraries** so every service does
 not rediscover the same RFC 6724 interaction. Most software engineers are not
 DNS or path-selection specialists, and they should not have to be: put
 resolution, Happy Eyeballs, and within-family spreading in **one** (or a small
-set of) platform libraries used across the codebase. Platform and SRE teams can
-then clear IPv6 readiness by saying **upgrade the shared client to version X**
-and apply (or stop overriding) the documented dual-stack profile, rather than
-teaching each application team how to rewrite connection logic --- the same
-readiness-gate pattern as (#application-readiness).
+set of) platform libraries used across the codebase, then **review each client**
+that still rolls its own destination selection --- the same discipline as
+Happy Eyeballs coverage. Because DNS-spread expectations are often implicit,
+pair that review with the Semgrep / CodeQL patterns in (#static-analysis)
+rather than relying on humans to notice every `getaddrinfo()` call site.
+Platform and SRE teams can then clear IPv6 readiness
+by saying **upgrade the shared client to version X** and apply (or stop
+overriding) the documented dual-stack profile, rather than teaching each
+application team how to rewrite connection logic --- the same readiness-gate
+pattern as (#application-readiness).
 
 ## IP Address Storage in Application Data
 
