@@ -6,6 +6,13 @@ semantics.
 
 ## Unreleased
 
+- **Address selection / client LB:** Frame RFC 6724 Rule 9 as breaking DNS
+  load balancing; cite draft-martin-ipv6-addr-selection-updates as the
+  attempted OS fix and draft-ietf-6man-rfc6724-update for the orthogonal
+  policy-table/ULA axis; until Rule 9 is fixed on hosts, clients must handle
+  spreading and review destination selection per client (Happy Eyeballs
+  parallel), especially for DC backends. When all candidates fail, report the
+  most pertinent error (furthest progress), not only the first attempt.
 - **Application readiness (dependency gates):** Version/image is a
   prerequisite, not proof of IPv6 readiness; pair it with the effective
   configuration profile (CM inheritance/overrides, independently deployed
