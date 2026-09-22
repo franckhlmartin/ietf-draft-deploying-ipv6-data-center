@@ -1518,7 +1518,7 @@ may ether rely on the order produced by the libc implementation (usually followi
 or apply a more sophisticated re-ordering strategy based on Happy Eyeballs,
 within-family random or weighted selection for equivalent data-center backends.
 There is no guarantee that the first entry is the best choice,
-reflects order frim DNS or is even functional at all.
+reflects order from DNS or is even functional at all.
 
 Note that libc implementations may **reorder** the list per [@!RFC6724] before
 returning it (see (#address-selection)). You still need every element --- reorder
