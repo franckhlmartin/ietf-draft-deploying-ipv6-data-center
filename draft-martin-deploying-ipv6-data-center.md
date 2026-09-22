@@ -1514,11 +1514,11 @@ timeout on an earlier candidate).
 DNS often publishes **multiple A and AAAA records** for availability and load
 distribution. Connecting to `result->ai_addr` and ignoring `ai_next` defeats
 that design. After collecting the list, the application (or a shared library)
-chooses order: IPv6-first, Happy Eyeballs, within-family random or weighted
-selection for equivalent data-center backends (while [@!RFC6724] Rule 9 still reorders;
-see (#address-selection)), or explicit retry on failure. **`getaddrinfo()`
-supplies candidates; it may not replace client-side load balancing or best 
-destination selection.**
+may ether rely on the order produced by the libc implementation (usually following  [@!RFC6724])
+or apply a more sophisticated re-ordering strategy based on Happy Eyeballs,
+within-family random or weighted selection for equivalent data-center backends.
+There is no guarantee that the first entry is the best choice,
+reflects order frim DNS or is even functional at all.
 
 Note that libc implementations may **reorder** the list per [@!RFC6724] before
 returning it (see (#address-selection)). You still need every element --- reorder
