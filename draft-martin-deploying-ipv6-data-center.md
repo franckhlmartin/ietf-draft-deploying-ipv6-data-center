@@ -1503,7 +1503,8 @@ the other family, or after IPv4 fails while unused IPv6 candidates remain (and
 vice versa). Try other addresses from the resolved list --- or use Happy Eyeballs
 [@?RFC8305] --- before concluding that the service cannot be reached. When
 **none** of the candidates succeed, do **not** surface only the error from the
-first attempt: report the **most pertinent** failure --- typically the attempt
+first attempt: preferably report all failures encountered. If this is not feasible,
+report at least the **most pertinent** failure --- typically the attempt
 that progressed furthest (for example TCP handshake completed but TLS or
 application protocol failed, or a clear ICMP unreachable rather than a
 timeout on an earlier candidate).
