@@ -31,7 +31,7 @@ make clean-all # also remove the local .venv
 ```
 
 Before submitting, run `make` and upload the generated XML (for example
-`draft-martin-deploying-ipv6-data-center-03.xml`) to the
+`draft-martin-deploying-ipv6-data-center-04.xml`) to the
 [IETF Datatracker submission tool](https://datatracker.ietf.org/submit/).
 Do not add the generated `.xml`, `.txt`, or `.html` files to the commit.
 
