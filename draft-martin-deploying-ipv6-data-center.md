@@ -6,7 +6,7 @@ area = "ops"
 workgroup = "IPv6 Operations"
 keyword = ["IPv6", "data center", "SRE", "software", "operations", "deployment"]
 
-date = 2026-09-18
+date = 2026-09-24
 
 [seriesInfo]
 name = "Internet-Draft"
@@ -37,12 +37,11 @@ addressing, restore end-to-end connectivity, and meet operator and
 government timelines. Much published IPv6 guidance targets network engineers;
 this document instead addresses **Site Reliability Engineers (SREs)** and
 **Software Engineers (SWEs)** who deploy, operate, and debug services in
-**operator-owned data centers**. It is organized in two parts after IPv6 fundamentals: a
-**migration program** (transition strategy and observability) and a
-**technical stack** (hardware, provisioning, transport, applications, and
-diagnostics). It documents common software and infrastructure gaps and offers
-practical deployment patterns aligned with the IPv6 Operations (v6ops) working
-group charter.
+**operator-owned data centers**. It is organized in four parts --- migration
+strategies, building the data center, tools and best practices, and pitfalls ---
+with IPv6 fundamentals as an appendix. It documents common software and
+infrastructure gaps and offers practical deployment patterns aligned with the
+IPv6 Operations (v6ops) working group charter.
 
 .# About This Document
 
