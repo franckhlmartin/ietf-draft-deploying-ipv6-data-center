@@ -6,8 +6,48 @@ semantics.
 
 ## Unreleased
 
-- **Address selection / client LB:** Frame RFC 6724 Rule 9 as breaking DNS
-  load balancing; cite draft-martin-ipv6-addr-selection-updates as the
+- **Revision -03:** Bump Internet-Draft version and date for Datatracker
+  submission; align Abstract with the four-part layout.
+- **Authors:** Add Philipp S. Tiesel (SAP SE) as co-author.
+- **Section reshuffle (major):** Redistribute content into Parts I–IV
+  (migration strategies, build, tools, pitfalls); move IPv6 fundamentals to
+  an appendix; rewrite §1.3 Document Structure and role-based reading paths
+  (including SRE/SWE).
+- **Reasons to start IPv6-only programs (Part I, new):** Organizational
+  scoping for manageable IPv6-only slices; hitch migration to hardware refresh,
+  DC buildout, re-platforming, cloud moves, AI, zero trust, and
+  containerization; cost/complexity rationale when IPv4 renumbering would
+  otherwise dominate.
+- **Programme sponsorship (Part I, new):** Business sponsor vs exception
+  approver vs escalation; early security/network/platform/tier-1 stakeholders;
+  wire §1.1, reading paths, ICMPv6 sequencing, and Security Considerations.
+- **Procurement and long-lead hardware (Part I, new):** RFP/purchase IPv6
+  requirements at kickoff; owned vs uncontrolled systems; lab acceptance
+  before racking; cross-link from OOB refresh cycles.
+- **Noticeable IPv4 friction (Part I, new):** Soft-failure intent --- culture
+  training on dual-stack jump hosts (SSH countdown) and optional modest IPv4
+  traffic shaping so silent IPv4 preference is noticeable; latency/QPS as
+  existing signals; clarify jump-host modes (no IPv4 on the host vs delayed
+  IPv4).
+- **Cloud provider gap analysis:** Label by default client path; add
+  `supported-not-default` distinct from `partial`; prefer operator-owned names
+  independent of provider hostname taxonomy; drop vendor-specific examples;
+  refine hybrid scoping for operator-owned DCs that connect to cloud.
+- **Prefix allocation:** Frame `/56`-per-host as one template among others
+  (including `/64` per VLAN/link with longer host carve-outs such as `/80`);
+  lead with an explicit per-role numbering policy sized for growth; note when
+  `/64` is hard (SLAAC / some TCAM) vs closed-DC longer prefixes; mention
+  Kubernetes/CNI needing multiple ranges without a cluster recipe; clarify
+  `/72` carve-out vs node `/64`.
+- **Observability / probes (Sulabh feedback):** Per-AF TCP handshake metrics;
+  when probing VIPs by address, still present production SNI/`Host`; clarify
+  that a failed ping alone does not prove "no route."
+- **Client-side load balancing:** Weights from service discovery, endpoint
+  freshness, and long-lived multiplexed-pool caveats; prefer shared-library
+  Happy Eyeballs / spreading (upgrade-as-readiness-gate) over per-app
+  reimplementation.
+- **Address selection / client LB (Rule 9):** Frame RFC 6724 Rule 9 as breaking
+  DNS load balancing; cite draft-martin-ipv6-addr-selection-updates as the
   attempted OS fix and draft-ietf-6man-rfc6724-update for the orthogonal
   policy-table/ULA axis; until Rule 9 is fixed on hosts, clients must handle
   spreading and review destination selection per client (Happy Eyeballs
@@ -17,22 +57,16 @@ semantics.
   prerequisite, not proof of IPv6 readiness; pair it with the effective
   configuration profile (CM inheritance/overrides, independently deployed
   config versions) and end-to-end path validation.
-- **Document Structure (§1.3):** Rewrite for the four-part layout (strategy,
-  build, tools, pitfalls) with fundamentals as appendix; retarget role-based
-  reading paths (including SRE/SWE). Bump document date to 2026-09-07.
-- **Noticeable IPv4 friction (§4.4, §4.5 new, §5):** Non-blocking IPv4 delay
-  (SSH countdown on dual-stack jump hosts, modest traffic shaping) so silent
-  IPv4 preference is noticeable; latency/QPS as existing signals.
-- **Cloud provider gap analysis (§10.2):** Label by default client path; add
-  `supported-not-default` distinct from `partial`; prefer operator-owned names
-  independent of provider hostname taxonomy; no vendor-specific examples.
-- **Prefix allocation (§8.1):** Frame `/56`-per-host as a template; require a
-  numbering policy sized for growth; mention Kubernetes as needing multiple
-  ranges without a cluster recipe; clarify `/72` carve-out vs node `/64`.
-- **Programme sponsorship (§4.1, new):** Business sponsor vs exception approver
-  vs escalation; early security/network/platform/tier-1 stakeholders; wire §1.1,
-  reading paths, ICMPv6 sequencing, and Security Considerations.
-- **Acknowledgments:** Spiro Stathakis (isp6).
+- **Address representation:** Operators MAY use consistent non-RFC 5952 text
+  forms in comparison tables for scanning; interchange/storage still binary or
+  RFC 5952.
+- **Name resolution (`getaddrinfo`):** Iterate candidates until connect succeeds;
+  prefer runtime Happy Eyeballs helpers (`net.Dialer`, Node `net.connect`
+  `autoSelectFamily`); correct Node lookup API naming.
+- **ICMPv6 / PMTUD:** Cite DPLPMTUD (RFC 8899) alongside classic PMTUD where
+  ICMP-based discovery is unreliable.
+- **Acknowledgments:** Spiro Stathakis (isp6), Sulabh Soneji, Andrew
+  Yourtchenko (Cisco).
 
 - **Revision -02:** Bump Internet-Draft version and date for Datatracker
   submission; build outputs renamed to match.
