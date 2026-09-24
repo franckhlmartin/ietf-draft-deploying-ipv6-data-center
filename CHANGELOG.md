@@ -6,6 +6,7 @@ semantics.
 
 ## Unreleased
 
+## Revision -03
 - **Revision -03:** Bump Internet-Draft version and date for Datatracker
   submission; align Abstract with the four-part layout.
 - **Authors:** Add Philipp S. Tiesel (SAP SE) as co-author.
@@ -68,6 +69,7 @@ semantics.
 - **Acknowledgments:** Spiro Stathakis (isp6), Sulabh Soneji, Andrew
   Yourtchenko (Cisco).
 
+## Revision -02
 - **Revision -02:** Bump Internet-Draft version and date for Datatracker
   submission; build outputs renamed to match.
 - **Related Guides (§1.2) and IPv6 testing cross-references:** Add informative
@@ -95,6 +97,8 @@ semantics.
 - **Internal vs external (§8.5):** Dual-homed edge hosts during internal IPv6
   rollout --- unreachable (not blackhole) routes when internal NIC is still
   IPv4-only; cross-link from name resolution (§12).
+
+## Revision -01
 - **Revision -01:** Bump Internet-Draft version for Datatracker submission; build
   outputs renamed to match (makefile reads version from front matter).
 - **Document structure (major):** Reorganize after §2 into a dual-track layout —
