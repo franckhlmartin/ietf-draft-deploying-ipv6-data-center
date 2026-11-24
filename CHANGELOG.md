@@ -6,6 +6,19 @@ semantics.
 
 ## Unreleased
 
+- **Editorial (Andrew Yourtchenko / #32):** Thin decorative bold and mmark
+  em-dashes (` --- `); keep RFC 2119 keywords bold; fix awkward joins from the
+  dash rewrite; spot-fix Claudism-style seams (aphoristic openers, staccato
+  fragments, "landscape") without changing technical recommendations.
+- **Semantic prefixes (Brian Carpenter / #33):** Discuss ULAs as the automatic
+  private/public heuristic; keep GUA + semantic aggregates + edge filters as
+  the primary DC recommendation; note topology hiding vs RFC 1918/NAT44 and
+  cite RFC 4864 as dated Local Network Protection background.
+- **Address representation (Brian Carpenter / #34):** Mention
+  `fe80::1%eth0` zone form; explain scrambled production IIDs (temporary and
+  opaque stable IIDs).
+- **Acknowledgments:** Add Brian Carpenter.
+
 ## Revision -03
 - **Revision -03:** Bump Internet-Draft version and date for Datatracker
   submission; align Abstract with the four-part layout.
