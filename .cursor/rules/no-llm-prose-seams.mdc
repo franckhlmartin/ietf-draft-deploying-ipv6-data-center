@@ -1,0 +1,146 @@
+---
+description: Avoid LLM prose seams in IETF draft text (inlined Claudisms checklist)
+globs: draft-*.md,CHANGELOG.md
+alwaysApply: false
+---
+
+# No LLM prose seams
+
+When writing or editing this Internet-Draft, prose must not read as AI-generated.
+
+**Do not fetch or rely on any live web page for this checklist.** The items
+below are a local snapshot. If the upstream page changes, ignore those changes
+until a human updates this rule file.
+
+Provenance (attribution only; not a runtime source):
+Andrew Yourtchenko / Ap[e]Chat, “Claude-isms: the itemized list”
+(https://ayourtch-llm.github.io/apchat-blog/posts/2026-09-11-claudisms-itemized/),
+snapshot taken 2026-11-24 for this repository.
+
+Core test per sentence: stating or staging? Prefer sentences that state
+content over sentences that prepare the reader for it. A checklist match is a
+candidate; keep an item only when it carries real information.
+
+## Draft-specific tells (this repository)
+
+- Do not decorate ordinary words with `**bold**`. Keep bold for RFC 2119
+  keywords (`MUST`, `SHOULD`, …) and rare first-use of defined terms only.
+- Do not use mmark em-dashes (` --- `) as default connective tissue. Prefer
+  periods, commas, parentheses, or a colon after a short label. More than about
+  one em-dash per 150 words reads machine-written.
+- Prefer plain IETF informational tone over marketing cadence or blog voice.
+- Keep technical recommendations unchanged while cleaning register.
+- After substantive prose edits, skim for bold density and ` --- ` before finishing.
+
+## 1. Caught in ayourtch household text
+
+1. “Honest”, “honestly”, “to be honest” as emphasis (implies the rest is not). Fix: describe the behaviour or give the number alone.
+2. Reflexive agreement openers: “You’re absolutely right!”, “Great question!”, “Certainly!”.
+3. Contrast pair “X, not Y” / “not X but Y”. Keep only when correcting a specific wrong reading (“4 points, not 16”). Delete when it only adds rhythm.
+4. Evaluative tail clauses: “X is different, and the reason matters”, “…, and here’s why”. Headings should name the subject.
+5. Forced triads (three parallel items where two, four, or prose would do).
+6. Over-hedging: “I think maybe it could possibly.”
+7. Service-desk openers: “I’d be happy to”, “Let me go ahead and”.
+8. Em-dash as connective tissue in every sentence.
+9. Summarizing the ask back before answering it.
+10. “Worth noting”, “worth flagging”. State the point without the marker.
+11. “Which is exactly what/why…”, “that’s exactly the…”, “exactly” as intensifier.
+12. Phantom counterfactual: “X instead of Y” / “rather than Y” where nobody proposed Y. Cut it; if the alternative was real, name it once as a fact.
+13. Aphoristic parallel antithesis at density (“A beats B; C beats D”). One per passage max; more than one per section, keep only the best.
+14. Balanced-antithesis sign-off (two-clause epigram as a bow at the end).
+15. Personified time spans / borrowed literary frames in technical prose.
+16. Evaluative pre-framing: “The verdict is in…”. Lead with the facts.
+17. Enthusiasm cascade: “Yes — and there’s a neat way to…”.
+18. Long sentences and borrowed quotation frames. Prefer short sentences and small paragraphs.
+
+## 2. External register review
+
+1. Negation-first reveal: “It is not X. It is Y.” Earned only if the previous paragraph proposed X.
+2. Significance designation: “the actual question”, “the part that matters”, “the useful question”.
+3. Abstraction agency: tables show, medians hide, tools discover. Put a real subject in the subject slot.
+4. Deferred noun: “One thing is not flat”. Name the noun.
+5. Coy or thesis headers. Header should label the section (or be the definition).
+6. Colon-staged intro: “So:”, “The defensible statement:”.
+7. Aphoristic closer that withholds its referent: “Only one of them is expensive.” Name which.
+8. Staccato fragments as gravitas: “Six legs. One GPU.”
+9. Self-grading / move narration: “That is what the data shows”.
+10. Performed humility with no content: “Their phrasing is better than mine.”
+11. Opening drum roll (quoting your own previous ending and answering it).
+12. Inflation: “collapse” for a small drop.
+
+## 3. From declauding skill (additions)
+
+1. Structural-metaphor locator: “the seam where”, “the hinge”, “the fault line”. Name the mechanism.
+2. Suspense construction / “Here’s where it gets interesting.”
+3. Drama line break (one short sentence alone on a line for weight).
+4. Rhetorical question plus fragment answer. Use one declarative instead.
+5. Straw-man knockdown attributed to the reader.
+6. Em-dash density (see draft-specific tells).
+7. Throat-clearing: “In this post I’ll cover”, “Let me explain”.
+8. RTFM as revelation: “It turns out”, “buried in the docs” for documented behaviour.
+9. Generic developer vocabulary: footgun, rabbit hole, yak shaving, belt-and-suspenders, load-bearing (metaphor), under the hood, sane defaults, “just works”.
+10. Slop vocabulary: delve, tapestry, testament to, landscape, realm, robust, seamless, leverage, crucial, pivotal, myriad, unlock, harness, dive deep, that said.
+11. Sanitized quotes: “expressed concern” for what someone actually said.
+12. Time-scale inflation: “a month ago” / “recently” when it was hours.
+
+Earned exceptions exist: a contrast that carries information, a short factual closer, and a colon before a real payload can pass.
+
+## 4. From Simon Willison cliché highlighter / Signs of AI writing
+
+1. Negation chains: “No fluff, no filler, no jargon.”
+2. “Don’t call it X. Call it Y.”
+3. “Sit with that.”
+4. “You already know.”
+5. “Is the whole point” / “is the entire game”.
+6. “The X is real, and…”
+7. “The punchline is.”
+8. “Worth naming.”
+9. “That’s not nothing.”
+10. Echo triad (consecutive sentences on the same four-word skeleton).
+11. Sentence anaphora (three or more consecutive sentences opening on the same word).
+12. “The only X I trust” / “the only X that matters”.
+13. “Don’t take my word for it.”
+14. Stacked questions (two or more in a row).
+15. “Here’s the twist / thing / catch / kicker.”
+16. “X is dead; long live X.”
+17. “That’s why X mattered.”
+18. Stranded auxiliary: “The tool died; the data didn’t.”
+19. Sentence-initial “Turns out.”
+20. “Fits in your head”, “batteries included”, “zero config”.
+21. Performative honesty: “I won’t pretend”, “let’s be real”, sentence-initial “Look,” / “Frankly,”.
+22. “That’s the part” / “the part that gets me”.
+23. Colon followed by three comma-separated items (noisy in documentation).
+24. AI vocabulary: meticulous, intricate, interplay, underscore, garner, bolster, vibrant, bustling, multifaceted, commendable, ever-evolving.
+25. “It’s important to note” / “it should be noted”.
+26. “Stands as a testament” / “serves as a reminder”.
+27. “Plays a crucial / pivotal / vital role.”
+28. “Ever-evolving landscape” / “in today’s fast-paced world”.
+29. Vague experts: “experts argue”, “critics note”, “industry reports indicate”.
+30. “Despite these challenges” / “remains to be seen” / “time will tell”.
+31. Participle tails: “, highlighting the…”, “, underscoring the…”, “, showcasing the…”.
+32. Promo tone: “nestled in”, “hidden gem”, “boasts a”, “breathtaking”.
+33. Chatbot leftovers: “As an AI language model”, knowledge-cutoff chatter, citation debris, `utm_source=` in links.
+
+## 5. Whole-text tells
+
+1. Near-repetition with drifting referents (reads well sentence-by-sentence, fails as one argument).
+2. Vagueness that reads as depth.
+3. Locally plausible pairings the reader must rationalise; prefer one argument that runs end to end.
+4. Default ideas as well as default words (lexical cleaning is not enough if the shared stock idea remains).
+
+## 6. Positive readability defaults
+
+1. Characters as subjects, actions as verbs; kill needless nominalizations.
+2. Short concrete subject and specific verb early; avoid long insertions before the verb.
+3. Old before new (start from what the reader already holds).
+4. Prefer shorter sentences in procedures; watch maximum sentence length, not only median.
+5. Prefer active voice and present tense for operational guidance.
+6. Signpost before a split (one sentence giving the shape of the next paragraphs).
+7. Break at the turn (new paragraph when the claim changes).
+8. Connectives that carry a reason (“so”, “still”, “even if”).
+9. State the epistemic status of a claim; keep the author’s certainty level.
+10. When quoting a question, preserve its lean.
+11. Concede in the same sentence (“even if” / “although”).
+12. Give a list its noun before “First… Second…”.
+13. Put track record next to theory when claiming what a mechanism would do.
+14. After aggressive smoothing, check later references still have antecedents.
